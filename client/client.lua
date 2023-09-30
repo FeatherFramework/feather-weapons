@@ -1,1 +1,3 @@
---Insert Your Main Client Side Code Here
+RegisterCommand("weaponstest", function()
+    print("This is working wee")
+end)
