@@ -1,5 +1,6 @@
 # feather-weapons
 > The main weapon system for Feather Framework!
+> This is not ready for live use, and is still undergoing furthee development.
 
 # Requirments
 - feather-core
