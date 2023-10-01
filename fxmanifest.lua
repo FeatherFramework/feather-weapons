@@ -15,6 +15,7 @@ server_scripts {
 client_scripts {
   "/client//helpers/functions.lua",
   "/client/services/giveWeapons.lua",
+  "/client/services/api.lua",
   '/client/main.lua'
 }
 
