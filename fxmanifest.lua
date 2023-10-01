@@ -13,8 +13,9 @@ server_scripts {
 }
 
 client_scripts {
-  "/client/functions.lua",
-  "/client/client.lua"
+  "/client//helpers/functions.lua",
+  "/client/services/giveWeapons.lua",
+  '/client/main.lua'
 }
 
 dependencies {
