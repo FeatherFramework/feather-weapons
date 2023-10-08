@@ -1,0 +1,1 @@
+FeatherInventory = exports['feather-inventory'].initiate()

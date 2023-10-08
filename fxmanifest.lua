@@ -9,7 +9,8 @@ shared_scripts {
 }
 
 server_scripts {
-  "/server/server.lua"
+  "/server/helpers/functions.lua",
+  "/server/main.lua"
 }
 
 client_scripts {
@@ -20,7 +21,8 @@ client_scripts {
 }
 
 dependencies {
-  "feather-core"
+  "feather-core",
+  "feather-inventory"
 }
 
 --Version Checking

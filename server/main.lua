@@ -3,3 +3,12 @@ if GetCurrentResourceName() ~= "feather-weapons" then
 else
     --start core
 end
+
+CreateThread(function()
+    FeatherInventory.RegisterInventory('stables', 6)
+    FeatherInventory.AddItem('doubleactionrevolver', 6, nil)
+    FeatherInventory.RegisterUsableItem('doubleactionrevolver', function (item)
+        print('You ate an apple!')
+        print(item)
+    end)
+end)
