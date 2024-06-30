@@ -1,5 +1,3 @@
-local function StartFeatherWeapons()
-    StartAPI()
-end
-
-StartFeatherWeapons()
+RegisterNetEvent("Feather:Character:Spawned", function(character)
+    TriggerServerEvent("test")
+end)

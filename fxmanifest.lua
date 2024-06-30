@@ -9,14 +9,15 @@ shared_scripts {
 }
 
 server_scripts {
-  "/server/server.lua"
+  "/server/imports.lua",
+  "/server/services/*.lua",
+  "/server/main.lua"
 }
 
 client_scripts {
-  "/client//helpers/functions.lua",
-  "/client/services/giveWeapons.lua",
-  "/client/services/api.lua",
-  '/client/main.lua'
+  "/client/imports.lua",
+  "/client/services/*.lua",
+  "/client/main.lua"
 }
 
 dependencies {
