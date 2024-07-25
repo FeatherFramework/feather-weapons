@@ -13,7 +13,6 @@ WeaponList = {
     ['WEAPON_MELEE_KNIFE_HORROR'] = { weaponGroup = "group_melee", weaponSlot = "melee" },
     ['WEAPON_MELEE_KNIFE_RUSTIC'] = { weaponGroup = "group_melee", weaponSlot = "melee" },
 
-
     -- Sidearm
     ['WEAPON_PISTOL_VOLCANIC'] = { weaponGroup = "group_pistol", weaponSlot = "pistol" },
     ['WEAPON_PISTOL_M1899'] = { weaponGroup = "group_pistol", weaponSlot = "pistol" },
@@ -28,7 +27,6 @@ WeaponList = {
     ['WEAPON_REVOLVER_NAVY'] = { weaponGroup = "group_pistol", weaponSlot = "pistol" },
     ['WEAPON_REVOLVER_NAVY_CROSSOVER'] = { weaponGroup = "group_pistol", weaponSlot = "pistol" },
     ['WEAPON_SHOTGUN_SAWEDOFF'] = { weaponGroup = "group_shotgun", weaponSlot = "pistol" },
-
 
     -- Long Guns & Bows
     ['WEAPON_REPEATER_EVANS'] = { weaponGroup = "group_repeater", weaponSlot = "longgun" },
@@ -52,7 +50,6 @@ WeaponList = {
 
     ['WEAPON_BOW'] = { weaponGroup = "group_bow", weaponSlot = "longgun" },
     ['WEAPON_BOW_IMPROVED'] = { weaponGroup = "group_bow", weaponSlot = "longgun" },
-
 
     -- Thrown
     ['WEAPON_MELEE_HATCHET'] = { weaponGroup = "group_thrown", weaponSlot = "throwable" },
