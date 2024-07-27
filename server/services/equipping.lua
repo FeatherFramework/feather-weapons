@@ -1,8 +1,8 @@
 -- Weapon Registering
 CreateThread(function()
-    for k, v in pairs(Config.weapons) do
+    for k, v in pairs(WeaponList) do
         FeatherInv.Items.RegisterUsableItem(v.weaponDBName, function(item, src, updateCB)
-            TriggerClientEvent("feather-weapons:equipWeapon", src, v.weaponHash, item.id)
+            TriggerClientEvent("feather-weapons:equipWeapon", src, k, item.id)
         end)
     end
 end)

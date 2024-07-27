@@ -1,4 +1,7 @@
 RegisterCommand("giveTestWeapon", function()
     TriggerServerEvent("giveTestWeapon")
-    AmmoAPI.AddAmmo("AMMO_PISTOL", 100)
+    print("WAiting 10 secs")
+    Wait(10000)
+    print('giving 300 ammo')
+    Citizen.InvokeNative(0x5FD1E1F011E76D7E, PlayerPedId(), joaat("AMMO_PISTOL"), 300, 0xCA3454E6)
 end)
