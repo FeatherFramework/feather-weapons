@@ -1,16 +1,3 @@
-RegisterServerEvent('giveTestWeapon', function()
-    local _source = source
-    FeatherInv.Items.AddItem('volcanic_pistol', 1, nil, _source)
-    FeatherInv.Items.AddItem('doubleaction_revolver', 1, nil, _source)
-    FeatherInv.Items.AddItem('sawedoff_shotgun', 1, nil, _source)
-    FeatherInv.Items.AddItem('evans_repeater', 1, nil, _source)
-    FeatherInv.Items.AddItem('springfield_rifle', 1, nil, _source)
-    FeatherInv.Items.AddItem('pump_shotgun', 1, nil, _source)
-    FeatherInv.Items.AddItem('carcano_sniper', 1, nil, _source)
-    FeatherInv.Items.AddItem('bow', 1, nil, _source)
-    FeatherInv.Items.AddItem('bow', 1, nil, _source)
-end)
-
 RegisterServerEvent("feather-weapons:Init", function(charId)
     local _source = source
     -- ensure the player has a row in the ammo table
