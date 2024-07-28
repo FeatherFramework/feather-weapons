@@ -8,7 +8,7 @@ RegisterNetEvent("feather-weapons:equipWeapon", function(weaponName, itemId)
             GiveWeaponToPed(PlayerPedId(), wepHash, 0, false, true)
             weaponSlots[wepSlot] = { itemId = itemId, weaponName = weaponName }
         end
-        if weaponSlot ~= "longgun" or weaponSlot ~= "secondaryLonggun" then
+        if weaponSlot ~= "longgun" and weaponSlot ~= "secondaryLonggun" then
             if not weaponSlots[weaponSlot] then
                 equipWeaponToPed(weaponSlot)
             else

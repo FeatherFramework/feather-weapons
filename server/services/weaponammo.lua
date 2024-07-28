@@ -2,8 +2,8 @@
 AmmoAPI = {}
 
 function AmmoAPI.AddAmmo(ammoType, amount, src)
-    ammoType = string.upper(ammoType) -- Ensure the ammo type is in uppercase to match the game's ammo types
     if type(ammoType) == "string" and type(amount) == "number" and type (src) == "number" then
+        ammoType = string.upper(ammoType) -- Ensure the ammo type is in uppercase to match the game's ammo types
         for k, v in pairs(AmmoTypes) do
             if k == ammoType then
                 local player = FeatherCore.Character.GetCharacter({ src = src })
