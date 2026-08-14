@@ -1,5 +1,10 @@
 -- CREDIT TO: https://github.com/femga/rdr3_discoveries/blob/a4b4bcd5a3006b0c1434b03e4095d038164932f7/weapons/weapons.lua
 -- There are 4 weapon slots: melee, pistol, longgun, throwable
+-- `weaponDBName` is the bridge to feather-inventory: it must match an
+-- `items.name` row (see migration.sql's weapons INSERTs) -- that's the item
+-- name server/services/equipping.lua registers as usable, and equip only
+-- ever fires when a player uses that matching inventory item (or, still, a
+-- same-client local self-trigger -- see WPN-04 in the weapons audit).
 
 WeaponList = {
     -- Melee

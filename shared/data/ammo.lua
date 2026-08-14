@@ -1,3 +1,8 @@
+-- Every ammo type the framework tracks, keyed by the uppercase name used
+-- throughout server/services/weaponammo.lua (lowercased, it's also the
+-- `ammo` table's column name -- see migration.sql). `ammoHash` is the
+-- native ammo-type hash used to match against GetCurrentPedWeaponAmmoType
+-- client-side; `max` is the server-enforced cap (AmmoAPI.AddAmmo).
 AmmoTypes = {
 	["AMMO_ARROW_DYNAMITE"] = {
 		ammoHash = -1040876935,
