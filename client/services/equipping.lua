@@ -1,5 +1,20 @@
 local weaponSlots = {["pistol"] = nil, ["longgun"] = nil, ["secondaryLonggun"] = nil, ["melee"] = nil, ["throwable"] = nil} -- This will store what weapon slots have weapons equipped so we can check if the player already has a weapon equipped in that slot
 
+-- (WPN-04) The network-reachable half of this finding is already closed:
+-- the only server-driven trigger is feather-inventory's usable-item
+-- callback (server/services/equipping.lua), which since Phase 2's INV-02
+-- fix only fires for an item the caller actually, verifiably owns -- an
+-- executor can no longer reach this cross-player or via a spoofed item id.
+-- What remains is a same-client local TriggerEvent self-trigger, which is
+-- not fixable at this layer: RegisterNetEvent handlers can always be fired
+-- locally by their own client, and a cheat client could call
+-- GiveWeaponToPed directly via the raw native regardless of whether this
+-- handler exists at all -- this is RedM's client-authoritative weapon
+-- state, the same limitation the Phase 1 audit already concluded. No
+-- server-side consequence currently depends on equip state (ammo
+-- consumption is tracked/reconciled server-side per WPN-01, not equip
+-- state), so there is no privileged action left for this residual gap to
+-- unlock.
 RegisterNetEvent("feather-weapons:equipWeapon", function(weaponName, itemId)
     if WeaponList[weaponName] then
         local weaponSlot = WeaponList[weaponName].weaponSlot
