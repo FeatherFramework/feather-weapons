@@ -21,14 +21,28 @@ RegisterNetEvent("feather-weapons:AddAmmo", function(ammoType, amount)
 end)
 
 -- Monitoring shooting to remove ammo
+-- (pattern: wrong/missing native binding, cf. this session's TASK_PLAY_ANIM
+-- arg-count fix in feather-core) `GetCurrentPedWeaponAmmoType`/
+-- `GetPedWeaponObject` are not real natives -- verified against the native
+-- DB, the actual (unconfirmed-name) globals are `_GetCurrentPedWeaponAmmoType`/
+-- `_GetPedWeaponObject` (leading underscore, per this repo's own generated
+-- .luals/redm-natives/WEAPON.lua stubs). Calling the un-prefixed names hit
+-- an undefined global -> "attempt to call a nil value", an uncaught error
+-- that killed this thread on the very first shot fired after any spawn,
+-- silently ending client-side ammo-consumption tracking for the rest of the
+-- session. Also added a nil-guard on AmmoCache: `CharSpawned` flips true
+-- synchronously in client/main.lua right after firing the async GetAmmo RPC,
+-- so there's a real window where CharSpawned is true but AmmoCache is still
+-- nil -- shooting in that window would have indexed a nil AmmoCache once the
+-- native-name bug above no longer masked it.
 CreateThread(function()
     while true do
         Wait(5)
-        if CharSpawned then
+        if CharSpawned and AmmoCache then
             if IsPedShooting(PlayerPedId()) then
                 local bool, weaponHash = GetCurrentPedWeapon(PlayerPedId())
                 if bool then
-                    local ammoHash = GetCurrentPedWeaponAmmoType(PlayerPedId(), GetPedWeaponObject(PlayerPedId(), true))
+                    local ammoHash = _GetCurrentPedWeaponAmmoType(PlayerPedId(), _GetPedWeaponObject(PlayerPedId(), true))
                     for k, v in pairs(AmmoTypes) do
                         if ammoHash == v.ammoHash then
                             AmmoCache[string.lower(k)] = AmmoCache[string.lower(k)] - 1
