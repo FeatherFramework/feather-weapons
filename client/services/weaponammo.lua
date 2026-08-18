@@ -12,7 +12,12 @@
 -- call can inflate the local mirror but can never get persisted to the DB,
 -- since the server only ever accepts decreases relative to its own record.
 RegisterNetEvent("feather-weapons:AddAmmo", function(ammoType, amount)
-    Citizen.InvokeNative(0x5FD1E1F011E76D7E, PlayerPedId(), joaat(ammoType), amount, 0xCA3454E6)
+    -- SET_PED_AMMO_BY_TYPE (0x5FD1E1F011E76D7E) takes only 3 params (ped,
+    -- ammoType, ammo) -- verified against the RDR3 native DB. The 4th arg
+    -- here (0xCA3454E6) was inert (InvokeNative silently ignores trailing
+    -- args); dropped as dead/misleading rather than left as a phantom
+    -- "reason" param that doesn't exist on this native.
+    Citizen.InvokeNative(0x5FD1E1F011E76D7E, PlayerPedId(), joaat(ammoType), amount)
 
     if AmmoCache then
         local column = string.lower(ammoType)
