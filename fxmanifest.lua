@@ -31,6 +31,7 @@ server_scripts {
     "/server/services/runtime.lua",
     "/server/services/equip.lua",
     "/server/services/ammo.lua",
+    "/server/services/repair.lua",
     "/server/services/reconciliation.lua",
     "/server/services/api.lua",
     "/server/main.lua"
