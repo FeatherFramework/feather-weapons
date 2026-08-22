@@ -19,7 +19,7 @@ function WeaponAPI.GetCapabilities()
             unload = false,
             fireCheckpoint = InventoryAdapter.IsReady(),
             condition = InventoryAdapter.IsReady(),
-            repair = false
+            repair = InventoryAdapter.IsReady()
         }
     }
 end
