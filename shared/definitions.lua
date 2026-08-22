@@ -25,7 +25,12 @@ WeaponDefinitionCatalog = {
                 minimum = 0,
                 maximum = 100,
                 equipMinimum = 1,
-                wearPerShot = 1
+                wearPerShot = 1,
+                repair = {
+                    itemDefinitionId = "weapon_repair_kit",
+                    quantity = 1,
+                    restore = 25
+                }
             },
             attachmentSlots = {},
             policies = {
