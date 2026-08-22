@@ -44,6 +44,9 @@ function WeaponValidation.Definition(definition, expectedKind)
             or definition.condition.equipMinimum > definition.condition.maximum then
             AddError(errors, "condition", "must define ordered minimum, equipMinimum, and maximum values")
         end
+        if type(definition.condition.wearPerShot) ~= "number" or definition.condition.wearPerShot < 0 then
+            AddError(errors, "condition.wearPerShot", "must be a non-negative number")
+        end
     elseif expectedKind == "ammunition" then
         if not IsNonEmptyString(definition.nativeAmmoName) then AddError(errors, "nativeAmmoName", "must be a non-empty string") end
     end
