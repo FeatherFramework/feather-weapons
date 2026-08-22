@@ -21,7 +21,7 @@ local function EnsureCharacter(context)
 
     characters[key] = {
         equipped = nil,
-        ammunition = { revolver_standard = 24 },
+        quantities = { revolver_standard = 24, weapon_repair_kit = 3 },
         item = {
             id = "dev:cattleman:" .. key,
             inventoryId = "development",
@@ -84,19 +84,19 @@ function TestInventoryProvider.Transaction(context, callback)
     end
 
     function tx:GetQuantity(definitionId)
-        return tonumber(working.ammunition[definitionId]) or 0
+        return tonumber(working.quantities[definitionId]) or 0
     end
 
     function tx:RemoveQuantity(definitionId, quantity)
         local current = self:GetQuantity(definitionId)
         if quantity < 0 or current < quantity then return false end
-        working.ammunition[definitionId] = current - quantity
+        working.quantities[definitionId] = current - quantity
         return true
     end
 
     function tx:AddQuantity(definitionId, quantity)
         if quantity < 0 then return false end
-        working.ammunition[definitionId] = self:GetQuantity(definitionId) + quantity
+        working.quantities[definitionId] = self:GetQuantity(definitionId) + quantity
         return true
     end
 
