@@ -46,6 +46,7 @@ function WeaponRuntime.RestoreEquipped(source, sessionId, item, definition, corr
         nativeWeaponName = definition.nativeWeaponName,
         nativeAmmoName = NativeAmmoName(definition),
         ammo = item.metadata.ammo and item.metadata.ammo.loaded or 0,
+        condition = tonumber(item.metadata.condition) or definition.condition.maximum,
         equippedAt = os.time()
     }
     runtime.state = "equipped"
@@ -74,6 +75,7 @@ function WeaponRuntime.BeginEquip(source, sessionId, item, definition, correlati
         nativeWeaponName = definition.nativeWeaponName,
         nativeAmmoName = NativeAmmoName(definition),
         ammo = item.metadata.ammo and item.metadata.ammo.loaded or 0,
+        condition = tonumber(item.metadata.condition) or definition.condition.maximum,
         expiresAt = GetGameTimer() + Config.Runtime.authorizationTtlMs,
         correlationId = correlationId
     }
@@ -94,6 +96,7 @@ function WeaponRuntime.BeginEquip(source, sessionId, item, definition, correlati
         nativeWeaponName = definition.nativeWeaponName,
         nativeAmmoName = NativeAmmoName(definition),
         ammo = item.metadata.ammo and item.metadata.ammo.loaded or 0,
+        condition = tonumber(item.metadata.condition) or definition.condition.maximum,
         expiresInMs = Config.Runtime.authorizationTtlMs
     }, correlationId)
 end
@@ -116,6 +119,7 @@ function WeaponRuntime.CompleteEquip(source, sessionId, token, correlationId)
         nativeWeaponName = pending.nativeWeaponName,
         nativeAmmoName = pending.nativeAmmoName,
         ammo = pending.ammo,
+        condition = pending.condition,
         equippedAt = os.time()
     }
     runtime.pending = nil
@@ -139,6 +143,18 @@ function WeaponRuntime.SetAmmo(source, sessionId, loaded, correlationId)
     end
     runtime.equipped.ammo = loaded
     return WeaponResult.Ok({ loaded = loaded }, correlationId)
+end
+
+function WeaponRuntime.SetCondition(source, sessionId, condition, correlationId)
+    local runtime = sessions[source]
+    if not runtime or runtime.sessionId ~= sessionId then
+        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil, correlationId)
+    end
+    if not runtime.equipped then
+        return WeaponResult.Error(WeaponErrors.NOT_EQUIPPED, "No weapon is equipped", nil, correlationId)
+    end
+    runtime.equipped.condition = tonumber(condition)
+    return WeaponResult.Ok({ condition = runtime.equipped.condition }, correlationId)
 end
 
 function WeaponRuntime.Unequip(source, sessionId, correlationId)
