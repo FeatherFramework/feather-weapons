@@ -112,6 +112,15 @@ end
 
 function FeatherWeaponsClient.Reload(amount, callback) AmmoOperation("feather-weapons:ammo:reload", amount, callback) end
 
+function FeatherWeaponsClient.Repair(itemInstanceId, callback)
+    FeatherCore.RPC.Call("feather-weapons:repair", { itemInstanceId = itemInstanceId }, function(result, rpcError)
+        if result and result.ok and equipped and equipped.itemInstanceId == itemInstanceId then
+            equipped.condition = tonumber(result.value.condition) or equipped.condition
+        end
+        if callback then callback(result, rpcError) end
+    end)
+end
+
 RegisterNetEvent("feather-weapons:client:clearAuthorization", function(token) if pendingToken == token then ClearNativeWeapon() end end)
 RegisterNetEvent("feather-weapons:client:clearEquipped", ClearNativeWeapon)
 RegisterNetEvent("feather-weapons:client:clearSession", ClearNativeWeapon)
@@ -175,6 +184,20 @@ if Config.DevMode and Config.Inventory.allowTestAdapter then
     end
     RegisterCommand("testreload", function(_, args)
         FeatherWeaponsClient.Reload(args[1], function(result, rpcError) PrintAmmoResult("reload", result, rpcError) end)
+    end, false)
+    RegisterCommand("testrepair", function()
+        if not activeCharacterId then return end
+        local itemInstanceId = ("dev:cattleman:%s"):format(tostring(activeCharacterId))
+        FeatherWeaponsClient.Repair(itemInstanceId, function(result, rpcError)
+            if result and result.ok then
+                print(("[feather-weapons] repair restored=%s condition=%s kits=%s"):format(
+                    tostring(result.value.restored), tostring(result.value.condition), tostring(result.value.materialRemaining)))
+                return
+            end
+            local failure = result and result.error or rpcError
+            print(("[feather-weapons] repair failed: %s"):format(
+                failure and (tostring(failure.code) .. " - " .. tostring(failure.message)) or "no response"))
+        end)
     end, false)
 end
 
