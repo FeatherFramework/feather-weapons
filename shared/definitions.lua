@@ -24,7 +24,8 @@ WeaponDefinitionCatalog = {
             condition = {
                 minimum = 0,
                 maximum = 100,
-                equipMinimum = 1
+                equipMinimum = 1,
+                wearPerShot = 1
             },
             attachmentSlots = {},
             policies = {
