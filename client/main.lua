@@ -30,7 +30,7 @@ local function ApplyApprovedWeapon(approved)
     SetNativeAmmo(approved.nativeAmmoName, approved.ammo)
     equipped = { itemInstanceId = approved.itemInstanceId, definitionId = approved.definitionId,
         nativeWeaponName = approved.nativeWeaponName, nativeAmmoName = approved.nativeAmmoName,
-        ammo = tonumber(approved.ammo) or 0 }
+        ammo = tonumber(approved.ammo) or 0, condition = tonumber(approved.condition) }
     desiredAmmo = equipped.ammo
 end
 
@@ -43,6 +43,16 @@ local function FlushConsumption()
         if not equipped then return end
         if result and result.ok then
             equipped.ammo = tonumber(result.value.loaded) or submitted
+            equipped.condition = tonumber(result.value.condition) or equipped.condition
+            if Config.DevMode then
+                print(("[feather-weapons] fired consumed=%s loaded=%s condition=%s"):format(
+                    tostring(result.value.consumed), tostring(equipped.ammo), tostring(equipped.condition)))
+            end
+            if result.value.broken then
+                print("[feather-weapons] weapon condition is broken")
+                ClearNativeWeapon()
+                return
+            end
             if desiredAmmo > equipped.ammo then desiredAmmo = equipped.ammo end
         else
             FeatherWeaponsClient.Reconcile()
@@ -141,6 +151,18 @@ if Config.DevMode and Config.Inventory.allowTestAdapter then
         if activeCharacterId then FeatherWeaponsClient.Equip(("dev:cattleman:%s"):format(tostring(activeCharacterId))) end
     end, false)
     RegisterCommand("testweaponoff", function() FeatherWeaponsClient.Unequip() end, false)
+    RegisterCommand("testweaponstate", function()
+        FeatherWeaponsClient.Reconcile(function(result, rpcError)
+            if result and result.ok then
+                local state = result.value.equipped
+                print(("[feather-weapons] state equipped=%s loaded=%s condition=%s"):format(
+                    tostring(state ~= nil), tostring(state and state.ammo), tostring(state and state.condition)))
+            else
+                local failure = result and result.error or rpcError
+                print(("[feather-weapons] state failed: %s"):format(failure and tostring(failure.code) or "no response"))
+            end
+        end)
+    end, false)
     local function PrintAmmoResult(action, result, rpcError)
         if result and result.ok then
             print(("[feather-weapons] %s moved=%s loaded=%s reserve=%s"):format(action,
