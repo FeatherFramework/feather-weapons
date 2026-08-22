@@ -6,7 +6,7 @@ lua54 "yes"
 description "The weapon system for the Feather framework."
 author "Feather Framework"
 name "feather-weapons"
-version "0.2.0-dev"
+version "0.2.0"
 
 github_version_check "true"
 github_version_type "release"
