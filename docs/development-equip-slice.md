@@ -40,6 +40,7 @@ The mock character starts with 24 reserve revolver cartridges and an empty weapo
 
 - `/testreload` fills the equipped weapon up to its six-round capacity.
 - `/testreload 2` loads at most two rounds.
-- Firing reads RedM's post-shot native ammunition count, then submits a subtract-only checkpoint that updates weapon item metadata.
+- Firing reads RedM's post-shot native ammunition count, then submits a subtract-only checkpoint that updates ammo and condition in one transaction.
+- `/testweaponstate` prints authoritative loaded ammo and condition; the Cattleman loses one condition point per accepted shot in development.
 
 Suggested check: equip, reload, fire two rounds, disconnect, reconnect, and confirm the revolver restores with four loaded rounds. Unload is intentionally unavailable until the RedM runtime can reliably remove physical ammunition.
