@@ -44,3 +44,12 @@ The mock character starts with 24 reserve revolver cartridges and an empty weapo
 - `/testweaponstate` prints authoritative loaded ammo and condition; the Cattleman loses one condition point per accepted shot in development.
 
 Suggested check: equip, reload, fire two rounds, disconnect, reconnect, and confirm the revolver restores with four loaded rounds. Unload is intentionally unavailable until the RedM runtime can reliably remove physical ammunition.
+
+## Repair test
+
+The development character starts with three repair kits. Each repair consumes one kit and restores up to 25 condition.
+
+- Fire at least one round, then run `/testrepair`.
+- Run `/testweaponstate` to confirm the repaired condition persists.
+- Repair at full condition is rejected without consuming a kit.
+- A broken weapon can be repaired by item-instance ID and equipped again afterward.
