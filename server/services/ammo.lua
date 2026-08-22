@@ -41,6 +41,13 @@ local function Reload(source, rpcContext, requested)
         local metadataResult = WeaponMetadata.Validate(item.metadata, definition, context.correlationId)
         if not metadataResult.ok then return metadataResult end
 
+        if tonumber(item.metadata.condition) < definition.condition.equipMinimum then
+            return WeaponResult.Error(WeaponErrors.CONDITION_BROKEN, "Weapon condition is too low to reload", {
+                condition = item.metadata.condition,
+                minimum = definition.condition.equipMinimum
+            }, context.correlationId)
+        end
+
         local loaded = tonumber(item.metadata.ammo.loaded) or 0
         local needed = definition.capacity - loaded
         local available = tx:GetQuantity(definition.ammunitionType)
@@ -92,15 +99,30 @@ function AmmoService.SyncConsumption(source, rpcContext, reportedLoaded)
         if reportedLoaded > current then
             return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Ammunition increases are not accepted from the client", nil, context.correlationId)
         end
+        local consumed = current - reportedLoaded
+        local condition = tonumber(item.metadata.condition) or definitionResult.value.condition.maximum
+        local wear = consumed * definitionResult.value.condition.wearPerShot
         item.metadata.ammo.loaded = reportedLoaded
         item.metadata.ammo.chambered = reportedLoaded > 0
+        item.metadata.condition = math.max(definitionResult.value.condition.minimum, condition - wear)
         if not tx:SetMetadata(item.id, item.metadata, item.metadataRevision) then
             return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Weapon metadata changed during ammunition checkpoint", nil, context.correlationId)
         end
-        return { loaded = reportedLoaded, consumed = current - reportedLoaded }
+        return {
+            loaded = reportedLoaded,
+            consumed = consumed,
+            condition = item.metadata.condition,
+            broken = item.metadata.condition < definitionResult.value.condition.equipMinimum
+        }
     end)
     if not transactionResult.ok then return transactionResult end
     WeaponRuntime.SetAmmo(source, rpcContext.sessionId, reportedLoaded, rpcContext.correlationId)
+    WeaponRuntime.SetCondition(source, rpcContext.sessionId, transactionResult.value.condition, rpcContext.correlationId)
+    if transactionResult.value.broken then
+        local persistResult = InventoryAdapter.SetEquippedForCharacter(context, nil)
+        if not persistResult.ok then return persistResult end
+        WeaponRuntime.Unequip(source, rpcContext.sessionId, rpcContext.correlationId)
+    end
     return WeaponResult.Ok(transactionResult.value, rpcContext.correlationId)
 end
 
