@@ -17,7 +17,9 @@ function WeaponAPI.GetCapabilities()
             ammunition = InventoryAdapter.IsReady(),
             reload = InventoryAdapter.IsReady(),
             unload = false,
-            fireCheckpoint = InventoryAdapter.IsReady()
+            fireCheckpoint = InventoryAdapter.IsReady(),
+            condition = InventoryAdapter.IsReady(),
+            repair = false
         }
     }
 end
