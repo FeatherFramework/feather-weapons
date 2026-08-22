@@ -1,2 +1,1 @@
-FeatherCore =  exports['feather-core'].initiate()
-FeatherInv = exports['feather-inventory'].initiate()
+FeatherCore = exports["feather-core"].initiate()
