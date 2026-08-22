@@ -47,6 +47,12 @@ function WeaponValidation.Definition(definition, expectedKind)
         if type(definition.condition.wearPerShot) ~= "number" or definition.condition.wearPerShot < 0 then
             AddError(errors, "condition.wearPerShot", "must be a non-negative number")
         end
+        local repair = definition.condition.repair
+        if type(repair) ~= "table" or not IsNonEmptyString(repair.itemDefinitionId)
+            or type(repair.quantity) ~= "number" or repair.quantity < 1 or repair.quantity % 1 ~= 0
+            or type(repair.restore) ~= "number" or repair.restore <= 0 then
+            AddError(errors, "condition.repair", "must define an item, positive integer quantity, and positive restore amount")
+        end
     elseif expectedKind == "ammunition" then
         if not IsNonEmptyString(definition.nativeAmmoName) then AddError(errors, "nativeAmmoName", "must be a non-empty string") end
     end
