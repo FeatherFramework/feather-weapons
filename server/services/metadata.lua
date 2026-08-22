@@ -1,0 +1,38 @@
+WeaponMetadata = {}
+
+function WeaponMetadata.Build(definition, options)
+    options = type(options) == "table" and options or {}
+    local metadata = {
+        schemaVersion = WeaponConstants.MetadataSchemaVersion,
+        weaponDefinitionId = definition.id,
+        serialNumber = options.serialNumber,
+        condition = tonumber(options.condition) or definition.condition.maximum,
+        quality = tonumber(options.quality) or 100,
+        ammo = {
+            loaded = tonumber(options.loadedAmmo) or 0,
+            chambered = options.chambered == true
+        },
+        attachments = options.attachments or {},
+        cosmetics = options.cosmetics or {},
+        flags = {
+            stolen = options.stolen == true,
+            evidence = options.evidence == true,
+            disabled = options.disabled == true
+        },
+        provenance = options.provenance or {}
+    }
+
+    local valid, errors = WeaponValidation.Metadata(metadata, definition)
+    if not valid then
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Generated weapon metadata is invalid", errors)
+    end
+    return WeaponResult.Ok(metadata)
+end
+
+function WeaponMetadata.Validate(metadata, definition, correlationId)
+    local valid, errors = WeaponValidation.Metadata(metadata, definition)
+    if not valid then
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Weapon item metadata is invalid", errors, correlationId)
+    end
+    return WeaponResult.Ok(metadata, correlationId)
+end
