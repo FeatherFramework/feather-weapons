@@ -80,6 +80,58 @@ function AmmoService.Reload(source, rpcContext, amount)
     return Reload(source, rpcContext, amount)
 end
 
+function AmmoService.Unload(source, rpcContext, requested)
+    local equipped, failure = GetEquipped(source, rpcContext)
+    if not equipped then return failure end
+    if requested ~= nil then requested = math.floor(tonumber(requested) or -1) end
+    if requested ~= nil and requested < 1 then
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Ammunition amount must be a positive integer", nil,
+            rpcContext.correlationId)
+    end
+
+    local definitionResult = DefinitionRegistry.Get("weapon", equipped.definitionId)
+    if not definitionResult.ok then return definitionResult end
+    local definition = definitionResult.value
+    local context = Context(source, rpcContext, "unload")
+    local transactionResult = InventoryAdapter.Transaction(context, function(tx)
+        local item = tx:GetItemForUpdate(equipped.itemInstanceId)
+        if not item then
+            return WeaponResult.Error(WeaponErrors.ITEM_NOT_OWNED, "Equipped weapon is no longer owned", nil,
+                context.correlationId)
+        end
+        local metadataResult = WeaponMetadata.Validate(item.metadata, definition, context.correlationId)
+        if not metadataResult.ok then return metadataResult end
+
+        local loaded = tonumber(item.metadata.ammo.loaded) or 0
+        local moved = math.min(loaded, requested or loaded)
+        if moved <= 0 then
+            return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "The equipped weapon is already empty", nil,
+                context.correlationId)
+        end
+        if not tx:AddQuantity(definition.ammunitionType, moved) then
+            return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+                "Inventory cannot accept the unloaded ammunition", nil, context.correlationId)
+        end
+
+        item.metadata.ammo.loaded = loaded - moved
+        item.metadata.ammo.chambered = item.metadata.ammo.loaded > 0
+        if not tx:SetMetadata(item.id, item.metadata, item.metadataRevision) then
+            return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+                "Weapon metadata changed during ammunition operation", nil, context.correlationId)
+        end
+        return {
+            loaded = item.metadata.ammo.loaded,
+            moved = moved,
+            inventoryAmmo = tx:GetQuantity(definition.ammunitionType),
+            nativeAmmoName = equipped.nativeAmmoName
+        }
+    end)
+    if not transactionResult.ok then return transactionResult end
+
+    WeaponRuntime.SetAmmo(source, rpcContext.sessionId, transactionResult.value.loaded, rpcContext.correlationId)
+    return WeaponResult.Ok(transactionResult.value, rpcContext.correlationId)
+end
+
 function AmmoService.SyncConsumption(source, rpcContext, reportedLoaded)
     local equipped, failure = GetEquipped(source, rpcContext)
     if not equipped then return failure end
@@ -128,6 +180,10 @@ end
 
 FeatherCore.RPC.Register("feather-weapons:ammo:reload", function(params, respond, source, context)
     respond(AmmoService.Reload(source, context, params and params.amount))
+end, { requireCharacter = true, windowMs = 1000, maxCalls = 4, maxPayloadBytes = 128 })
+
+FeatherCore.RPC.Register("feather-weapons:ammo:unload", function(params, respond, source, context)
+    respond(AmmoService.Unload(source, context, params and params.amount))
 end, { requireCharacter = true, windowMs = 1000, maxCalls = 4, maxPayloadBytes = 128 })
 
 FeatherCore.RPC.Register("feather-weapons:ammo:sync", function(params, respond, source, context)
