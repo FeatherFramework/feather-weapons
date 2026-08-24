@@ -60,7 +60,7 @@ Config = {
     StrictStartup = true,
     RequiredCoreContract = 1,
     Inventory = {
-        requiredContract = 1,
+        requiredContract = 2,
         equipmentSlot = "weapon"
     },
     Runtime = {
@@ -87,7 +87,7 @@ Config = {
 }
 ```
 
-Keep `StrictStartup = true` so missing dependencies or contracts fail closed. `DevMode` enables diagnostic output and development-only weapon grants; disable it on production servers. Keep `authoritativeNativeAmmo = true` when Feather Weapons owns all weapons and ammunition. At weapon boundaries, this clears the player's native ammo—including ammo granted by other resources—before restoring the equipped inventory item's saved rounds.
+Keep `StrictStartup = true` so missing dependencies or contracts fail closed. `Inventory.requiredContract` must match the contract feather-inventory reports from `GetCapabilities().value.contractVersion` -- it is checked before any definition, usable callback or guard is registered, and a version below it aborts installation rather than degrading to an empty index. `DevMode` enables diagnostic output and development-only weapon grants; disable it on production servers. Keep `authoritativeNativeAmmo = true` when Feather Weapons owns all weapons and ammunition. At weapon boundaries, this clears the player's native ammo—including ammo granted by other resources—before restoring the equipped inventory item's saved rounds.
 
 Players can change the registered reload and unload bindings in their Cfx key-binding settings. Reload defaults to `R`; unload defaults to `U`.
 
