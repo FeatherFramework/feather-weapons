@@ -13,7 +13,10 @@ local function Context(source, rpcContext)
 end
 
 function RepairService.Repair(source, rpcContext, itemInstanceId)
-    if type(itemInstanceId) ~= "string" or itemInstanceId == "" or #itemInstanceId > 128 then
+    local idType = type(itemInstanceId)
+    if (idType ~= "string" and idType ~= "number")
+        or (idType == "string" and (itemInstanceId == "" or #itemInstanceId > 128))
+        or (idType == "number" and (itemInstanceId < 1 or itemInstanceId % 1 ~= 0)) then
         return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Item instance ID is invalid", nil, rpcContext.correlationId)
     end
 
