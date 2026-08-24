@@ -4,6 +4,14 @@ local DefinitionIds = {}
 local MissingDefinitions = {}
 local DuplicateDefinitions = {}
 
+-- Capabilities as reported by feather-inventory, validated once at install
+-- time and cached. This is the REAL contract version -- it is deliberately
+-- not Config.Inventory.requiredContract, which is what we demand rather than
+-- what the provider offers. Reporting our own requirement back to ourselves
+-- is how the previous version of this gate came to compare 1 < 1 and could
+-- never fail.
+local InventoryCapabilities = nil
+
 local function Failure(context, message, details)
     return WeaponResult.Error(WeaponErrors.INVENTORY_UNAVAILABLE, message, details,
         context and context.correlationId)
@@ -21,10 +29,24 @@ local function NormalizeItem(item)
     }
 end
 
+-- Returns a WeaponResult so a failure can stop installation instead of
+-- leaving the index silently empty. An empty index is indistinguishable from
+-- "this server has no weapons configured", which is exactly the wrong thing
+-- to report when the real answer is "inventory did not answer".
 local function BuildDefinitionIndex()
     DefinitionIds = {}
     DuplicateDefinitions = {}
-    local definitions = Inventory.Items.GetDefinitions()
+
+    local listed = Inventory.Items.GetDefinitions()
+    if type(listed) ~= "table" or listed.ok ~= true then
+        local failure = type(listed) == "table" and listed.error or nil
+        return Failure(nil, "Inventory item definitions are unavailable", {
+            code = failure and failure.code,
+            reason = failure and failure.message
+        })
+    end
+
+    local definitions = listed.value
     for _, definition in pairs(definitions or {}) do
         local name, id = definition.name, tonumber(definition.id)
         if name and id then
@@ -49,12 +71,20 @@ local function BuildDefinitionIndex()
         if not DefinitionIds[name] then MissingDefinitions[#MissingDefinitions + 1] = name end
     end
     table.sort(MissingDefinitions)
+
+    return WeaponResult.Ok(true)
 end
 
 function FeatherInventoryProvider.GetCapabilities()
-    local capabilities = Inventory and Inventory.GetCapabilities and Inventory.GetCapabilities() or {}
+    -- Read from the validated cache, not by re-querying: the provider is not
+    -- installed until the contract has been checked, so there is no state in
+    -- which this should be asking again and reaching a different answer.
+    local capabilities = InventoryCapabilities or {}
     return {
-        contractVersion = Config.Inventory.requiredContract,
+        -- The provider's OWN reported contract version. Reporting
+        -- Config.Inventory.requiredContract here is what made the gate in
+        -- InventoryAdapter.InstallProvider compare a value against itself.
+        contractVersion = tonumber(capabilities.contractVersion) or 0,
         provider = "feather-inventory",
         inventoryVersion = capabilities.version,
         features = capabilities.features,
@@ -236,10 +266,10 @@ function FeatherInventoryProvider.Transaction(context, callback)
 end
 local function RegisterUsableWeapons()
     local listed = DefinitionRegistry.List("weapon")
-    if not listed.ok then return end
+    if not listed.ok then return listed end
     for _, definition in ipairs(listed.value) do
         if DefinitionIds[definition.itemName] then
-            Inventory.Items.RegisterUsableItem(definition.itemName, function(item, source, done)
+            local registered = Inventory.Items.RegisterUsableItem(definition.itemName, function(item, source, done)
                 if Config.DevMode then
                     print(("[feather-weapons] inventory use item=%s source=%s")
                         :format(tostring(item.id), tostring(source)))
@@ -247,20 +277,28 @@ local function RegisterUsableWeapons()
                 TriggerClientEvent("feather-weapons:client:useInventoryWeapon", source, item.id)
                 if done then done() end
             end)
+            if type(registered) == "table" and registered.ok ~= true then
+                return Failure(nil, "Weapon usable-item registration failed", {
+                    itemName = definition.itemName,
+                    code = registered.error and registered.error.code,
+                    reason = registered.error and registered.error.message
+                })
+            end
         end
     end
+    return WeaponResult.Ok(true)
 end
 
 local function RegisterUsableRepairItems()
     local listed = DefinitionRegistry.List("weapon")
-    if not listed.ok then return end
+    if not listed.ok then return listed end
     local registered = {}
     for _, definition in ipairs(listed.value) do
         local repair = definition.condition and definition.condition.repair
         local itemName = repair and repair.itemDefinitionId
         if itemName and DefinitionIds[itemName] and not registered[itemName] then
             registered[itemName] = true
-            Inventory.Items.RegisterUsableItem(itemName, function(item, source, done)
+            local registered = Inventory.Items.RegisterUsableItem(itemName, function(item, source, done)
                 if Config.DevMode then
                     print(("[feather-weapons] inventory repair use item=%s source=%s")
                         :format(tostring(item.id), tostring(source)))
@@ -280,20 +318,51 @@ local function RegisterUsableRepairItems()
                 TriggerClientEvent("feather-weapons:client:inventoryRepairResult", source, result)
                 if done then done() end
             end)
+            if type(registered) == "table" and registered.ok ~= true then
+                return Failure(nil, "Repair usable-item registration failed", {
+                    itemName = itemName,
+                    code = registered.error and registered.error.code,
+                    reason = registered.error and registered.error.message
+                })
+            end
         end
     end
+    return WeaponResult.Ok(true)
 end
 
 local function RegisterGuards()
+    -- Contract 2: IsInstanceEquipped answers with an envelope, where `ok`
+    -- says whether the question could be answered and `value` is the answer.
+    --
+    -- Both branches must be handled separately and the guard must FAIL
+    -- CLOSED. A failure envelope is a table and therefore truthy, so testing
+    -- the envelope itself would veto every move on a database error -- and
+    -- treating an unanswerable question as "not equipped" would let an
+    -- equipped weapon leave the inventory while the game still holds it.
     local function EquippedGuard(instance)
-        if Inventory.Equipment.IsInstanceEquipped(instance.id) then
+        local equipped = Inventory.Equipment.IsInstanceEquipped(instance.id)
+        if not equipped.ok then
+            return false, "Unable to verify equipped state."
+        end
+        if equipped.value then
             return false, "Unequip this item before moving or removing it."
         end
         return true
     end
 
-    Inventory.Guards.RegisterMoveGuard("feather-weapons", EquippedGuard)
-    Inventory.Guards.RegisterDestroyGuard("feather-weapons", EquippedGuard)
+    local move = Inventory.Guards.RegisterMoveGuard("feather-weapons", EquippedGuard)
+    if type(move) == "table" and move.ok ~= true then
+        return Failure(nil, "Move guard registration failed",
+            { reason = move.error and move.error.message })
+    end
+
+    local destroy = Inventory.Guards.RegisterDestroyGuard("feather-weapons", EquippedGuard)
+    if type(destroy) == "table" and destroy.ok ~= true then
+        return Failure(nil, "Destroy guard registration failed",
+            { reason = destroy.error and destroy.error.message })
+    end
+
+    return WeaponResult.Ok(true)
 end
 
 function InstallFeatherInventoryProvider()
@@ -315,9 +384,65 @@ function InstallFeatherInventoryProvider()
     end
 
     Inventory = api
-    BuildDefinitionIndex()
-    RegisterUsableWeapons()
-    RegisterUsableRepairItems()
-    RegisterGuards()
+
+    -- The contract check happens FIRST -- before definitions, usable
+    -- callbacks or guards are registered against an API we have not yet
+    -- confirmed we can speak to.
+    --
+    -- A key-existence check cannot detect a changed return shape: every
+    -- export contract 2 reshaped is still present under the same name, so
+    -- the loop above passes cleanly against a provider that will then
+    -- misanswer every call. This is the only gate that catches that, and it
+    -- must read the version the PROVIDER reports rather than the one we
+    -- require -- comparing our requirement against itself is a check that
+    -- can never fail.
+    local reported = api.GetCapabilities()
+    if type(reported) ~= "table" or reported.ok ~= true or type(reported.value) ~= "table" then
+        Inventory = nil
+        return Failure(nil, "feather-inventory capabilities are unavailable", {
+            reason = type(reported) == "table" and reported.error and reported.error.message or nil
+        })
+    end
+
+    local contractVersion = tonumber(reported.value.contractVersion) or 0
+    if contractVersion < Config.Inventory.requiredContract then
+        Inventory = nil
+        return Failure(nil, "feather-inventory contract is too old", {
+            required = Config.Inventory.requiredContract,
+            actual = contractVersion,
+            inventoryVersion = reported.value.version
+        })
+    end
+
+    InventoryCapabilities = reported.value
+
+    -- Each of these can fail, and none of them may be degraded to an empty
+    -- result: reporting ready with no definitions, no usable callbacks or no
+    -- guards is worse than refusing to install, because an unguarded
+    -- inventory will happily move an equipped weapon.
+    local indexed = BuildDefinitionIndex()
+    if not indexed.ok then
+        Inventory, InventoryCapabilities = nil, nil
+        return indexed
+    end
+
+    local weapons = RegisterUsableWeapons()
+    if type(weapons) == "table" and weapons.ok ~= true then
+        Inventory, InventoryCapabilities = nil, nil
+        return weapons
+    end
+
+    local repairs = RegisterUsableRepairItems()
+    if type(repairs) == "table" and repairs.ok ~= true then
+        Inventory, InventoryCapabilities = nil, nil
+        return repairs
+    end
+
+    local guards = RegisterGuards()
+    if type(guards) == "table" and guards.ok ~= true then
+        Inventory, InventoryCapabilities = nil, nil
+        return guards
+    end
+
     return InventoryAdapter.InstallProvider(FeatherInventoryProvider)
 end

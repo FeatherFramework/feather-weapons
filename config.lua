@@ -3,7 +3,7 @@ Config = {
     StrictStartup = true,
     RequiredCoreContract = 1,
     Inventory = {
-        requiredContract = 1,
+        requiredContract = 2,
         equipmentSlot = "weapon"
     },
     Runtime = {
