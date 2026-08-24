@@ -16,9 +16,9 @@ if not definitionResult.ok then
     return
 end
 
-local testProviderResult = InstallTestInventoryProvider()
-if testProviderResult and not testProviderResult.ok then
-    FailStartup(testProviderResult.error.message, testProviderResult.error.details)
+local inventoryProviderResult = InstallFeatherInventoryProvider()
+if not inventoryProviderResult.ok then
+    FailStartup(inventoryProviderResult.error.message, inventoryProviderResult.error.details)
     return
 end
 
@@ -29,7 +29,13 @@ print(("[feather-weapons] foundation ready: %d weapon, %d ammunition, %d attachm
     :format(counts.weapon, counts.ammunition, counts.attachment))
 
 if InventoryAdapter.IsReady() then
-    print("[feather-weapons] development inventory provider active")
+    local capabilities = InventoryAdapter.GetCapabilities()
+    print(("[feather-weapons] inventory provider active: %s")
+        :format(tostring(capabilities.provider or "unknown")))
+    if capabilities.missingDefinitions and #capabilities.missingDefinitions > 0 then
+        print(("[feather-weapons] missing inventory definitions: %s")
+            :format(table.concat(capabilities.missingDefinitions, ", ")))
+    end
 else
     print("[feather-weapons] inventory provider pending; persistence and equip features remain disabled")
 end
