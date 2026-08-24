@@ -22,6 +22,7 @@ function InventoryAdapter.InstallProvider(candidate)
     if type(candidate.GetItemForCharacter) ~= "function"
         or type(candidate.GetEquippedForCharacter) ~= "function"
         or type(candidate.SetEquippedForCharacter) ~= "function"
+        or type(candidate.CreateWeapon) ~= "function"
         or type(candidate.Transaction) ~= "function" then
         return WeaponResult.Error(WeaponErrors.INVENTORY_UNAVAILABLE, "Inventory provider is missing required operations")
     end
@@ -54,6 +55,11 @@ end
 function InventoryAdapter.SetEquippedForCharacter(context, itemInstanceId)
     if not provider then return Unavailable(context, "SetEquippedForCharacter") end
     return provider.SetEquippedForCharacter(context, itemInstanceId)
+end
+
+function InventoryAdapter.CreateWeapon(context, definition, metadata)
+    if not provider then return Unavailable(context, "CreateWeapon") end
+    return provider.CreateWeapon(context, definition, metadata)
 end
 
 function InventoryAdapter.Transaction(context, callback)
