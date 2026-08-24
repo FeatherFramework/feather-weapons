@@ -1,55 +1,58 @@
 # Feather Weapons
 
-Feather Weapons is the weapons system for the Feather Framework. It manages equipped weapons, ammunition, weapon condition, repairs, and reconnect restoration.
+Feather Weapons is the database-backed weapon system for the Feather Framework. Weapons are unique inventory item instances; their loaded ammunition, condition, and identity live in item metadata, while equipped state is stored per character.
 
 > [!WARNING]
-> Feather Weapons is currently a development preview. It is suitable for testing, but it is not ready for a production server because the included inventory provider stores data in memory. Player data survives reconnects but is lost when the resource or server restarts.
+> This resource is still a development preview. The Cattleman Revolver lifecycle is working end to end, but the full weapon catalog, weapon creation service, attachments, shops, transfers, and administrative recovery tools are not finished.
 
-## What works today
+## Current features
 
-The current build includes one complete test weapon: the Cattleman Revolver.
+- Equip a weapon by using its item in Feather Inventory.
+- Unequip it by using the same item again.
+- Restore the equipped weapon after reconnects and resource or server restarts.
+- Reload with the player-remappable `R` key.
+- Atomically remove compatible ammunition items during reloads.
+- Persist loaded ammunition after firing.
+- Apply and persist condition loss per shot.
+- Repair the equipped weapon by using a repair kit in inventory.
+- Atomically consume the repair kit and update weapon condition.
+- Prevent equipped weapon instances from being moved or destroyed.
+- Reject stale, concurrent, invalid, or unauthorized mutations.
 
-- Equip and unequip a character-owned weapon.
-- Restore the equipped weapon after reconnecting.
-- Load ammunition from the character's reserve supply.
-- Save remaining ammunition after firing.
-- Reduce weapon condition when shots are fired.
-- Save weapon condition across reconnects.
-- Consume repair kits to restore condition.
-- Prevent broken weapons from being equipped or reloaded.
-- Repair broken weapons and equip them again.
-- Reject weapon actions when the character session or inventory state is invalid.
-
-## What is not ready
-
-- Weapon and ammunition data does not yet survive a resource or server restart.
-- Only the Cattleman Revolver is configured for the current test slice.
-- Physical ammunition unloading is disabled because RedM does not reliably remove rounds from a loaded weapon on the tested runtime. Enabling it would allow ammunition duplication.
-- Weapon shops, crafting, attachments, transfers, storage, drops, evidence, licenses, job restrictions, and admin tools are not implemented yet.
-- A production Feather Inventory integration is still required.
+The current configured weapon is the Cattleman Revolver using standard revolver ammunition.
 
 ## Requirements
 
-- A RedM server.
-- `feather-core` with character-session contract version 1.
-- `feather-core` must start before `feather-weapons`.
+- RedM server
+- `oxmysql`
+- `feather-core` with the character-session contract
+- Current `feather-inventory` with transactions, item instances, guards, and equipment persistence
 
-Current start order:
+Recommended start order:
 
 ```cfg
+ensure oxmysql
 ensure feather-core
+ensure feather-inventory
 ensure feather-weapons
 ```
 
-## Installation for testing
+`feather-weapons` now requires the production Feather Inventory provider. The abandoned in-memory fallback has been removed.
 
-1. Place `feather-weapons` in your server resources.
-2. Ensure the updated `feather-core` is installed.
-3. Confirm development mode and the test inventory provider are enabled in `config.lua`.
-4. Add the resources to `server.cfg` in the order shown above.
-5. Restart the server and select a character.
+## Installation
 
-Current testing configuration:
+1. Install compatible versions of Feather Core and Feather Inventory.
+2. Run [`sql/install_items.sql`](sql/install_items.sql) after the Feather Inventory schema and migrations.
+3. Confirm `cattleman_revolver` exists as a unique, usable inventory definition.
+4. Ensure the resources in the order shown above.
+5. Restart the server; do not use a resource refresh for database migrations.
+
+The installation SQL adds standard revolver ammunition and weapon repair kits, marks repair kits usable, and enforces unique/usable settings on the Cattleman definition. It is idempotent and can be rerun.
+
+> [!NOTE]
+> Weapon instances are created through the inventory transaction service with unique serials and complete metadata. When `DevMode = true`, authorized staff can use the development grant command to issue configured weapons for testing.
+
+## Configuration
 
 ```lua
 Config = {
@@ -58,107 +61,96 @@ Config = {
     RequiredCoreContract = 1,
     Inventory = {
         requiredContract = 1,
-        allowTestAdapter = true
+        equipmentSlot = "weapon"
+    },
+    Runtime = {
+        authorizationTtlMs = 5000,
+        authoritativeNativeAmmo = true
+    },
+    Controls = {
+        reload = {
+            enabled = true,
+            defaultKey = "R",
+            command = "feather_weapon_reload",
+            nativeControl = 0xE30CD707,
+            disableNative = true
+        },
+        unload = {
+            enabled = true,
+            defaultKey = "U",
+            command = "feather_weapon_unload"
+        }
+    },
+    Logging = {
+        level = "info"
     }
 }
 ```
 
-> [!CAUTION]
-> Do not use `allowTestAdapter = true` on a production server. The test provider is not connected to the database.
+Keep `StrictStartup = true` so missing dependencies or contracts fail closed. `DevMode` enables diagnostic output and development-only weapon grants; disable it on production servers. Keep `authoritativeNativeAmmo = true` when Feather Weapons owns all weapons and ammunition. At weapon boundaries, this clears the player's native ammo—including ammo granted by other resources—before restoring the equipped inventory item's saved rounds.
 
-## Test commands
+Players can change the registered reload and unload bindings in their Cfx key-binding settings. Reload defaults to `R`; unload defaults to `U`.
 
-These commands are available only while development mode and the test provider are enabled.
+## Gameplay
 
-| Command | Description |
-| --- | --- |
-| `/testweapon` | Equip your test Cattleman Revolver |
-| `/testweaponoff` | Unequip the current weapon |
-| `/testreload` | Fill the weapon from reserve ammunition |
-| `/testreload 3` | Load up to three rounds |
-| `/testweaponstate` | Show authoritative loaded ammo and condition in F8 |
-| `/testrepair` | Use one repair kit on the test Cattleman |
+### Equip and unequip
 
-Each test character receives:
+Use a weapon item to equip it. Use that same item again to unequip it. A different weapon cannot be equipped until the current weapon is unequipped.
 
-- One empty Cattleman Revolver
-- 24 revolver cartridges
-- Three repair kits
+### Reload
 
-## Recommended test process
+Press `R` with a weapon equipped. The server determines capacity and compatible ammunition, removes only the required inventory quantity, commits the loaded amount, then authorizes the client reload. Full weapons and missing compatible ammunition fail without changing inventory.
 
-1. Select a character and run `/testweapon`.
-2. Run `/testreload` and confirm the revolver contains six rounds.
-3. Fire three rounds.
-4. Run `/testweaponstate`.
-5. Confirm F8 reports three loaded rounds and condition 97.
-6. Disconnect and reconnect with the same character.
-7. Run `/testweaponstate` again and confirm the same values.
-8. Run `/testrepair` and confirm condition returns to 100.
-9. Run `/testrepair` again and confirm it is rejected because the weapon is already fully repaired.
+### Unload
 
-Example output:
+Press `U` with a loaded weapon equipped. The server returns the loaded rounds to the character inventory and updates the weapon metadata in one transaction, then rebuilds the native weapon with the approved remaining load.
 
-```text
-[feather-weapons] state equipped=true loaded=3 condition=97
-[feather-weapons] repair restored=3 condition=100 kits=2
-```
+### Condition and repair
 
-More detailed testing notes are available in [docs/development-equip-slice.md](docs/development-equip-slice.md).
+Accepted shots lower condition according to the weapon definition. Use a `weapon_repair_kit` from inventory to restore up to 25 condition on the equipped Cattleman. Full-condition and invalid repairs do not consume a kit.
 
-## Current weapon settings
+## Current Cattleman settings
 
-| Setting | Cattleman Revolver |
+| Setting | Value |
 | --- | --- |
 | Capacity | 6 rounds |
-| Starting condition | 100 |
-| Condition loss | 1 per shot |
-| Broken threshold | Below 1 |
-| Repair material | 1 weapon repair kit |
+| Ammunition | Standard revolver cartridges |
+| Maximum condition | 100 |
+| Wear | 1 condition per shot |
+| Equip minimum | 1 condition |
+| Repair cost | 1 weapon repair kit |
 | Repair amount | Up to 25 condition |
 
-Weapon settings are definition-driven and will be expanded after the first lifecycle is fully proven.
+## Persistence
 
-## Persistence behavior
-
-| Event | Current result |
+| Event | Result |
 | --- | --- |
-| Character reconnect | Equipped weapon, ammo, and condition restore |
-| Character logout | Native weapon state is cleared safely |
-| Resource restart | Test data is lost |
-| Server restart | Test data is lost |
-| Production database save | Waiting for the real inventory provider |
+| Character reconnect | Equipped weapon, loaded ammo, and condition restore |
+| `feather-weapons` restart | Equipped state restores from the database |
+| Server restart | Equipped state and item metadata restore from the database |
+| Failed transaction | Ammo, repair materials, and metadata remain unchanged |
+| Concurrent stale mutation | Rejected by inventory revision checks |
 
-## Known limitation: unloading ammunition
+## Development diagnostics
 
-The `/testunload` command and unload API are intentionally unavailable. On the tested RedM runtime, documented ammunition-removal natives report success without reducing the physical rounds in the weapon. Returning those rounds to inventory would create a duplication exploit.
+When `DevMode = true`, `/weaponstate` prints the authoritative equipped item ID, loaded ammunition, and condition to F8. Normal equip, reload, unload, and repair testing uses gameplay interactions rather than test commands.
 
-Loaded rounds therefore remain attached to the weapon until they are fired.
+## Known limitations
 
+- Only the Cattleman Revolver is configured.
+- Switching directly between two equipped weapon items is not implemented; unequip first.
+- Attachments, alternate ammunition, weapon creation/provenance, transfers, storage rules, drops, evidence, licenses, shops, crafting, and admin recovery remain planned.
 
-## Production readiness checklist
-
-Do not move this resource to production until:
-
-- The real Feather Inventory provider is installed.
-- Weapon, ammunition, condition, equipped state, and repair materials survive resource and server restarts.
-- Development mode and the test provider are disabled.
-- Production item definitions and database migrations are installed.
-- Security, concurrency, restart, and multiplayer tests pass.
-- Required admin and recovery tools are available.
-
-## For developers
-
-Weapons are unique inventory item instances. The database-backed item metadata is authoritative; the RedM weapon is only its temporary in-game representation.
+## Developer API
 
 ```lua
 local Weapons = exports["feather-weapons"]:initiate()
 local capabilities = Weapons.GetCapabilities()
 ```
 
-Current server exports provide capability discovery, definition reads, metadata validation, runtime lookup, and inventory-provider installation. The client export provides equip, unequip, reload, repair, and reconciliation requests.
+Server capabilities expose definition reads, metadata validation, runtime state, and feature availability. Client methods expose equip, unequip, reload, repair, and reconciliation requests.
 
-All operations use a consistent success or failure result:
+Operations return a consistent result envelope:
 
 ```lua
 { ok = true, value = value, correlationId = correlationId }
@@ -176,11 +168,11 @@ All operations use a consistent success or failure result:
 }
 ```
 
-## Planned next work
+## Next milestones
 
-1. Weapon creation, serial generation, and provenance.
-2. Production inventory and database persistence.
-3. Audit records and administrative operations.
-4. Attachments and weapon ownership lifecycle.
-5. Transfers, storage, drops, evidence, and destruction.
-6. Shops, licenses, jobs, user interfaces, and release hardening.
+1. Expand and validate the full weapon and ammunition catalog.
+2. Add attachments and customization transactions.
+3. Add transfers, storage, drops, evidence, destruction, and recovery flows.
+4. Add shops, licenses, jobs, crafting, admin tooling, and release hardening.
+
+See [`MASTER_PLAN.md`](MASTER_PLAN.md) for the complete build plan.
