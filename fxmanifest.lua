@@ -25,13 +25,15 @@ server_scripts {
     "/server/imports.lua",
     "/server/adapters/core.lua",
     "/server/adapters/inventory.lua",
+    "/server/adapters/feather_inventory.lua",
     "/server/services/definition_registry.lua",
     "/server/services/metadata.lua",
-    "/server/adapters/test_inventory.lua",
     "/server/services/runtime.lua",
     "/server/services/equip.lua",
     "/server/services/ammo.lua",
     "/server/services/repair.lua",
+    "/server/services/issuance.lua",
+    "/server/services/commands.lua",
     "/server/services/reconciliation.lua",
     "/server/services/api.lua",
     "/server/main.lua"
@@ -43,5 +45,6 @@ client_scripts {
 }
 
 dependencies {
-    "feather-core"
+    "feather-core",
+    "feather-inventory"
 }
