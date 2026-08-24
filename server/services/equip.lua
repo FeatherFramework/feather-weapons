@@ -13,7 +13,10 @@ local function BuildContext(source, session, correlationId, reason)
 end
 
 function EquipService.ValidateOwnedItem(context, itemInstanceId)
-    if type(itemInstanceId) ~= "string" or itemInstanceId == "" or #itemInstanceId > 128 then
+    local idType = type(itemInstanceId)
+    if (idType ~= "string" and idType ~= "number")
+        or (idType == "string" and (itemInstanceId == "" or #itemInstanceId > 128))
+        or (idType == "number" and (itemInstanceId < 1 or itemInstanceId % 1 ~= 0)) then
         return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Item instance ID is invalid", nil, context.correlationId)
     end
 
