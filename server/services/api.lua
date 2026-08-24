@@ -16,10 +16,11 @@ function WeaponAPI.GetCapabilities()
             equip = InventoryAdapter.IsReady(),
             ammunition = InventoryAdapter.IsReady(),
             reload = InventoryAdapter.IsReady(),
-            unload = false,
+            unload = InventoryAdapter.IsReady(),
             fireCheckpoint = InventoryAdapter.IsReady(),
             condition = InventoryAdapter.IsReady(),
-            repair = InventoryAdapter.IsReady()
+            repair = InventoryAdapter.IsReady(),
+            issuance = InventoryAdapter.IsReady()
         }
     }
 end
@@ -36,12 +37,19 @@ function WeaponAPI.GetRuntime(source)
     return WeaponRuntime.Get(source)
 end
 
+function WeaponAPI.IssueWeapon(request, context)
+    context = type(context) == "table" and context or {}
+    context.resource = context.resource or GetInvokingResource() or "feather-weapons"
+    return IssuanceService.Issue(context, request)
+end
+
 exports("initiate", function()
     return {
         GetCapabilities = WeaponAPI.GetCapabilities,
         Definitions = { Get = WeaponAPI.GetDefinition, List = WeaponAPI.ListDefinitions },
         Metadata = { Build = WeaponMetadata.Build, Validate = WeaponMetadata.Validate },
         Runtime = { Get = WeaponAPI.GetRuntime },
+        Issuance = { Issue = WeaponAPI.IssueWeapon },
         Inventory = {
             InstallProvider = InventoryAdapter.InstallProvider,
             GetCapabilities = InventoryAdapter.GetCapabilities
