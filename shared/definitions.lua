@@ -11,8 +11,8 @@ WeaponDefinitionCatalog = {
         }
     },
     weapons = {
-        revolver_cattleman = {
-            id = "revolver_cattleman",
+        cattleman_revolver = {
+            id = "cattleman_revolver",
             kind = "weapon",
             itemName = "cattleman_revolver",
             label = "Cattleman Revolver",
