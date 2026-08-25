@@ -351,15 +351,15 @@ local function RegisterGuards()
     end
 
     local move = Inventory.Guards.RegisterMoveGuard("feather-weapons", EquippedGuard)
-    if type(move) == "table" and move.ok ~= true then
+    if type(move) ~= "table" or move.ok ~= true then
         return Failure(nil, "Move guard registration failed",
-            { reason = move.error and move.error.message })
+            { reason = type(move) == "table" and move.error and move.error.message or nil })
     end
 
     local destroy = Inventory.Guards.RegisterDestroyGuard("feather-weapons", EquippedGuard)
-    if type(destroy) == "table" and destroy.ok ~= true then
+    if type(destroy) ~= "table" or destroy.ok ~= true then
         return Failure(nil, "Destroy guard registration failed",
-            { reason = destroy.error and destroy.error.message })
+            { reason = type(destroy) == "table" and destroy.error and destroy.error.message or nil })
     end
 
     return WeaponResult.Ok(true)

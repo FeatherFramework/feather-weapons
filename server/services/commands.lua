@@ -1,6 +1,6 @@
 if Config.DevMode then
     RegisterCommand("grantweapon", function(source, args)
-        local definitionId = args[1] or "revolver_cattleman"
+        local definitionId = args[1] or "cattleman_revolver"
         local targetSource = tonumber(args[2]) or (source > 0 and source or nil)
         if not targetSource then
             print("[feather-weapons] usage: grantweapon [definitionId] [targetServerId]")

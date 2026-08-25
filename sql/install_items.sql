@@ -25,6 +25,17 @@ SET `display_name` = 'Cattleman Revolver',
     `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique'
 WHERE `name` = 'cattleman_revolver';
 
+-- One-time normalization for weapons issued before the configured weapon ID
+-- was aligned with the inventory item name. Idempotent: only the old value is
+-- rewritten, and revisions advance so stale compare-and-set writes conflict.
+UPDATE `inventory_items` ii
+INNER JOIN `items` i ON i.`id` = ii.`item_id`
+SET ii.`metadata` = JSON_SET(ii.`metadata`, '$.weaponDefinitionId', 'cattleman_revolver'),
+    ii.`metadata_revision` = ii.`metadata_revision` + 1,
+    ii.`row_revision` = ii.`row_revision` + 1
+WHERE i.`name` = 'cattleman_revolver'
+  AND JSON_VALID(ii.`metadata`)
+  AND JSON_UNQUOTE(JSON_EXTRACT(ii.`metadata`, '$.weaponDefinitionId')) = 'revolver_cattleman';
 UPDATE `items`
 SET `display_name` = 'Revolver Ammunition',
     `description` = 'Standard ammunition for revolvers.',
