@@ -50,7 +50,7 @@ ensure feather-weapons
 The installation SQL adds standard revolver ammunition and weapon repair kits, marks repair kits usable, and enforces unique/usable settings on the Cattleman definition. It is idempotent and can be rerun.
 
 > [!NOTE]
-> Weapon instances are created through the inventory transaction service with unique serials and complete metadata. When `DevMode = true`, authorized staff can use the development grant command to issue configured weapons for testing.
+> Weapon instances are created through the inventory transaction service with unique serials and complete metadata. When `DevMode = true`, authorized staff can issue the configured Cattleman with `/grantweapon cattleman_revolver` in chat, or `grantweapon cattleman_revolver [targetServerId]` from the server console.
 
 ## Configuration
 
