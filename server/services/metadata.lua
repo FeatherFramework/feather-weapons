@@ -26,6 +26,8 @@ function WeaponMetadata.Build(definition, options)
     if not valid then
         return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Generated weapon metadata is invalid", errors)
     end
+    local attachments = DefinitionRegistry.ValidateAttachmentSet(definition.id, metadata.attachments)
+    if not attachments.ok then return attachments end
     return WeaponResult.Ok(metadata)
 end
 
@@ -33,6 +35,11 @@ function WeaponMetadata.Validate(metadata, definition, correlationId)
     local valid, errors = WeaponValidation.Metadata(metadata, definition)
     if not valid then
         return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Weapon item metadata is invalid", errors, correlationId)
+    end
+    local attachments = DefinitionRegistry.ValidateAttachmentSet(definition.id, metadata.attachments)
+    if not attachments.ok then
+        attachments.correlationId = correlationId
+        return attachments
     end
     return WeaponResult.Ok(metadata, correlationId)
 end
