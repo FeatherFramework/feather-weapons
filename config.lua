@@ -10,6 +10,17 @@ Config = {
         authorizationTtlMs = 5000,
         authoritativeNativeAmmo = true
     },
+    Attachments = {
+        requireStation = true,
+        interactionDistance = 2.0,
+        serverTolerance = 3.0,
+        stations = {
+            valentine = {
+                label = "Valentine Gunsmith Bench",
+                coords = vector3(-277.455, 779.197, 119.504)
+            }
+        }
+    },
     Controls = {
         reload = {
             enabled = true,
@@ -22,6 +33,11 @@ Config = {
             enabled = true,
             defaultKey = "U",
             command = "feather_weapon_unload"
+        },
+        modify = {
+            enabled = true,
+            defaultKey = "F6",
+            command = "weaponmods"
         }
     },
     Logging = {
