@@ -18,6 +18,23 @@ local function IsArray(value)
     return count == #value
 end
 
+local function ValidateStringArray(errors, path, value)
+    if not IsArray(value) then
+        AddError(errors, path, "must be an array")
+        return
+    end
+    local seen = {}
+    for index, entry in ipairs(value) do
+        if not IsNonEmptyString(entry) then
+            AddError(errors, ("%s[%d]"):format(path, index), "must be a non-empty string")
+        elseif seen[entry] then
+            AddError(errors, ("%s[%d]"):format(path, index), "must not be duplicated")
+        else
+            seen[entry] = true
+        end
+    end
+end
+
 function WeaponValidation.Definition(definition, expectedKind)
     local errors = {}
     if type(definition) ~= "table" then
@@ -53,8 +70,24 @@ function WeaponValidation.Definition(definition, expectedKind)
             or type(repair.restore) ~= "number" or repair.restore <= 0 then
             AddError(errors, "condition.repair", "must define an item, positive integer quantity, and positive restore amount")
         end
+        if type(definition.attachmentSlots) ~= "table" then
+            AddError(errors, "attachmentSlots", "must be a table keyed by supported slot")
+        else
+            for slot, allowed in pairs(definition.attachmentSlots) do
+                if not WeaponConstants.AttachmentSlots[slot] then
+                    AddError(errors, "attachmentSlots." .. tostring(slot), "uses an unsupported slot")
+                else
+                    ValidateStringArray(errors, "attachmentSlots." .. slot, allowed)
+                end
+            end
+        end
     elseif expectedKind == "ammunition" then
         if not IsNonEmptyString(definition.nativeAmmoName) then AddError(errors, "nativeAmmoName", "must be a non-empty string") end
+    elseif expectedKind == "attachment" then
+        if not WeaponConstants.AttachmentSlots[definition.slot] then AddError(errors, "slot", "is not supported") end
+        if not IsNonEmptyString(definition.nativeComponentName) then AddError(errors, "nativeComponentName", "must be a non-empty string") end
+        ValidateStringArray(errors, "conflicts", definition.conflicts)
+        if type(definition.removable) ~= "boolean" then AddError(errors, "removable", "must be boolean") end
     end
 
     return #errors == 0, errors
@@ -92,7 +125,33 @@ function WeaponValidation.Metadata(metadata, definition)
         end
     end
 
-    if not IsArray(metadata.attachments) then AddError(errors, "attachments", "must be an array") end
+    if not IsArray(metadata.attachments) then
+        AddError(errors, "attachments", "must be an array")
+    else
+        local seenDefinitions = {}
+        local seenSlots = {}
+        for index, attachment in ipairs(metadata.attachments) do
+            local path = ("attachments[%d]"):format(index)
+            if type(attachment) ~= "table" then
+                AddError(errors, path, "must be a table")
+            else
+                if not IsNonEmptyString(attachment.definitionId) then
+                    AddError(errors, path .. ".definitionId", "must be a non-empty string")
+                elseif seenDefinitions[attachment.definitionId] then
+                    AddError(errors, path .. ".definitionId", "must not be duplicated")
+                else
+                    seenDefinitions[attachment.definitionId] = true
+                end
+                if not WeaponConstants.AttachmentSlots[attachment.slot] then
+                    AddError(errors, path .. ".slot", "is not supported")
+                elseif seenSlots[attachment.slot] then
+                    AddError(errors, path .. ".slot", "is already occupied")
+                else
+                    seenSlots[attachment.slot] = true
+                end
+            end
+        end
+    end
     if type(metadata.cosmetics) ~= "table" then AddError(errors, "cosmetics", "must be a table") end
     if type(metadata.flags) ~= "table" then
         AddError(errors, "flags", "must be a table")
