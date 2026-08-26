@@ -20,7 +20,9 @@ function WeaponAPI.GetCapabilities()
             fireCheckpoint = InventoryAdapter.IsReady(),
             condition = InventoryAdapter.IsReady(),
             repair = InventoryAdapter.IsReady(),
-            issuance = InventoryAdapter.IsReady()
+            issuance = InventoryAdapter.IsReady(),
+            attachmentDefinitions = true,
+            attachmentTransactions = InventoryAdapter.IsReady()
         }
     }
 end
@@ -31,6 +33,10 @@ end
 
 function WeaponAPI.ListDefinitions(kind)
     return DefinitionRegistry.List(kind)
+end
+
+function WeaponAPI.ListCompatibleAttachments(weaponId)
+    return DefinitionRegistry.ListCompatibleAttachments(weaponId)
 end
 
 function WeaponAPI.GetRuntime(source)
@@ -46,7 +52,7 @@ end
 exports("initiate", function()
     return {
         GetCapabilities = WeaponAPI.GetCapabilities,
-        Definitions = { Get = WeaponAPI.GetDefinition, List = WeaponAPI.ListDefinitions },
+        Definitions = { Get = WeaponAPI.GetDefinition, List = WeaponAPI.ListDefinitions, ListCompatibleAttachments = WeaponAPI.ListCompatibleAttachments },
         Metadata = { Build = WeaponMetadata.Build, Validate = WeaponMetadata.Validate },
         Runtime = { Get = WeaponAPI.GetRuntime },
         Issuance = { Issue = WeaponAPI.IssueWeapon },
