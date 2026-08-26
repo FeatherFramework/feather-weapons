@@ -11,5 +11,14 @@ WeaponConstants = {
         sidearm = true,
         longgun = true,
         throwable = true
+    },
+    AttachmentSlots = {
+        barrel = true,
+        grip = true,
+        magazine = true,
+        muzzle = true,
+        sight = true,
+        stock = true,
+        wrap = true
     }
 }
