@@ -66,7 +66,8 @@ local function BuildDefinitionIndex()
     end
 
     MissingDefinitions = {}
-    local required = { cattleman_revolver = true, revolver_standard = true, weapon_repair_kit = true }
+    local required = { cattleman_revolver = true, revolver_standard = true, weapon_repair_kit = true,
+        cattleman_long_barrel = true }
     for name in pairs(required) do
         if not DefinitionIds[name] then MissingDefinitions[#MissingDefinitions + 1] = name end
     end
@@ -330,6 +331,38 @@ local function RegisterUsableRepairItems()
     return WeaponResult.Ok(true)
 end
 
+local function RegisterUsableAttachments()
+    local listed = DefinitionRegistry.List("attachment")
+    if not listed.ok then return listed end
+    for _, definition in ipairs(listed.value) do
+        if DefinitionIds[definition.itemName] then
+            local registered = Inventory.Items.RegisterUsableItem(definition.itemName, function(_, source, done)
+                local runtime = WeaponRuntime.Get(source)
+                local result
+                if not runtime or not runtime.equipped then
+                    result = WeaponResult.Error(WeaponErrors.NOT_EQUIPPED, "Equip a compatible weapon first")
+                else
+                    result = AttachmentService.Install(source, {
+                        characterId = runtime.characterId,
+                        sessionId = runtime.sessionId,
+                        correlationId = ("inventory-attachment:%s:%s"):format(tostring(source), tostring(GetGameTimer()))
+                    }, definition.id)
+                end
+                TriggerClientEvent("feather-weapons:client:attachmentResult", source, result)
+                if done then done() end
+            end)
+            if type(registered) == "table" and registered.ok ~= true then
+                return Failure(nil, "Attachment usable-item registration failed", {
+                    itemName = definition.itemName,
+                    code = registered.error and registered.error.code,
+                    reason = registered.error and registered.error.message
+                })
+            end
+        end
+    end
+    return WeaponResult.Ok(true)
+end
+
 local function RegisterGuards()
     -- Contract 2: IsInstanceEquipped answers with an envelope, where `ok`
     -- says whether the question could be answered and `value` is the answer.
@@ -436,6 +469,12 @@ function InstallFeatherInventoryProvider()
     if type(repairs) == "table" and repairs.ok ~= true then
         Inventory, InventoryCapabilities = nil, nil
         return repairs
+    end
+
+    local attachments = RegisterUsableAttachments()
+    if type(attachments) == "table" and attachments.ok ~= true then
+        Inventory, InventoryCapabilities = nil, nil
+        return attachments
     end
 
     local guards = RegisterGuards()
