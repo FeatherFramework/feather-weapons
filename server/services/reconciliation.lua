@@ -40,7 +40,8 @@ function ReconciliationService.Snapshot(source, sessionId, correlationId)
             nativeWeaponName = runtime.equipped.nativeWeaponName,
             nativeAmmoName = runtime.equipped.nativeAmmoName,
             ammo = runtime.equipped.ammo,
-            condition = runtime.equipped.condition
+            condition = runtime.equipped.condition,
+            attachments = runtime.equipped.attachments or {}
         }
     end
     return WeaponResult.Ok({ state = runtime.state, equipped = equipped }, correlationId)
