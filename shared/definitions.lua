@@ -32,7 +32,10 @@ WeaponDefinitionCatalog = {
                     restore = 25
                 }
             },
-            attachmentSlots = {},
+            -- Slot keys point to attachment definition IDs accepted by this weapon.
+            attachmentSlots = {
+                barrel = { "cattleman_long_barrel" }
+            },
             policies = {
                 transferable = true,
                 droppable = true,
@@ -42,5 +45,19 @@ WeaponDefinitionCatalog = {
             tags = { "firearm", "sidearm", "revolver" }
         }
     },
-    attachments = {}
+    -- Each attachment defines: id, itemName, label, slot,
+    -- nativeComponentName, conflicts, removable, and optional tags.
+    attachments = {
+        cattleman_long_barrel = {
+            id = "cattleman_long_barrel",
+            kind = "attachment",
+            itemName = "cattleman_long_barrel",
+            label = "Cattleman Long Barrel",
+            slot = "barrel",
+            nativeComponentName = "COMPONENT_REVOLVER_CATTLEMAN_BARREL_LONG",
+            conflicts = {},
+            removable = true,
+            tags = { "functional", "cattleman" }
+        }
+    }
 }

@@ -7,6 +7,21 @@ local function NativeAmmoName(definition)
     return result.ok and result.value.nativeAmmoName or nil
 end
 
+local function InstalledAttachments(metadata)
+    local result = {}
+    for _, installed in ipairs(metadata.attachments or {}) do
+        local definition = DefinitionRegistry.Get("attachment", installed.definitionId)
+        if definition.ok then
+            result[#result + 1] = {
+                definitionId = definition.value.id,
+                slot = definition.value.slot,
+                nativeComponentName = definition.value.nativeComponentName
+            }
+        end
+    end
+    return result
+end
+
 local function NextToken(runtime)
     tokenCounter = tokenCounter + 1
     return ("%s:%s:%s:%s"):format(runtime.sessionId, tostring(GetGameTimer()), tostring(tokenCounter), tostring(math.random(100000, 999999)))
@@ -47,6 +62,7 @@ function WeaponRuntime.RestoreEquipped(source, sessionId, item, definition, corr
         nativeAmmoName = NativeAmmoName(definition),
         ammo = item.metadata.ammo and item.metadata.ammo.loaded or 0,
         condition = tonumber(item.metadata.condition) or definition.condition.maximum,
+        attachments = InstalledAttachments(item.metadata),
         equippedAt = os.time()
     }
     runtime.state = "equipped"
@@ -76,6 +92,7 @@ function WeaponRuntime.BeginEquip(source, sessionId, item, definition, correlati
         nativeAmmoName = NativeAmmoName(definition),
         ammo = item.metadata.ammo and item.metadata.ammo.loaded or 0,
         condition = tonumber(item.metadata.condition) or definition.condition.maximum,
+        attachments = InstalledAttachments(item.metadata),
         expiresAt = GetGameTimer() + Config.Runtime.authorizationTtlMs,
         correlationId = correlationId
     }
@@ -97,6 +114,7 @@ function WeaponRuntime.BeginEquip(source, sessionId, item, definition, correlati
         nativeAmmoName = NativeAmmoName(definition),
         ammo = item.metadata.ammo and item.metadata.ammo.loaded or 0,
         condition = tonumber(item.metadata.condition) or definition.condition.maximum,
+        attachments = InstalledAttachments(item.metadata),
         expiresInMs = Config.Runtime.authorizationTtlMs
     }, correlationId)
 end
@@ -120,6 +138,7 @@ function WeaponRuntime.CompleteEquip(source, sessionId, token, correlationId)
         nativeAmmoName = pending.nativeAmmoName,
         ammo = pending.ammo,
         condition = pending.condition,
+        attachments = pending.attachments,
         equippedAt = os.time()
     }
     runtime.pending = nil
@@ -155,6 +174,18 @@ function WeaponRuntime.SetCondition(source, sessionId, condition, correlationId)
     end
     runtime.equipped.condition = tonumber(condition)
     return WeaponResult.Ok({ condition = runtime.equipped.condition }, correlationId)
+end
+
+function WeaponRuntime.SetAttachments(source, sessionId, attachments, correlationId)
+    local runtime = sessions[source]
+    if not runtime or runtime.sessionId ~= sessionId then
+        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil, correlationId)
+    end
+    if not runtime.equipped then
+        return WeaponResult.Error(WeaponErrors.NOT_EQUIPPED, "No weapon is equipped", nil, correlationId)
+    end
+    runtime.equipped.attachments = attachments or {}
+    return WeaponResult.Ok({ attachments = runtime.equipped.attachments }, correlationId)
 end
 
 function WeaponRuntime.Unequip(source, sessionId, correlationId)

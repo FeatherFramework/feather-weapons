@@ -45,11 +45,84 @@ function DefinitionRegistry.Start()
         end
     end
 
+    for id, definition in pairs(registry.weapon) do
+        for slot, attachmentIds in pairs(definition.attachmentSlots or {}) do
+            for _, attachmentId in ipairs(attachmentIds) do
+                local attachment = registry.attachment[attachmentId]
+                if not attachment then
+                    errors[#errors + 1] = { kind = "weapon", key = id, errors = { { path = "attachmentSlots." .. slot, message = "references unknown attachment " .. attachmentId } } }
+                elseif attachment.slot ~= slot then
+                    errors[#errors + 1] = { kind = "weapon", key = id, errors = { { path = "attachmentSlots." .. slot, message = "attachment " .. attachmentId .. " belongs to slot " .. tostring(attachment.slot) } } }
+                end
+            end
+        end
+    end
+    for id, attachment in pairs(registry.attachment) do
+        for _, conflictId in ipairs(attachment.conflicts or {}) do
+            if conflictId == id or not registry.attachment[conflictId] then
+                errors[#errors + 1] = { kind = "attachment", key = id, errors = { { path = "conflicts", message = "references invalid attachment " .. tostring(conflictId) } } }
+            end
+        end
+    end
+
     ready = #errors == 0
     if not ready then
         return WeaponResult.Error(WeaponErrors.INVALID_DEFINITION, "Weapon definitions failed validation", errors)
     end
     return WeaponResult.Ok(DefinitionRegistry.Counts())
+end
+
+function DefinitionRegistry.ValidateAttachmentSet(weaponId, installed)
+    local weapon = registry.weapon[weaponId]
+    if not weapon then
+        return WeaponResult.Error(WeaponErrors.DEFINITION_NOT_FOUND, "Definition was not found", { kind = "weapon", id = weaponId })
+    end
+    local present = {}
+    for index, entry in ipairs(installed or {}) do
+        local attachment = registry.attachment[entry.definitionId]
+        if not attachment then
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Installed attachment definition was not found", { index = index, attachmentId = entry.definitionId })
+        end
+        if entry.slot ~= attachment.slot then
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Installed attachment slot does not match its definition", { index = index, attachmentId = entry.definitionId, expected = attachment.slot, actual = entry.slot })
+        end
+        if not DefinitionRegistry.IsAttachmentCompatible(weaponId, entry.definitionId) then
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Attachment is not compatible with this weapon", { index = index, weaponId = weaponId, attachmentId = entry.definitionId })
+        end
+        present[entry.definitionId] = true
+    end
+    for _, entry in ipairs(installed or {}) do
+        local attachment = registry.attachment[entry.definitionId]
+        for _, conflictId in ipairs(attachment.conflicts or {}) do
+            if present[conflictId] then
+                return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Installed attachments conflict", { attachmentId = entry.definitionId, conflictId = conflictId })
+            end
+        end
+    end
+    return WeaponResult.Ok(true)
+end
+
+function DefinitionRegistry.IsAttachmentCompatible(weaponId, attachmentId)
+    local weapon = registry.weapon[weaponId]
+    local attachment = registry.attachment[attachmentId]
+    if not weapon or not attachment then return false end
+    for _, allowedId in ipairs((weapon.attachmentSlots or {})[attachment.slot] or {}) do
+        if allowedId == attachmentId then return true end
+    end
+    return false
+end
+
+function DefinitionRegistry.ListCompatibleAttachments(weaponId)
+    local weapon = registry.weapon[weaponId]
+    if not weapon then
+        return WeaponResult.Error(WeaponErrors.DEFINITION_NOT_FOUND, "Definition was not found", { kind = "weapon", id = weaponId })
+    end
+    local result = {}
+    for _, attachmentIds in pairs(weapon.attachmentSlots or {}) do
+        for _, attachmentId in ipairs(attachmentIds) do result[#result + 1] = Copy(registry.attachment[attachmentId]) end
+    end
+    table.sort(result, function(a, b) return a.id < b.id end)
+    return WeaponResult.Ok(result)
 end
 
 function DefinitionRegistry.IsReady()

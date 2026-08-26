@@ -4,6 +4,7 @@ local syncInFlight, desiredAmmo = false, nil
 local reloadInFlight, reloadQueued = false, false
 local unloadInFlight, unloadQueued = false, false
 local inventoryWeaponInFlight = false
+local attachmentReconcileUntil = 0
 local BeginReload, BeginUnload
 
 local function Notify(message)
@@ -36,12 +37,45 @@ local function SetNativeAmmo(nativeAmmoName, amount, nativeWeaponName)
     end
 end
 
-local function GiveApprovedNativeWeapon(nativeWeaponName, nativeAmmoName, amount)
+local function ApplyNativeAttachments(nativeWeaponName, attachments)
+    local ped = PlayerPedId()
+    local weaponHash = joaat(nativeWeaponName)
+    for _, attachment in ipairs(attachments or {}) do
+        local componentHash = joaat(attachment.nativeComponentName)
+        local modelHash = Citizen.InvokeNative(0x59DE03442B6C9598, componentHash)
+        if modelHash and modelHash ~= 0 then
+            RequestModel(modelHash)
+            local attempts = 0
+            while not HasModelLoaded(modelHash) and attempts < 100 do
+                attempts = attempts + 1
+                Wait(0)
+            end
+        end
+        Citizen.InvokeNative(0x74C9090FDD1BB48E, ped, componentHash, weaponHash, true)
+        if modelHash and modelHash ~= 0 then SetModelAsNoLongerNeeded(modelHash) end
+    end
+end
+
+local function ScheduleAttachmentReconciliation(nativeWeaponName, attachments)
+    if not attachments or #attachments == 0 then return end
+    attachmentReconcileUntil = GetGameTimer() + 15000
+    for _, delay in ipairs({ 250, 1000 }) do
+        SetTimeout(delay, function()
+            local expected = (equipped and equipped.nativeWeaponName == nativeWeaponName)
+                or pendingNativeWeaponName == nativeWeaponName
+            if expected then ApplyNativeAttachments(nativeWeaponName, attachments) end
+        end)
+    end
+end
+
+local function GiveApprovedNativeWeapon(nativeWeaponName, nativeAmmoName, amount, attachments)
     local ped = PlayerPedId()
     local ammoHash = nativeAmmoName and joaat(nativeAmmoName) or nil
     amount = math.max(0, math.floor(tonumber(amount) or 0))
     local before = ammoHash and GetPedAmmoByType(ped, ammoHash) or nil
     GiveWeaponToPed(ped, joaat(nativeWeaponName), amount, false, true)
+    ApplyNativeAttachments(nativeWeaponName, attachments)
+    ScheduleAttachmentReconciliation(nativeWeaponName, attachments)
     if Config.DevMode then
         local after = ammoHash and GetPedAmmoByType(ped, ammoHash) or nil
         print(("[feather-weapons] native weapon granted loaded=%s before=%s after=%s"):format(
@@ -61,10 +95,10 @@ local function ResetNativeAmmo(reason, nativeAmmoName)
     end
 end
 
-local function RestoreApprovedNativeWeapon(nativeWeaponName, nativeAmmoName, amount)
+local function RestoreApprovedNativeWeapon(nativeWeaponName, nativeAmmoName, amount, attachments)
     RemoveWeaponFromPed(PlayerPedId(), joaat(nativeWeaponName))
     ResetNativeAmmo("ammo-restored", nativeAmmoName)
-    GiveApprovedNativeWeapon(nativeWeaponName, nativeAmmoName, amount)
+    GiveApprovedNativeWeapon(nativeWeaponName, nativeAmmoName, amount, attachments)
 end
 
 local function ClearNativeWeapon()
@@ -75,6 +109,7 @@ local function ClearNativeWeapon()
     equipped, pendingToken, pendingNativeWeaponName, desiredAmmo, syncInFlight = nil, nil, nil, nil, false
     reloadInFlight, reloadQueued = false, false
     unloadInFlight, unloadQueued = false, false
+    attachmentReconcileUntil = 0
 end
 
 local function ApplyApprovedWeapon(approved)
@@ -82,11 +117,12 @@ local function ApplyApprovedWeapon(approved)
         or (pendingNativeWeaponName == approved.nativeWeaponName)
     if not alreadyApplied then
         ClearNativeWeapon()
-        GiveApprovedNativeWeapon(approved.nativeWeaponName, approved.nativeAmmoName, approved.ammo)
+        GiveApprovedNativeWeapon(approved.nativeWeaponName, approved.nativeAmmoName, approved.ammo, approved.attachments)
     end
     equipped = { itemInstanceId = approved.itemInstanceId, definitionId = approved.definitionId,
         nativeWeaponName = approved.nativeWeaponName, nativeAmmoName = approved.nativeAmmoName,
-        ammo = tonumber(approved.ammo) or 0, condition = tonumber(approved.condition) }
+        ammo = tonumber(approved.ammo) or 0, condition = tonumber(approved.condition),
+        attachments = approved.attachments or {} }
     desiredAmmo = equipped.ammo
 end
 
@@ -142,7 +178,7 @@ function FeatherWeaponsClient.Equip(itemInstanceId, callback)
 
         local nativeHash = joaat(authorization.nativeWeaponName)
         ResetNativeAmmo("weapon-equipped", authorization.nativeAmmoName)
-        GiveApprovedNativeWeapon(authorization.nativeWeaponName, authorization.nativeAmmoName, authorization.ammo)
+        GiveApprovedNativeWeapon(authorization.nativeWeaponName, authorization.nativeAmmoName, authorization.ammo, authorization.attachments)
         FeatherCore.RPC.Call("feather-weapons:equip:acknowledge", { token = authorization.token }, function(ack, ackError)
             if not ack or not ack.ok then
                 RemoveWeaponFromPed(PlayerPedId(), nativeHash)
@@ -213,7 +249,7 @@ function FeatherWeaponsClient.Unload(amount, callback)
             equipped.ammo = tonumber(result.value.loaded) or 0
             desiredAmmo = equipped.ammo
             RestoreApprovedNativeWeapon(equipped.nativeWeaponName,
-                result.value.nativeAmmoName or equipped.nativeAmmoName, equipped.ammo)
+                result.value.nativeAmmoName or equipped.nativeAmmoName, equipped.ammo, equipped.attachments)
         end
         if callback then callback(result, rpcError) end
     end)
@@ -297,6 +333,83 @@ RegisterNetEvent("feather-weapons:client:useInventoryWeapon", function(itemInsta
     end)
 end)
 
+local function HandleAttachmentResult(result)
+    if result and result.ok and equipped then
+        equipped.attachments = result.value.attachments or {}
+        RestoreApprovedNativeWeapon(equipped.nativeWeaponName, equipped.nativeAmmoName, equipped.ammo,
+            equipped.attachments)
+        Notify(result.value.installed and "Attachment installed." or "Attachment removed.")
+        return
+    end
+    local failure = result and result.error
+    Notify(failure and failure.message or "Unable to modify this weapon.")
+end
+
+RegisterNetEvent("feather-weapons:client:attachmentResult", HandleAttachmentResult)
+
+local ModificationMenu = FeatherMenu:RegisterMenu("feather-weapons:modifications", {
+    top = "10%",
+    left = "5%",
+    ["720width"] = "360px",
+    ["1080width"] = "420px",
+    ["2kwidth"] = "500px",
+    ["4kwidth"] = "650px",
+    draggable = true,
+    canclose = true
+}, {})
+
+local ModificationPage = nil
+
+local function NearGunsmithStation()
+    local settings = Config.Attachments or {}
+    if settings.requireStation ~= true then return true end
+    local position = GetEntityCoords(PlayerPedId())
+    local distance = tonumber(settings.interactionDistance) or 2.0
+    for _, station in pairs(settings.stations or {}) do
+        local coords = station.coords
+        if coords then
+            local dx, dy, dz = position.x - coords.x, position.y - coords.y, position.z - coords.z
+            if math.sqrt(dx * dx + dy * dy + dz * dz) <= distance then return true end
+        end
+    end
+    return false
+end
+
+local function OpenModificationMenu()
+    if not equipped then
+        Notify("Equip a weapon before modifying it.")
+        return
+    end
+    if not NearGunsmithStation() then
+        Notify("Visit a gunsmith bench to modify this weapon.")
+        return
+    end
+    if ModificationPage then ModificationPage:UnRegister() end
+    ModificationPage = ModificationMenu:RegisterPage("feather-weapons:installed-attachments")
+    ModificationPage:RegisterElement("header", { value = "Weapon Modifications", slot = "header" })
+    ModificationPage:RegisterElement("subheader", { value = equipped.definitionId or "Equipped weapon", slot = "header" })
+    ModificationPage:RegisterElement("line", { slot = "header" })
+
+    if not equipped.attachments or #equipped.attachments == 0 then
+        ModificationPage:RegisterElement("textdisplay", { value = "No attachments are installed.", slot = "content" })
+    else
+        for _, installed in ipairs(equipped.attachments) do
+            local attachmentId = installed.definitionId
+            ModificationPage:RegisterElement("button", {
+                label = ("Remove %s"):format(attachmentId:gsub("_", " ")),
+                slot = "content"
+            }, function()
+                ModificationMenu:Close()
+                FeatherCore.RPC.Call("feather-weapons:attachment:remove", { attachmentId = attachmentId },
+                    function(result, rpcError)
+                        HandleAttachmentResult(result or { ok = false, error = rpcError })
+                    end)
+            end)
+        end
+    end
+    ModificationMenu:Open({ startupPage = ModificationPage })
+end
+
 RegisterNetEvent("feather-weapons:client:inventoryRepairResult", function(result)
     if result and result.ok then
         if equipped and SameInstance(equipped.itemInstanceId, result.value.itemInstanceId) then
@@ -339,6 +452,12 @@ if Config.Controls and Config.Controls.unload and Config.Controls.unload.enabled
     RegisterKeyMapping(unloadControl.command, "Unload equipped weapon", "keyboard", unloadControl.defaultKey or "U")
 end
 
+if Config.Controls and Config.Controls.modify and Config.Controls.modify.enabled then
+    local modifyControl = Config.Controls.modify
+    RegisterCommand(modifyControl.command, OpenModificationMenu, false)
+    RegisterKeyMapping(modifyControl.command, "Modify equipped weapon", "keyboard", modifyControl.defaultKey or "F6")
+end
+
 CreateThread(function()
     while true do
         if equipped and desiredAmmo and desiredAmmo > 0 and IsPedShooting(PlayerPedId()) then
@@ -358,8 +477,22 @@ CreateThread(function()
     end
 end)
 
+CreateThread(function()
+    while true do
+        if equipped and equipped.attachments and #equipped.attachments > 0
+            and GetGameTimer() < attachmentReconcileUntil then
+            ApplyNativeAttachments(equipped.nativeWeaponName, equipped.attachments)
+            Wait(500)
+        else
+            Wait(1000)
+        end
+    end
+end)
+
 AddEventHandler("Feather:Character:Spawned", function()
     FeatherWeaponsClient.Reconcile()
+    SetTimeout(2000, function() FeatherWeaponsClient.Reconcile() end)
+    SetTimeout(5000, function() FeatherWeaponsClient.Reconcile() end)
 end)
 AddEventHandler("Feather:Character:Logout", function()
     inventoryWeaponInFlight = false

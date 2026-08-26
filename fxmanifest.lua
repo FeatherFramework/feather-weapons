@@ -6,7 +6,7 @@ lua54 'yes'
 description 'The official weapon system for Feather framework.'
 author 'Feather Framework'
 name 'feather-weapons'
-version '0.3.1'
+version '0.3.2'
 
 github_version_check 'true'
 github_version_type 'release'
@@ -32,6 +32,7 @@ server_scripts {
     '/server/services/equip.lua',
     '/server/services/ammo.lua',
     '/server/services/repair.lua',
+    '/server/services/attachments.lua',
     '/server/services/issuance.lua',
     '/server/services/commands.lua',
     '/server/services/reconciliation.lua',
@@ -46,5 +47,6 @@ client_scripts {
 
 dependencies {
     'feather-core',
-    'feather-inventory'
+    'feather-inventory',
+    'feather-menu'
 }

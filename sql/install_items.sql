@@ -18,6 +18,11 @@ INSERT INTO `items`
 SELECT 'weapon_repair_kit', 'Weapon Repair Kit', 'Materials used to repair a damaged weapon.', 20, 10, 1, 1, 3, 'item_item', 'stack'
 WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_repair_kit');
 
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'cattleman_long_barrel', 'Cattleman Long Barrel', 'A long barrel made for the Cattleman Revolver.', 20, 10, 1, 1, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'cattleman_long_barrel');
+
 UPDATE `items`
 SET `display_name` = 'Cattleman Revolver',
     `description` = 'A standard single-action revolver.',
@@ -49,3 +54,10 @@ SET `display_name` = 'Weapon Repair Kit',
     `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
     `usable` = 1, `type` = 'item_item', `instance_mode` = 'stack'
 WHERE `name` = 'weapon_repair_kit';
+
+UPDATE `items`
+SET `display_name` = 'Cattleman Long Barrel',
+    `description` = 'A long barrel made for the Cattleman Revolver.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 1, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'cattleman_long_barrel';
