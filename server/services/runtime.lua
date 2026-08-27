@@ -204,14 +204,17 @@ function WeaponRuntime.Unequip(source, sessionId, correlationId)
     return WeaponResult.Ok(previous, correlationId)
 end
 
-AddEventHandler("Feather:Server:Character:Ready", function(session)
+AddEventHandler("core.session.ready.v1", function(session)
+    local characterId = session and CoreAdapter.NormalizeCharacterId(session.characterId)
+    if not characterId then return end
+    session.characterId = characterId
     WeaponRuntime.Begin(session)
     SetTimeout(0, function()
         if ReconciliationService then ReconciliationService.RehydrateSession(session) end
     end)
 end)
 
-AddEventHandler("Feather:Server:Character:Leaving", function(session)
+AddEventHandler("core.session.leaving.v1", function(session)
     local runtime = sessions[session.source]
     if runtime and runtime.sessionId == session.sessionId then
         runtime.state = "leaving"
@@ -221,7 +224,7 @@ AddEventHandler("Feather:Server:Character:Leaving", function(session)
     end
 end)
 
-AddEventHandler("Feather:Server:Character:Left", function(session)
+AddEventHandler("core.session.left.v1", function(session)
     local runtime = sessions[session.source]
     if runtime and runtime.sessionId == session.sessionId then WeaponRuntime.Clear(session.source) end
 end)
