@@ -8,9 +8,12 @@ local attachmentReconcileUntil = 0
 local BeginReload, BeginUnload
 
 local function Notify(message)
-    if FeatherCore and FeatherCore.Notify and FeatherCore.Notify.RightNotify then
-        FeatherCore.Notify.RightNotify(message, 3000)
-    elseif Config.DevMode then
+    local result = exports["feather-core"]:ShowNotification({
+        style = "right",
+        message = message,
+        duration = 3000
+    })
+    if (not result or result.ok ~= true) and Config.DevMode then
         print(("[feather-weapons] %s"):format(message))
     end
 end
