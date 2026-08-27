@@ -19,6 +19,8 @@ Feather Weapons is the database-backed weapon system for the Feather Framework. 
 - Prevent equipped weapon instances from being moved or destroyed.
 - Reject stale, concurrent, invalid, or unauthorized mutations.
 - Validate attachment definitions, slots, conflicts, and per-weapon compatibility at startup.
+- Resolve active characters through Feather Core Contract 1 sessions.
+- Preserve canonical UUID character IDs through issuance, equipment, and Inventory calls.
 
 The current configured weapon is the Cattleman Revolver using standard revolver ammunition.
 
@@ -26,8 +28,8 @@ The current configured weapon is the Cattleman Revolver using standard revolver 
 
 - RedM server
 - `oxmysql`
-- `feather-core` with the character-session contract
-- Current `feather-inventory` with transactions, item instances, guards, and equipment persistence
+- `feather-core` Contract 1 with the session capability
+- Current `feather-inventory` Contract 2 with transactions, item instances, guards, equipment persistence, and canonical character-ID capabilities
 - `feather-menu` for the weapon modification screen
 
 Recommended start order:
@@ -41,6 +43,9 @@ ensure feather-weapons
 ```
 
 `feather-weapons` now requires the production Feather Inventory provider. The abandoned in-memory fallback has been removed.
+
+Weapons and Inventory require canonical UUID character IDs. Numeric legacy
+character IDs are rejected and are not part of the release contract.
 
 ## Installation
 
@@ -107,6 +112,12 @@ Config = {
 ```
 
 Keep `StrictStartup = true` so missing dependencies or contracts fail closed. `Inventory.requiredContract` must match the contract feather-inventory reports from `GetCapabilities().value.contractVersion` -- it is checked before any definition, usable callback or guard is registered, and a version below it aborts installation rather than degrading to an empty index. `DevMode` enables diagnostic output and development-only weapon grants; disable it on production servers. Keep `authoritativeNativeAmmo = true` when Feather Weapons owns all weapons and ammunition. At weapon boundaries, this clears the player's native ammo—including ammo granted by other resources—before restoring the equipped inventory item's saved rounds.
+
+Trusted server resources issue unique weapons through the stable named export:
+
+```lua
+local result = exports['feather-weapons']:IssueWeapon(request, context)
+```
 
 Players can change the registered bindings in their Cfx key-binding settings. Reload defaults to `R`, unload to `U`, and weapon modifications to `F6`. The modification menu can also be opened with `/weaponmods`.
 
