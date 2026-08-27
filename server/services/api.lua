@@ -62,3 +62,10 @@ exports("initiate", function()
         }
     }
 end)
+
+-- Stable cross-resource issuance entry point. Consumers should use this
+-- named export instead of relying on nested functions surviving Cfx's API
+-- table boundary.
+exports("IssueWeapon", function(request, context)
+    return WeaponAPI.IssueWeapon(request, context)
+end)
