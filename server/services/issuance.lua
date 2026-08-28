@@ -32,8 +32,8 @@ local function BuildProvenance(context, request)
         reference = CleanText(supplied.reference, 128),
         resource = CleanText(context.resource or "feather-weapons", 64),
         issuedBySource = tonumber(context.actorSource),
-        issuedByCharacterId = tonumber(context.actorCharacterId),
-        issuedToCharacterId = tonumber(context.characterId),
+        issuedByCharacterId = CoreAdapter.NormalizeCharacterId(context.actorCharacterId),
+        issuedToCharacterId = CoreAdapter.NormalizeCharacterId(context.characterId),
         createdAt = os.time()
     }
 end
@@ -41,9 +41,9 @@ end
 function IssuanceService.Issue(context, request)
     context = type(context) == "table" and context or {}
     request = type(request) == "table" and request or {}
-    local characterId = tonumber(request.characterId or context.characterId)
+    local characterId = CoreAdapter.NormalizeCharacterId(request.characterId or context.characterId)
     local definitionId = CleanText(request.definitionId, 64)
-    if not characterId or characterId < 1 or not definitionId then
+    if not characterId or not definitionId then
         return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
             "A target character and weapon definition are required", nil, context.correlationId)
     end

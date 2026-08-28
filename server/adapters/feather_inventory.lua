@@ -89,6 +89,7 @@ function FeatherInventoryProvider.GetCapabilities()
         provider = "feather-inventory",
         inventoryVersion = capabilities.version,
         features = capabilities.features,
+        characterIdentity = capabilities.characterIdentity,
         uniqueItems = capabilities.features and capabilities.features.instanceMode == true,
         equippedState = capabilities.features and capabilities.features.equippedState == true,
         reconnectPersistence = true,
@@ -444,6 +445,20 @@ function InstallFeatherInventoryProvider()
             required = Config.Inventory.requiredContract,
             actual = contractVersion,
             inventoryVersion = reported.value.version
+        })
+    end
+
+    local characterIdentity = reported.value.characterIdentity
+    if type(characterIdentity) ~= "table" or characterIdentity.uuid ~= true then
+        Inventory = nil
+        return Failure(nil, "feather-inventory does not support canonical character IDs")
+    end
+    local expectedMode = "uuid"
+    if characterIdentity.mode ~= expectedMode then
+        Inventory = nil
+        return Failure(nil, "feather-inventory character identity mode does not match weapons", {
+            expected = expectedMode,
+            actual = characterIdentity.mode
         })
     end
 
