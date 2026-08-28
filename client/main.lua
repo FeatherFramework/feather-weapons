@@ -2,6 +2,7 @@ FeatherWeaponsClient = {}
 local equipped, pendingToken, pendingNativeWeaponName = nil, nil, nil
 local syncInFlight, desiredAmmo = false, nil
 local reloadInFlight, reloadQueued = false, false
+local reloadInputArmed = false
 local unloadInFlight, unloadQueued = false, false
 local inventoryWeaponInFlight = false
 local attachmentReconcileUntil = 0
@@ -219,6 +220,11 @@ function FeatherWeaponsClient.Reload(amount, callback) AmmoOperation("feather-we
 
 BeginReload = function()
     if reloadInFlight then return end
+    local ped = PlayerPedId()
+    if ped == 0 or GetEntityHealth(ped) <= 0 or IsEntityDead(ped) then
+        reloadQueued = false
+        return
+    end
     if not equipped then
         Notify("No weapon is equipped.")
         return
@@ -233,7 +239,6 @@ BeginReload = function()
     FeatherWeaponsClient.Reload(nil, function(result, rpcError)
         reloadInFlight = false
         if result and result.ok then
-            local ped = PlayerPedId()
             if not IsPedReloading(ped) then
                 Citizen.InvokeNative(0x62D2916F56B9CD2D, ped, true)
             end
@@ -244,6 +249,33 @@ BeginReload = function()
         local failure = result and result.error or rpcError
         Notify(failure and failure.message or "Unable to reload.")
     end)
+end
+
+local function IsCarryingEntity(ped)
+    if ped == 0 then return false end
+    local carried = Citizen.InvokeNative(0xD806CD2A4F2C2996, ped)
+    if carried and carried ~= 0 then return true end
+    return Citizen.InvokeNative(0xA911EE21EDF69DAF, ped) == true
+end
+
+local function HasNearbyCarryablePed(ped)
+    local origin = GetEntityCoords(ped)
+    for _, candidate in ipairs(GetGamePool('CPed')) do
+        if candidate ~= ped and DoesEntityExist(candidate) then
+            local coords = GetEntityCoords(candidate)
+            if #(origin - coords) <= 2.25 then
+                local carryable = IsEntityDead(candidate)
+                    or (type(IsPedDeadOrDying) == 'function' and IsPedDeadOrDying(candidate, true))
+                    or (type(IsPedHogtied) == 'function' and IsPedHogtied(candidate))
+                if carryable then return true end
+            end
+        end
+    end
+    return false
+end
+
+local function CarryInteractionActive(ped)
+    return IsCarryingEntity(ped) or HasNearbyCarryablePed(ped)
 end
 
 function FeatherWeaponsClient.Unload(amount, callback)
@@ -433,15 +465,23 @@ RegisterNetEvent("feather-weapons:client:reconcile", function() FeatherWeaponsCl
 if Config.Controls and Config.Controls.reload and Config.Controls.reload.enabled then
     local reloadControl = Config.Controls.reload
     RegisterCommand(reloadControl.command, function() BeginReload() end, false)
-    RegisterKeyMapping(reloadControl.command, "Reload equipped weapon", "keyboard", reloadControl.defaultKey or "R")
 
     if reloadControl.disableNative and reloadControl.nativeControl then
         CreateThread(function()
             while true do
                 if equipped then
                     DisableControlAction(0, reloadControl.nativeControl, true)
+                    if IsDisabledControlJustPressed(0, reloadControl.nativeControl) then
+                        reloadInputArmed = not CarryInteractionActive(PlayerPedId())
+                    end
+                    if IsDisabledControlJustReleased(0, reloadControl.nativeControl) then
+                        local shouldReload = reloadInputArmed and not CarryInteractionActive(PlayerPedId())
+                        reloadInputArmed = false
+                        if shouldReload then BeginReload() end
+                    end
                     Wait(0)
                 else
+                    reloadInputArmed = false
                     Wait(500)
                 end
             end
