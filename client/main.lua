@@ -9,11 +9,14 @@ local attachmentReconcileUntil = 0
 local BeginReload, BeginUnload
 
 local function Notify(message)
-    local result = exports["feather-core"]:ShowNotification({
-        style = "right",
-        message = message,
-        duration = 3000
-    })
+    local called, result = pcall(function()
+        return exports["feather-notify"]:ShowNotification({
+            style = "right",
+            message = message,
+            duration = 3000
+        })
+    end)
+    if not called then result = { ok = false, code = "provider_unavailable" } end
     if (not result or result.ok ~= true) and Config.DevMode then
         print(("[feather-weapons] %s"):format(message))
     end

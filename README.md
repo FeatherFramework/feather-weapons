@@ -5,6 +5,13 @@ Feather Weapons is the database-backed weapon system for the Feather Framework. 
 > [!WARNING]
 > This resource is still a development preview. The Cattleman Revolver lifecycle and Inventory Contract 2 integration are working end to end. Attachment foundations are now in development; the full catalog, installation gameplay, shops, transfers, and administrative recovery tools are not finished.
 
+> [!IMPORTANT]
+> The current reload implementation is a temporary legacy vertical slice. It
+> intercepts reload input and will be replaced, not extended. The approved
+> architecture is the native-first rebuild in [`MASTER_PLAN.md`](MASTER_PLAN.md):
+> RedM owns live draw/fire/reload behavior while Feather owns authorization,
+> Inventory-backed ammunition budgets, persistence, and reconciliation.
+
 ## Current features
 
 - Equip a weapon by using its item in Feather Inventory.
