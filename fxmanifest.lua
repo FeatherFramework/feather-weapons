@@ -6,12 +6,7 @@ lua54 'yes'
 description 'The official weapon system for Feather framework.'
 author 'Feather Framework'
 name 'feather-weapons'
-version '0.4.0'
-
-github_version_check 'true'
-github_version_type 'release'
-github_ui_check 'false'
-github_link 'https://github.com/FeatherFramework/feather-weapons'
+version '0.5.0'
 
 shared_scripts {
     'config.lua',
