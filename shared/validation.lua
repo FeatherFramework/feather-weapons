@@ -120,6 +120,12 @@ function WeaponValidation.Metadata(metadata, definition)
         if not loaded or loaded < 0 or loaded > definition.capacity or loaded % 1 ~= 0 then
             AddError(errors, "ammo.loaded", "must be an integer within weapon capacity")
         end
+        local reserve = tonumber(metadata.ammo.reserve or 0)
+        local maxTotal = math.max(definition.capacity,
+            math.floor(tonumber(Config and Config.Escrow and Config.Escrow.maxTotal) or definition.capacity))
+        if not reserve or reserve < 0 or reserve % 1 ~= 0 or (loaded or 0) + reserve > maxTotal then
+            AddError(errors, "ammo.reserve", "must be a non-negative integer within the escrow limit")
+        end
         if type(metadata.ammo.chambered) ~= "boolean" then
             AddError(errors, "ammo.chambered", "must be boolean")
         end

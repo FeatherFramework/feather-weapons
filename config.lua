@@ -1,6 +1,5 @@
 Config = {
-    DevMode = true,
-    StrictStartup = true,
+    DevMode = false,
     RequiredCoreContract = 1,
     Inventory = {
         requiredContract = 2,
@@ -8,7 +7,23 @@ Config = {
     },
     Runtime = {
         authorizationTtlMs = 5000,
-        authoritativeNativeAmmo = true
+        authoritativeNativeAmmo = true,
+        observationIntervalMs = 50,
+        checkpointDebounceMs = 250
+    },
+    Escrow = {
+        -- Maximum cartridges authorized in one equipped native weapon pool.
+        maxTotal = 30,
+        -- Using compatible ammunition fills up to this boundary.
+        refillAmount = 30
+    },
+    NativeProbe = {
+        -- Isolated Phase 1 diagnostic. Enable only on a development server.
+        enabled = false,
+        weapon = "WEAPON_REVOLVER_CATTLEMAN",
+        ammo = "AMMO_REVOLVER",
+        capacity = 6,
+        observationIntervalMs = 50
     },
     Attachments = {
         requireStation = true,
@@ -22,13 +37,6 @@ Config = {
         }
     },
     Controls = {
-        reload = {
-            enabled = true,
-            defaultKey = "R",
-            command = "feather_weapon_reload",
-            nativeControl = 0xE30CD707,
-            disableNative = true
-        },
         unload = {
             enabled = true,
             defaultKey = "U",
@@ -39,8 +47,5 @@ Config = {
             defaultKey = "F6",
             command = "weaponmods"
         }
-    },
-    Logging = {
-        level = "info"
     }
 }

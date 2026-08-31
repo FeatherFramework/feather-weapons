@@ -2,15 +2,16 @@
 
 Feather Weapons is the database-backed weapon system for the Feather Framework. Weapons are unique inventory item instances; their loaded ammunition, condition, and identity live in item metadata, while equipped state is stored per character.
 
+Server operation, recovery, integration, and trust boundaries are documented in
+[`docs/operations.md`](docs/operations.md).
+
 > [!WARNING]
 > This resource is still a development preview. The Cattleman Revolver lifecycle and Inventory Contract 2 integration are working end to end. Attachment foundations are now in development; the full catalog, installation gameplay, shops, transfers, and administrative recovery tools are not finished.
 
 > [!IMPORTANT]
-> The current reload implementation is a temporary legacy vertical slice. It
-> intercepts reload input and will be replaced, not extended. The approved
-> architecture is the native-first rebuild in [`MASTER_PLAN.md`](MASTER_PLAN.md):
-> RedM owns live draw/fire/reload behavior while Feather owns authorization,
-> Inventory-backed ammunition budgets, persistence, and reconciliation.
+> This is a native-first implementation. RedM owns live draw, fire, reload, and
+> contextual controls. Feather owns authorization, Inventory-backed ammunition
+> budgets, condition, persistence, and reconciliation.
 
 ## Current features
 
@@ -36,6 +37,7 @@ The current configured weapon is the Cattleman Revolver using standard revolver 
 - RedM server
 - `oxmysql`
 - `feather-core` Contract 1 with the session capability
+- Current `feather-character` with logout checkpoint support
 - Current `feather-inventory` Contract 2 with transactions, item instances, guards, equipment persistence, and canonical character-ID capabilities
 - `feather-menu` for the weapon modification screen
 
@@ -44,6 +46,7 @@ Recommended start order:
 ```cfg
 ensure oxmysql
 ensure feather-core
+ensure feather-character
 ensure feather-inventory
 ensure feather-menu
 ensure feather-weapons
@@ -62,7 +65,7 @@ character IDs are rejected and are not part of the release contract.
 4. Ensure the resources in the order shown above.
 5. Restart the server; do not use a resource refresh for database migrations.
 
-The installation SQL adds standard revolver ammunition, weapon repair kits, and the Cattleman Long Barrel; marks interactive items usable; and enforces unique/usable settings on the Cattleman definition. It is idempotent and can be rerun.
+The installation SQL adds standard revolver ammunition, weapon repair kits, and the Cattleman Long Barrel; marks only the weapon, ammunition, and repair kit usable; and enforces unique/stack modes. It is idempotent and can be rerun. Startup fails closed if a required definition is missing, duplicated, or has incompatible usable, type, or instance-mode values.
 
 > [!NOTE]
 > Weapon instances are created through the inventory transaction service with unique serials and complete metadata. When `DevMode = true`, authorized staff can issue the configured Cattleman with `/grantweapon cattleman_revolver` in chat, or `grantweapon cattleman_revolver [targetServerId]` from the server console.
@@ -71,8 +74,7 @@ The installation SQL adds standard revolver ammunition, weapon repair kits, and 
 
 ```lua
 Config = {
-    DevMode = true,
-    StrictStartup = true,
+    DevMode = false,
     RequiredCoreContract = 1,
     Inventory = {
         requiredContract = 2,
@@ -80,7 +82,13 @@ Config = {
     },
     Runtime = {
         authorizationTtlMs = 5000,
-        authoritativeNativeAmmo = true
+        authoritativeNativeAmmo = true,
+        observationIntervalMs = 50,
+        checkpointDebounceMs = 250
+    },
+    Escrow = {
+        maxTotal = 30,
+        refillAmount = 30
     },
     Attachments = {
         requireStation = true,
@@ -94,13 +102,6 @@ Config = {
         }
     },
     Controls = {
-        reload = {
-            enabled = true,
-            defaultKey = "R",
-            command = "feather_weapon_reload",
-            nativeControl = 0xE30CD707,
-            disableNative = true
-        },
         unload = {
             enabled = true,
             defaultKey = "U",
@@ -111,14 +112,11 @@ Config = {
             defaultKey = "F6",
             command = "weaponmods"
         }
-    },
-    Logging = {
-        level = "info"
     }
 }
 ```
 
-Keep `StrictStartup = true` so missing dependencies or contracts fail closed. `Inventory.requiredContract` must match the contract feather-inventory reports from `GetCapabilities().value.contractVersion` -- it is checked before any definition, usable callback or guard is registered, and a version below it aborts installation rather than degrading to an empty index. `DevMode` enables diagnostic output and development-only weapon grants; disable it on production servers. Keep `authoritativeNativeAmmo = true` when Feather Weapons owns all weapons and ammunition. At weapon boundaries, this clears the player's native ammo—including ammo granted by other resources—before restoring the equipped inventory item's saved rounds.
+Startup always fails closed when required dependencies, definitions, or contracts are unavailable. `Inventory.requiredContract` must match the contract feather-inventory reports from `GetCapabilities().value.contractVersion` -- it is checked before any definition, usable callback or guard is registered, and a version below it aborts installation rather than degrading to an empty index. `DevMode` enables diagnostic output and development-only weapon grants; disable it on production servers. Keep `authoritativeNativeAmmo = true` when Feather Weapons owns all weapons and ammunition. At weapon boundaries, this clears the player's native ammo—including ammo granted by other resources—before restoring the equipped inventory item's saved rounds.
 
 Trusted server resources issue unique weapons through the stable named export:
 
@@ -126,7 +124,19 @@ Trusted server resources issue unique weapons through the stable named export:
 local result = exports['feather-weapons']:IssueWeapon(request, context)
 ```
 
-Players can change the registered bindings in their Cfx key-binding settings. Reload defaults to `R`, unload to `U`, and weapon modifications to `F6`. The modification menu can also be opened with `/weaponmods`.
+## Recovery commands
+
+The following commands are server-console only:
+
+- `WeaponMetadataInspect [serverId]` validates the equipped Inventory instance
+  and reports its serial, ammunition, condition, attachments, and runtime match.
+- `WeaponReconcile [serverId]` discards unaccepted native state and restores the
+  character's last accepted Inventory snapshot with a new lease generation.
+
+Run the inspection command first. Reconciliation is an explicit recovery action,
+not routine gameplay synchronization.
+
+Players can change Feather's registered bindings in their Cfx key-binding settings. Unload defaults to `U`, and weapon modifications to `F6`. Reload remains the native RedM `R` action and is not registered or intercepted by Feather. The modification menu can also be opened with `/weaponmods`.
 
 ## Gameplay
 
@@ -136,11 +146,11 @@ Use a weapon item to equip it. Use that same item again to unequip it. A differe
 
 ### Reload
 
-Press `R` with a weapon equipped. The server determines capacity and compatible ammunition, removes only the required inventory quantity, commits the loaded amount, then authorizes the client reload. Full weapons and missing compatible ammunition fail without changing inventory.
+Use a compatible ammunition stack while its weapon is equipped to transfer cartridges transactionally into that weapon's bounded escrow. Refilling a completely empty Cattleman loads its cylinder immediately because RedM does this natively when a positive ammunition pool is granted. After firing, press native `R` to reload from the approved reserve. Feather observes and persists the resulting loaded/reserve distribution without reading or disabling the key.
 
 ### Unload
 
-Press `U` with a loaded weapon equipped. The server returns the loaded rounds to the character inventory and updates the weapon metadata in one transaction, then rebuilds the native weapon with the approved remaining load.
+Press `U` with an armed weapon equipped. The server returns its loaded and reserve cartridges to the character inventory and updates weapon metadata in one transaction, then clears the native ammunition pool.
 
 ### Condition and repair
 
@@ -148,13 +158,14 @@ Accepted shots lower condition according to the weapon definition. Use a `weapon
 
 ### Weapon modifications
 
-Attachment installation and removal require proximity to a configured gunsmith bench. Equip the weapon at the Valentine bench, use a compatible attachment item to install it, or press `F6`/use `/weaponmods` to remove an installed attachment. Client proximity provides immediate feedback, while the server independently verifies distance before starting the inventory transaction.
+Attachment installation and removal require proximity to a configured gunsmith bench. Equip the weapon at the Valentine bench, then press `F6` or use `/weaponmods` to install an owned compatible attachment or remove an installed one. The Long Barrel is not a usable item; the server verifies distance and ownership before starting the Inventory transaction.
 
 ## Current Cattleman settings
 
 | Setting | Value |
 | --- | --- |
 | Capacity | 6 rounds |
+| Escrow ceiling | 30 rounds total |
 | Ammunition | Standard revolver cartridges |
 | Maximum condition | 100 |
 | Wear | 1 condition per shot |
@@ -180,8 +191,8 @@ When `DevMode = true`, `/weaponstate` prints the authoritative equipped item ID,
 
 - Only the Cattleman Revolver is configured.
 - Switching directly between two equipped weapon items is not implemented; unequip first.
-- The first Long Barrel attachment is available; additional attachment definitions and the production gunsmith removal UI remain unfinished.
-- Alternate ammunition, expanded provenance, evidence, licenses, shops, crafting, and admin recovery remain planned.
+- The first Long Barrel attachment is available; additional attachment definitions remain unfinished.
+- Alternate ammunition, expanded provenance, evidence, licenses, shops, and crafting remain planned.
 
 ## Validation status
 

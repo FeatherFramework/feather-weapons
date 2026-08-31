@@ -2,6 +2,11 @@ WeaponRuntime = {}
 local sessions = {}
 local tokenCounter = 0
 
+local function NextGeneration(runtime)
+    runtime.generation = (tonumber(runtime.generation) or 0) + 1
+    return runtime.generation
+end
+
 local function NativeAmmoName(definition)
     local result = DefinitionRegistry.Get("ammunition", definition.ammunitionType)
     return result.ok and result.value.nativeAmmoName or nil
@@ -31,6 +36,23 @@ function WeaponRuntime.Get(source)
     return sessions[source]
 end
 
+local function AmmoSnapshot(metadata, definition)
+    local loaded = math.max(0, math.min(definition.capacity,
+        math.floor(tonumber(metadata.ammo and metadata.ammo.loaded) or 0)))
+    local reserve = math.max(0, math.floor(tonumber(metadata.ammo and metadata.ammo.reserve) or 0))
+    return loaded, reserve, loaded + reserve
+end
+
+function WeaponRuntime.MatchesLease(source, sessionId, itemInstanceId, generation)
+    local runtime = sessions[tonumber(source) or source]
+    local equipped = runtime and runtime.equipped
+    return runtime ~= nil and equipped ~= nil
+        and tostring(runtime.sessionId or "") == tostring(sessionId or "")
+        and tostring(equipped.sessionId or "") == tostring(sessionId or "")
+        and tostring(equipped.itemInstanceId or "") == tostring(itemInstanceId or "")
+        and tonumber(equipped.generation) == tonumber(generation)
+end
+
 function WeaponRuntime.Begin(session)
     sessions[session.source] = {
         source = session.source,
@@ -38,6 +60,7 @@ function WeaponRuntime.Begin(session)
         sessionId = session.sessionId,
         equipped = nil,
         pending = nil,
+        generation = 0,
         state = "idle"
     }
     return sessions[session.source]
@@ -55,14 +78,20 @@ function WeaponRuntime.RestoreEquipped(source, sessionId, item, definition, corr
         return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil, correlationId)
     end
     runtime.pending = nil
+    local generation = NextGeneration(runtime)
+    local loaded, reserve, total = AmmoSnapshot(item.metadata, definition)
     runtime.equipped = {
         itemInstanceId = item.id,
         definitionId = definition.id,
         nativeWeaponName = definition.nativeWeaponName,
         nativeAmmoName = NativeAmmoName(definition),
-        ammo = item.metadata.ammo and item.metadata.ammo.loaded or 0,
+        ammo = total,
+        loaded = loaded,
+        reserve = reserve,
         condition = tonumber(item.metadata.condition) or definition.condition.maximum,
         attachments = InstalledAttachments(item.metadata),
+        generation = generation,
+        sessionId = runtime.sessionId,
         equippedAt = os.time()
     }
     runtime.state = "equipped"
@@ -84,13 +113,16 @@ function WeaponRuntime.BeginEquip(source, sessionId, item, definition, correlati
     end
 
     local token = NextToken(runtime)
+    local loaded, reserve, total = AmmoSnapshot(item.metadata, definition)
     runtime.pending = {
         token = token,
         itemInstanceId = item.id,
         definitionId = definition.id,
         nativeWeaponName = definition.nativeWeaponName,
         nativeAmmoName = NativeAmmoName(definition),
-        ammo = item.metadata.ammo and item.metadata.ammo.loaded or 0,
+        ammo = total,
+        loaded = loaded,
+        reserve = reserve,
         condition = tonumber(item.metadata.condition) or definition.condition.maximum,
         attachments = InstalledAttachments(item.metadata),
         expiresAt = GetGameTimer() + Config.Runtime.authorizationTtlMs,
@@ -112,7 +144,9 @@ function WeaponRuntime.BeginEquip(source, sessionId, item, definition, correlati
         definitionId = definition.id,
         nativeWeaponName = definition.nativeWeaponName,
         nativeAmmoName = NativeAmmoName(definition),
-        ammo = item.metadata.ammo and item.metadata.ammo.loaded or 0,
+        ammo = total,
+        loaded = loaded,
+        reserve = reserve,
         condition = tonumber(item.metadata.condition) or definition.condition.maximum,
         attachments = InstalledAttachments(item.metadata),
         expiresInMs = Config.Runtime.authorizationTtlMs
@@ -137,8 +171,12 @@ function WeaponRuntime.CompleteEquip(source, sessionId, token, correlationId)
         nativeWeaponName = pending.nativeWeaponName,
         nativeAmmoName = pending.nativeAmmoName,
         ammo = pending.ammo,
+        loaded = pending.loaded,
+        reserve = pending.reserve,
         condition = pending.condition,
         attachments = pending.attachments,
+        generation = NextGeneration(runtime),
+        sessionId = runtime.sessionId,
         equippedAt = os.time()
     }
     runtime.pending = nil
@@ -146,7 +184,7 @@ function WeaponRuntime.CompleteEquip(source, sessionId, token, correlationId)
     return WeaponResult.Ok(runtime.equipped, correlationId)
 end
 
-function WeaponRuntime.SetAmmo(source, sessionId, loaded, correlationId)
+function WeaponRuntime.SetAmmo(source, sessionId, total, loaded, correlationId)
     local runtime = sessions[source]
     if not runtime or runtime.sessionId ~= sessionId then
         return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil, correlationId)
@@ -156,12 +194,30 @@ function WeaponRuntime.SetAmmo(source, sessionId, loaded, correlationId)
     end
     local definitionResult = DefinitionRegistry.Get("weapon", runtime.equipped.definitionId)
     if not definitionResult.ok then return definitionResult end
+    total = math.floor(tonumber(total) or -1)
     loaded = math.floor(tonumber(loaded) or -1)
-    if loaded < 0 or loaded > definitionResult.value.capacity then
+    local maxTotal = math.max(definitionResult.value.capacity,
+        math.floor(tonumber(Config.Escrow and Config.Escrow.maxTotal) or definitionResult.value.capacity))
+    if total < 0 or total > maxTotal or loaded < 0
+        or loaded > definitionResult.value.capacity or loaded > total then
         return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Ammunition is outside weapon capacity", nil, correlationId)
     end
-    runtime.equipped.ammo = loaded
-    return WeaponResult.Ok({ loaded = loaded }, correlationId)
+    runtime.equipped.ammo = total
+    runtime.equipped.loaded = loaded
+    runtime.equipped.reserve = total - loaded
+    return WeaponResult.Ok({ total = total, loaded = loaded, reserve = total - loaded }, correlationId)
+end
+
+function WeaponRuntime.ResetForReconcile(source, sessionId, correlationId)
+    local runtime = sessions[source]
+    if not runtime or runtime.sessionId ~= sessionId or runtime.state == "leaving" then
+        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED,
+            "Character session is no longer active", nil, correlationId)
+    end
+    runtime.pending = nil
+    runtime.equipped = nil
+    runtime.state = "idle"
+    return WeaponResult.Ok({ generation = runtime.generation }, correlationId)
 end
 
 function WeaponRuntime.SetCondition(source, sessionId, condition, correlationId)
@@ -209,9 +265,7 @@ AddEventHandler("core.session.ready.v1", function(session)
     if not characterId then return end
     session.characterId = characterId
     WeaponRuntime.Begin(session)
-    SetTimeout(0, function()
-        if ReconciliationService then ReconciliationService.RehydrateSession(session) end
-    end)
+    if ReconciliationService then ReconciliationService.RehydrateSession(session) end
 end)
 
 AddEventHandler("core.session.leaving.v1", function(session)

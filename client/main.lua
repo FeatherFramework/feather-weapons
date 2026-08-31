@@ -1,12 +1,19 @@
 FeatherWeaponsClient = {}
 local equipped, pendingToken, pendingNativeWeaponName = nil, nil, nil
-local syncInFlight, desiredAmmo = false, nil
-local reloadInFlight, reloadQueued = false, false
-local reloadInputArmed = false
+local syncInFlight, desiredAmmo, desiredLoaded = false, nil, nil
 local unloadInFlight, unloadQueued = false, false
 local inventoryWeaponInFlight = false
 local attachmentReconcileUntil = 0
-local BeginReload, BeginUnload
+local BeginUnload
+local RegisterCharacterLogoutCheckpoint
+local observerCorrectionPending = false
+local checkpointWaiters = {}
+
+local function ResolveCheckpointWaiters(result)
+    local waiters = checkpointWaiters
+    checkpointWaiters = {}
+    for _, callback in ipairs(waiters) do callback(result) end
+end
 
 local function Notify(message)
     local called, result = pcall(function()
@@ -26,14 +33,14 @@ local function SameInstance(left, right)
     return left ~= nil and right ~= nil and tostring(left) == tostring(right)
 end
 
-local function SetNativeAmmo(nativeAmmoName, amount, nativeWeaponName)
+local function SetNativeAmmo(nativeAmmoName, amount, nativeWeaponName, loaded)
     if not nativeAmmoName then return end
     local ped = PlayerPedId()
     local ammoHash = joaat(nativeAmmoName)
     amount = math.max(0, math.floor(tonumber(amount) or 0))
     local before = GetPedAmmoByType(ped, ammoHash)
-    if nativeWeaponName then
-        Citizen.InvokeNative(0xDCD2A934D65CB497, ped, joaat(nativeWeaponName), math.min(before, amount))
+    if nativeWeaponName and loaded ~= nil then
+        SetAmmoInClip(ped, joaat(nativeWeaponName), math.max(0, math.floor(tonumber(loaded) or 0)))
     end
     if before < amount then
         Citizen.InvokeNative(0x5FD1E1F011E76D7E, ped, ammoHash, amount)
@@ -75,17 +82,19 @@ local function ScheduleAttachmentReconciliation(nativeWeaponName, attachments)
     end
 end
 
-local function GiveApprovedNativeWeapon(nativeWeaponName, nativeAmmoName, amount, attachments)
+local function GiveApprovedNativeWeapon(nativeWeaponName, nativeAmmoName, amount, loaded, attachments)
     local ped = PlayerPedId()
     local ammoHash = nativeAmmoName and joaat(nativeAmmoName) or nil
     amount = math.max(0, math.floor(tonumber(amount) or 0))
     local before = ammoHash and GetPedAmmoByType(ped, ammoHash) or nil
-    GiveWeaponToPed(ped, joaat(nativeWeaponName), amount, false, true)
+    GiveWeaponToPed(ped, joaat(nativeWeaponName), 0, false, true)
+    SetAmmoInClip(ped, joaat(nativeWeaponName), math.max(0, math.floor(tonumber(loaded) or 0)))
+    if ammoHash then SetPedAmmoByType(ped, ammoHash, amount) end
     ApplyNativeAttachments(nativeWeaponName, attachments)
     ScheduleAttachmentReconciliation(nativeWeaponName, attachments)
     if Config.DevMode then
         local after = ammoHash and GetPedAmmoByType(ped, ammoHash) or nil
-        print(("[feather-weapons] native weapon granted loaded=%s before=%s after=%s"):format(
+        print(("[feather-weapons] native weapon granted total=%s before=%s after=%s"):format(
             tostring(amount), tostring(before), tostring(after)))
     end
 end
@@ -102,10 +111,10 @@ local function ResetNativeAmmo(reason, nativeAmmoName)
     end
 end
 
-local function RestoreApprovedNativeWeapon(nativeWeaponName, nativeAmmoName, amount, attachments)
+local function RestoreApprovedNativeWeapon(nativeWeaponName, nativeAmmoName, amount, loaded, attachments)
     RemoveWeaponFromPed(PlayerPedId(), joaat(nativeWeaponName))
     ResetNativeAmmo("ammo-restored", nativeAmmoName)
-    GiveApprovedNativeWeapon(nativeWeaponName, nativeAmmoName, amount, attachments)
+    GiveApprovedNativeWeapon(nativeWeaponName, nativeAmmoName, amount, loaded, attachments)
 end
 
 local function ClearNativeWeapon()
@@ -113,9 +122,10 @@ local function ClearNativeWeapon()
     local nativeAmmoName = equipped and equipped.nativeAmmoName or nil
     if nativeWeaponName then RemoveWeaponFromPed(PlayerPedId(), joaat(nativeWeaponName)) end
     ResetNativeAmmo("weapon-cleared", nativeAmmoName)
-    equipped, pendingToken, pendingNativeWeaponName, desiredAmmo, syncInFlight = nil, nil, nil, nil, false
-    reloadInFlight, reloadQueued = false, false
+    equipped, pendingToken, pendingNativeWeaponName, desiredAmmo, desiredLoaded, syncInFlight = nil, nil, nil, nil, nil, false
     unloadInFlight, unloadQueued = false, false
+    observerCorrectionPending = false
+    ResolveCheckpointWaiters({ ok = false, code = "session_cleared", message = "Weapon session was cleared." })
     attachmentReconcileUntil = 0
 end
 
@@ -124,28 +134,58 @@ local function ApplyApprovedWeapon(approved)
         or (pendingNativeWeaponName == approved.nativeWeaponName)
     if not alreadyApplied then
         ClearNativeWeapon()
-        GiveApprovedNativeWeapon(approved.nativeWeaponName, approved.nativeAmmoName, approved.ammo, approved.attachments)
+        GiveApprovedNativeWeapon(approved.nativeWeaponName, approved.nativeAmmoName, approved.ammo,
+            approved.loaded, approved.attachments)
     end
     equipped = { itemInstanceId = approved.itemInstanceId, definitionId = approved.definitionId,
         nativeWeaponName = approved.nativeWeaponName, nativeAmmoName = approved.nativeAmmoName,
         ammo = tonumber(approved.ammo) or 0, condition = tonumber(approved.condition),
+        loaded = tonumber(approved.loaded) or 0, reserve = tonumber(approved.reserve) or 0,
+        generation = tonumber(approved.generation), sessionId = approved.sessionId,
         attachments = approved.attachments or {} }
     desiredAmmo = equipped.ammo
+    desiredLoaded = equipped.loaded
 end
 
 local function FlushConsumption()
-    if syncInFlight or not equipped or desiredAmmo == nil or desiredAmmo >= equipped.ammo then return end
+    if syncInFlight then return end
+    if not equipped then
+        ResolveCheckpointWaiters({ ok = true, value = { skipped = true } })
+        return
+    end
+    if desiredAmmo == nil or desiredAmmo > equipped.ammo then
+        ResolveCheckpointWaiters({ ok = false, code = "invalid_native_state", message = "Native ammunition state is invalid." })
+        return
+    end
+    if desiredAmmo == equipped.ammo and desiredLoaded == equipped.loaded then
+        ResolveCheckpointWaiters({ ok = true, value = {
+            total = equipped.ammo, loaded = equipped.loaded, reserve = equipped.reserve
+        } })
+        return
+    end
     syncInFlight = true
     local submitted = desiredAmmo
-    FeatherCore.RPC.Call("feather-weapons:ammo:sync", { loaded = submitted }, function(result)
+    local submittedLoaded = desiredLoaded or (equipped.loaded or 0)
+    local leaseItem = equipped.itemInstanceId
+    local leaseGeneration = equipped.generation
+    FeatherCore.RPC.Call("feather-weapons:ammo:sync", {
+        total = submitted,
+        loaded = submittedLoaded,
+        itemInstanceId = leaseItem,
+        generation = leaseGeneration
+    }, function(result)
         syncInFlight = false
-        if not equipped then return end
+        if not equipped or not SameInstance(equipped.itemInstanceId, leaseItem)
+            or equipped.generation ~= leaseGeneration then return end
         if result and result.ok then
-            equipped.ammo = tonumber(result.value.loaded) or submitted
+            equipped.ammo = tonumber(result.value.total) or submitted
+            equipped.loaded = tonumber(result.value.loaded) or submittedLoaded
+            equipped.reserve = tonumber(result.value.reserve) or (equipped.ammo - equipped.loaded)
             equipped.condition = tonumber(result.value.condition) or equipped.condition
             if Config.DevMode then
-                print(("[feather-weapons] fired consumed=%s loaded=%s condition=%s"):format(
-                    tostring(result.value.consumed), tostring(equipped.ammo), tostring(equipped.condition)))
+                print(("[feather-weapons] checkpoint consumed=%s total=%s loaded=%s condition=%s"):format(
+                    tostring(result.value.consumed), tostring(equipped.ammo),
+                    tostring(equipped.loaded), tostring(equipped.condition)))
             end
             if result.value.broken then
                 print("[feather-weapons] weapon condition is broken")
@@ -154,19 +194,49 @@ local function FlushConsumption()
             end
             if desiredAmmo > equipped.ammo then desiredAmmo = equipped.ammo end
         else
+            ResolveCheckpointWaiters(result or { ok = false, code = "checkpoint_failed",
+                message = "Weapon state could not be saved." })
             FeatherWeaponsClient.Reconcile()
             return
         end
-        if desiredAmmo < equipped.ammo then
+        if desiredAmmo < equipped.ammo or desiredLoaded ~= equipped.loaded then
             FlushConsumption()
-        elseif reloadQueued then
-            reloadQueued = false
-            BeginReload()
-        elseif unloadQueued then
+        else
+            ResolveCheckpointWaiters({ ok = true, value = {
+                total = equipped.ammo, loaded = equipped.loaded, reserve = equipped.reserve
+            } })
+        end
+        if unloadQueued then
             unloadQueued = false
             BeginUnload()
         end
     end)
+end
+
+local function CaptureNativeState()
+    if not equipped then return true end
+    local ped = PlayerPedId()
+    local observedTotal = math.max(0, math.floor(tonumber(
+        GetPedAmmoByType(ped, joaat(equipped.nativeAmmoName))) or 0))
+    local clipOk, clipAmount = GetAmmoInClip(ped, joaat(equipped.nativeWeaponName))
+    if observedTotal > equipped.ammo then return false end
+    desiredAmmo = observedTotal
+    if clipOk == true or clipOk == 1 then
+        desiredLoaded = math.max(0, math.min(observedTotal,
+            math.floor(tonumber(clipAmount) or 0)))
+    end
+    return true
+end
+
+function FeatherWeaponsClient.Checkpoint(callback)
+    callback = type(callback) == "function" and callback or function() end
+    checkpointWaiters[#checkpointWaiters + 1] = callback
+    if not CaptureNativeState() then
+        ResolveCheckpointWaiters({ ok = false, code = "invalid_native_state",
+            message = "Native ammunition exceeded the active weapon lease." })
+        return
+    end
+    FlushConsumption()
 end
 
 function FeatherWeaponsClient.Reconcile(callback)
@@ -185,7 +255,8 @@ function FeatherWeaponsClient.Equip(itemInstanceId, callback)
 
         local nativeHash = joaat(authorization.nativeWeaponName)
         ResetNativeAmmo("weapon-equipped", authorization.nativeAmmoName)
-        GiveApprovedNativeWeapon(authorization.nativeWeaponName, authorization.nativeAmmoName, authorization.ammo, authorization.attachments)
+        GiveApprovedNativeWeapon(authorization.nativeWeaponName, authorization.nativeAmmoName, authorization.ammo,
+            authorization.loaded, authorization.attachments)
         FeatherCore.RPC.Call("feather-weapons:equip:acknowledge", { token = authorization.token }, function(ack, ackError)
             if not ack or not ack.ok then
                 RemoveWeaponFromPed(PlayerPedId(), nativeHash)
@@ -208,86 +279,32 @@ function FeatherWeaponsClient.Unequip(callback)
     end)
 end
 
-local function AmmoOperation(route, amount, callback)
-    FeatherCore.RPC.Call(route, { amount = amount }, function(result, rpcError)
-        if result and result.ok and equipped then
-            equipped.ammo = tonumber(result.value.loaded) or equipped.ammo
-            desiredAmmo = equipped.ammo
-            SetNativeAmmo(result.value.nativeAmmoName or equipped.nativeAmmoName, equipped.ammo, equipped.nativeWeaponName)
-        end
-        if callback then callback(result, rpcError) end
-    end)
-end
-
-function FeatherWeaponsClient.Reload(amount, callback) AmmoOperation("feather-weapons:ammo:reload", amount, callback) end
-
-BeginReload = function()
-    if reloadInFlight then return end
-    local ped = PlayerPedId()
-    if ped == 0 or GetEntityHealth(ped) <= 0 or IsEntityDead(ped) then
-        reloadQueued = false
-        return
-    end
-    if not equipped then
-        Notify("No weapon is equipped.")
-        return
-    end
-    if syncInFlight or (desiredAmmo ~= nil and desiredAmmo < equipped.ammo) then
-        reloadQueued = true
-        FlushConsumption()
-        return
-    end
-
-    reloadInFlight = true
-    FeatherWeaponsClient.Reload(nil, function(result, rpcError)
-        reloadInFlight = false
-        if result and result.ok then
-            if not IsPedReloading(ped) then
-                Citizen.InvokeNative(0x62D2916F56B9CD2D, ped, true)
-            end
-            Notify(("Loaded %s round%s."):format(
-                tostring(result.value.moved), result.value.moved == 1 and "" or "s"))
-            return
-        end
-        local failure = result and result.error or rpcError
-        Notify(failure and failure.message or "Unable to reload.")
-    end)
-end
-
-local function IsCarryingEntity(ped)
-    if ped == 0 then return false end
-    local carried = Citizen.InvokeNative(0xD806CD2A4F2C2996, ped)
-    if carried and carried ~= 0 then return true end
-    return Citizen.InvokeNative(0xA911EE21EDF69DAF, ped) == true
-end
-
-local function HasNearbyCarryablePed(ped)
-    local origin = GetEntityCoords(ped)
-    for _, candidate in ipairs(GetGamePool('CPed')) do
-        if candidate ~= ped and DoesEntityExist(candidate) then
-            local coords = GetEntityCoords(candidate)
-            if #(origin - coords) <= 2.25 then
-                local carryable = IsEntityDead(candidate)
-                    or (type(IsPedDeadOrDying) == 'function' and IsPedDeadOrDying(candidate, true))
-                    or (type(IsPedHogtied) == 'function' and IsPedHogtied(candidate))
-                if carryable then return true end
-            end
-        end
-    end
-    return false
-end
-
-local function CarryInteractionActive(ped)
-    return IsCarryingEntity(ped) or HasNearbyCarryablePed(ped)
+-- Read-only state used by isolated development diagnostics. The probe must not
+-- replace or mutate an Inventory-authorized weapon.
+function FeatherWeaponsClient.GetDiagnosticState()
+    if not equipped then return { equipped = false } end
+    return {
+        equipped = true,
+        itemInstanceId = equipped.itemInstanceId,
+        definitionId = equipped.definitionId,
+        nativeWeaponName = equipped.nativeWeaponName,
+        nativeAmmoName = equipped.nativeAmmoName,
+        generation = equipped.generation,
+        sessionId = equipped.sessionId
+    }
 end
 
 function FeatherWeaponsClient.Unload(amount, callback)
     FeatherCore.RPC.Call("feather-weapons:ammo:unload", { amount = amount }, function(result, rpcError)
         if result and result.ok and equipped then
-            equipped.ammo = tonumber(result.value.loaded) or 0
+            equipped.ammo = tonumber(result.value.total) or 0
+            equipped.loaded = tonumber(result.value.loaded) or 0
+            equipped.reserve = tonumber(result.value.reserve) or 0
             desiredAmmo = equipped.ammo
+            desiredLoaded = equipped.loaded
             RestoreApprovedNativeWeapon(equipped.nativeWeaponName,
-                result.value.nativeAmmoName or equipped.nativeAmmoName, equipped.ammo, equipped.attachments)
+                result.value.nativeAmmoName or equipped.nativeAmmoName, equipped.ammo,
+                equipped.loaded, equipped.attachments)
         end
         if callback then callback(result, rpcError) end
     end)
@@ -375,7 +392,7 @@ local function HandleAttachmentResult(result)
     if result and result.ok and equipped then
         equipped.attachments = result.value.attachments or {}
         RestoreApprovedNativeWeapon(equipped.nativeWeaponName, equipped.nativeAmmoName, equipped.ammo,
-            equipped.attachments)
+            equipped.loaded, equipped.attachments)
         Notify(result.value.installed and "Attachment installed." or "Attachment removed.")
         return
     end
@@ -428,6 +445,31 @@ local function OpenModificationMenu()
     ModificationPage:RegisterElement("subheader", { value = equipped.definitionId or "Equipped weapon", slot = "header" })
     ModificationPage:RegisterElement("line", { slot = "header" })
 
+    local installedIds = {}
+    for _, installed in ipairs(equipped.attachments or {}) do
+        installedIds[installed.definitionId] = true
+    end
+    local weaponDefinition = WeaponDefinitionCatalog.weapons[equipped.definitionId]
+    local compatibleIds = {}
+    for _, attachmentIds in pairs(weaponDefinition and weaponDefinition.attachmentSlots or {}) do
+        for _, attachmentId in ipairs(attachmentIds) do compatibleIds[attachmentId] = true end
+    end
+    for attachmentId in pairs(compatibleIds) do
+        if not installedIds[attachmentId] then
+            local definition = WeaponDefinitionCatalog.attachments[attachmentId]
+            ModificationPage:RegisterElement("button", {
+                label = ("Install %s"):format(definition and definition.label or attachmentId:gsub("_", " ")),
+                slot = "content"
+            }, function()
+                ModificationMenu:Close()
+                FeatherCore.RPC.Call("feather-weapons:attachment:install", { attachmentId = attachmentId },
+                    function(result, rpcError)
+                        HandleAttachmentResult(result or { ok = false, error = rpcError })
+                    end)
+            end)
+        end
+    end
+
     if not equipped.attachments or #equipped.attachments == 0 then
         ModificationPage:RegisterElement("textdisplay", { value = "No attachments are installed.", slot = "content" })
     else
@@ -461,36 +503,28 @@ RegisterNetEvent("feather-weapons:client:inventoryRepairResult", function(result
 end)
 
 RegisterNetEvent("feather-weapons:client:clearAuthorization", function(token) if pendingToken == token then ClearNativeWeapon() end end)
+RegisterNetEvent("feather-weapons:client:inventoryAmmoResult", function(result)
+    if result and result.ok and equipped then
+        equipped.ammo = tonumber(result.value.total) or equipped.ammo
+        equipped.loaded = tonumber(result.value.loaded) or equipped.loaded
+        equipped.reserve = tonumber(result.value.reserve) or (equipped.ammo - equipped.loaded)
+        desiredAmmo, desiredLoaded = equipped.ammo, equipped.loaded
+        SetNativeAmmo(result.value.nativeAmmoName or equipped.nativeAmmoName,
+            equipped.ammo, equipped.nativeWeaponName, equipped.loaded)
+        Notify(("Escrowed %s cartridge%s."):format(
+            tostring(result.value.moved), result.value.moved == 1 and "" or "s"))
+        return
+    end
+    local failure = result and result.error
+    Notify(failure and failure.message or "Unable to escrow ammunition.")
+end)
 RegisterNetEvent("feather-weapons:client:clearEquipped", ClearNativeWeapon)
 RegisterNetEvent("feather-weapons:client:clearSession", ClearNativeWeapon)
 RegisterNetEvent("feather-weapons:client:reconcile", function() FeatherWeaponsClient.Reconcile() end)
-
-if Config.Controls and Config.Controls.reload and Config.Controls.reload.enabled then
-    local reloadControl = Config.Controls.reload
-    RegisterCommand(reloadControl.command, function() BeginReload() end, false)
-
-    if reloadControl.disableNative and reloadControl.nativeControl then
-        CreateThread(function()
-            while true do
-                if equipped then
-                    DisableControlAction(0, reloadControl.nativeControl, true)
-                    if IsDisabledControlJustPressed(0, reloadControl.nativeControl) then
-                        reloadInputArmed = not CarryInteractionActive(PlayerPedId())
-                    end
-                    if IsDisabledControlJustReleased(0, reloadControl.nativeControl) then
-                        local shouldReload = reloadInputArmed and not CarryInteractionActive(PlayerPedId())
-                        reloadInputArmed = false
-                        if shouldReload then BeginReload() end
-                    end
-                    Wait(0)
-                else
-                    reloadInputArmed = false
-                    Wait(500)
-                end
-            end
-        end)
-    end
-end
+RegisterNetEvent("feather-weapons:client:forceReconcile", function()
+    ClearNativeWeapon()
+    FeatherWeaponsClient.Reconcile()
+end)
 
 if Config.Controls and Config.Controls.unload and Config.Controls.unload.enabled then
     local unloadControl = Config.Controls.unload
@@ -505,20 +539,61 @@ if Config.Controls and Config.Controls.modify and Config.Controls.modify.enabled
 end
 
 CreateThread(function()
+    local runtimeConfig = Config.Runtime or {}
+    local observationInterval = math.max(25,
+        math.floor(tonumber(runtimeConfig.observationIntervalMs) or 50))
+    local checkpointDebounce = math.max(0,
+        math.floor(tonumber(runtimeConfig.checkpointDebounceMs) or 250))
+    local wasDead = false
     while true do
-        if equipped and desiredAmmo and desiredAmmo > 0 and IsPedShooting(PlayerPedId()) then
+        if equipped and desiredAmmo ~= nil then
             local itemInstanceId = equipped.itemInstanceId
+            local generation = equipped.generation
             local ammoHash = equipped.nativeAmmoName and joaat(equipped.nativeAmmoName) or nil
-            Wait(75)
-            if equipped and SameInstance(equipped.itemInstanceId, itemInstanceId) and ammoHash then
+            if ammoHash then
+                local clipOk, clipAmount = GetAmmoInClip(PlayerPedId(), joaat(equipped.nativeWeaponName))
+                local clipChanged = false
+                if clipOk == true or clipOk == 1 then
+                    local observedLoaded = math.max(0, math.floor(tonumber(clipAmount) or 0))
+                    clipChanged = desiredLoaded ~= nil and observedLoaded ~= desiredLoaded
+                    desiredLoaded = observedLoaded
+                end
                 local observed = math.max(0, math.floor(tonumber(GetPedAmmoByType(PlayerPedId(), ammoHash)) or 0))
                 if observed < desiredAmmo then
                     desiredAmmo = observed
-                    SetTimeout(250, FlushConsumption)
+                    SetTimeout(checkpointDebounce, function()
+                        if equipped and SameInstance(equipped.itemInstanceId, itemInstanceId)
+                            and equipped.generation == generation then FlushConsumption() end
+                    end)
+                elseif clipChanged then
+                    SetTimeout(checkpointDebounce, function()
+                        if equipped and SameInstance(equipped.itemInstanceId, itemInstanceId)
+                            and equipped.generation == generation then FlushConsumption() end
+                    end)
+                elseif observed > equipped.ammo and not observerCorrectionPending then
+                    observerCorrectionPending = true
+                    if Config.DevMode then
+                        print(("[feather-weapons] native ammo exceeded lease observed=%d approved=%d generation=%s")
+                            :format(observed, equipped.ammo, tostring(generation)))
+                    end
+                    FeatherWeaponsClient.Reconcile()
+                elseif observed <= equipped.ammo then
+                    observerCorrectionPending = false
                 end
             end
+            local deadState = IsEntityDead(PlayerPedId())
+            local dead = deadState == true or deadState == 1
+            if dead and not wasDead then
+                -- Death is a persistence boundary. Capture and submit immediately;
+                -- ordinary firing/reload observations remain debounced.
+                CaptureNativeState()
+                FlushConsumption()
+            end
+            wasDead = dead
+            Wait(observationInterval)
         else
-            Wait(equipped and 0 or 500)
+            wasDead = false
+            Wait(500)
         end
     end
 end)
@@ -536,16 +611,50 @@ CreateThread(function()
 end)
 
 AddEventHandler("Feather:Character:Spawned", function()
+    RegisterCharacterLogoutCheckpoint()
     FeatherWeaponsClient.Reconcile()
-    SetTimeout(2000, function() FeatherWeaponsClient.Reconcile() end)
-    SetTimeout(5000, function() FeatherWeaponsClient.Reconcile() end)
 end)
 AddEventHandler("Feather:Character:Logout", function()
     inventoryWeaponInFlight = false
     ClearNativeWeapon()
 end)
+
+RegisterCharacterLogoutCheckpoint = function()
+    if GetResourceState("feather-character") ~= "started" then return end
+    local called, result = pcall(function()
+        return exports["feather-character"]:RegisterLogoutCheckpoint(
+            "feather-weapons:runtime", "CheckpointBeforeLogout")
+    end)
+    if Config.DevMode then
+        local passed = called and result and result.ok == true
+        local failure = type(result) == "table" and (result.error or result) or nil
+        print(("[feather-weapons] character logout checkpoint registration %s code=%s message=%s"):format(
+            passed and "PASS" or "FAIL",
+            tostring(passed and "none" or (failure and failure.code) or "export_error"),
+            tostring(passed and "none" or (failure and failure.message) or result)))
+    end
+end
+
+exports("CheckpointBeforeLogout", function()
+    local pending = promise.new()
+    FeatherWeaponsClient.Checkpoint(function(checkpoint) pending:resolve(checkpoint) end)
+    local checkpoint = Citizen.Await(pending)
+    if Config.DevMode then
+        print(("[feather-weapons] logout checkpoint %s total=%s loaded=%s"):format(
+            checkpoint and checkpoint.ok and "PASS" or "FAIL",
+            tostring(checkpoint and checkpoint.value and checkpoint.value.total),
+            tostring(checkpoint and checkpoint.value and checkpoint.value.loaded)))
+    end
+    return checkpoint
+end)
+
 AddEventHandler("onClientResourceStart", function(resourceName)
-    if resourceName == GetCurrentResourceName() then SetTimeout(1000, function() FeatherWeaponsClient.Reconcile() end) end
+    if resourceName == GetCurrentResourceName() then
+        RegisterCharacterLogoutCheckpoint()
+        FeatherWeaponsClient.Reconcile()
+    elseif resourceName == "feather-character" then
+        RegisterCharacterLogoutCheckpoint()
+    end
 end)
 AddEventHandler("onResourceStop", function(resourceName) if resourceName == GetCurrentResourceName() then ClearNativeWeapon() end end)
 
@@ -554,9 +663,24 @@ if Config.DevMode then
         FeatherWeaponsClient.Reconcile(function(result, rpcError)
             if result and result.ok then
                 local state = result.value.equipped
-                print(("[feather-weapons] state equipped=%s item=%s loaded=%s condition=%s"):format(
+                print(("[feather-weapons] state equipped=%s item=%s generation=%s total=%s loaded=%s reserve=%s condition=%s"):format(
                     tostring(state ~= nil), tostring(state and state.itemInstanceId),
-                    tostring(state and state.ammo), tostring(state and state.condition)))
+                    tostring(state and state.generation),
+                    tostring(state and state.ammo), tostring(state and state.loaded),
+                    tostring(state and state.reserve), tostring(state and state.condition)))
+                if state then
+                    local attachmentIds = {}
+                    for _, attachment in ipairs(state.attachments or {}) do
+                        attachmentIds[#attachmentIds + 1] = tostring(attachment.definitionId)
+                    end
+                    print(("[feather-weapons] attachments count=%s ids=%s"):format(
+                        tostring(#attachmentIds), #attachmentIds > 0 and table.concat(attachmentIds, ",") or "none"))
+                    local ped = PlayerPedId()
+                    local clipOk, nativeLoaded = GetAmmoInClip(ped, joaat(state.nativeWeaponName))
+                    local nativeTotal = GetPedAmmoByType(ped, joaat(state.nativeAmmoName))
+                    print(("[feather-weapons] native total=%s loaded=%s clipOk=%s"):format(
+                        tostring(nativeTotal), tostring(nativeLoaded), tostring(clipOk)))
+                end
                 return
             end
             local failure = result and result.error or rpcError

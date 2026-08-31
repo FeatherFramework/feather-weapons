@@ -167,6 +167,10 @@ function AttachmentService.Remove(source, rpcContext, attachmentId)
     return WeaponResult.Ok(transaction.value, rpcContext.correlationId)
 end
 
+FeatherCore.RPC.Register("feather-weapons:attachment:install", function(params, respond, source, context)
+    respond(AttachmentService.Install(source, context, params and params.attachmentId))
+end, { requireCharacter = true, windowMs = 2000, maxCalls = 3, maxPayloadBytes = 256 })
+
 FeatherCore.RPC.Register("feather-weapons:attachment:remove", function(params, respond, source, context)
     respond(AttachmentService.Remove(source, context, params and params.attachmentId))
 end, { requireCharacter = true, windowMs = 2000, maxCalls = 3, maxPayloadBytes = 256 })
