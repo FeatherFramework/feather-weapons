@@ -6,7 +6,7 @@ lua54 'yes'
 description 'The official weapon system for Feather framework.'
 author 'Feather Framework'
 name 'feather-weapons'
-version '0.5.0'
+version '0.6.0'
 
 shared_scripts {
     'config.lua',
@@ -37,11 +37,13 @@ server_scripts {
 
 client_scripts {
     '/client/imports.lua',
-    '/client/main.lua'
+    '/client/main.lua',
+    '/client/native_probe.lua'
 }
 
 dependencies {
     'feather-core',
+    'feather-character',
     'feather-inventory',
     'feather-menu'
 }

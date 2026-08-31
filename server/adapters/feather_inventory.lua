@@ -36,6 +36,7 @@ end
 local function BuildDefinitionIndex()
     DefinitionIds = {}
     DuplicateDefinitions = {}
+    local definitionsByName = {}
 
     local listed = Inventory.Items.GetDefinitions()
     if type(listed) ~= "table" or listed.ok ~= true then
@@ -50,6 +51,7 @@ local function BuildDefinitionIndex()
     for _, definition in pairs(definitions or {}) do
         local name, id = definition.name, tonumber(definition.id)
         if name and id then
+            definitionsByName[name] = definitionsByName[name] or definition
             local current = DefinitionIds[name]
             if current then
                 DuplicateDefinitions[name] = DuplicateDefinitions[name] or { current }
@@ -72,6 +74,42 @@ local function BuildDefinitionIndex()
         if not DefinitionIds[name] then MissingDefinitions[#MissingDefinitions + 1] = name end
     end
     table.sort(MissingDefinitions)
+
+    if #MissingDefinitions > 0 then
+        return Failure(nil, "Required Inventory item definitions are missing", {
+            missing = MissingDefinitions
+        })
+    end
+    if next(DuplicateDefinitions) ~= nil then
+        return Failure(nil, "Duplicate Inventory item definitions are not supported", {
+            duplicates = DuplicateDefinitions
+        })
+    end
+
+    local expected = {
+        cattleman_revolver = { instanceMode = "unique", usable = true, type = "item_weapon" },
+        revolver_standard = { instanceMode = "stack", usable = true, type = "item_ammo" },
+        weapon_repair_kit = { instanceMode = "stack", usable = true, type = "item_item" },
+        cattleman_long_barrel = { instanceMode = "stack", usable = false, type = "item_item" }
+    }
+    local mismatches = {}
+    for name, rules in pairs(expected) do
+        local definition = definitionsByName[name]
+        local usable = definition.usable == true or tonumber(definition.usable) == 1
+        local actualMode = definition.instanceMode or definition.instance_mode
+        if actualMode ~= rules.instanceMode or usable ~= rules.usable or definition.type ~= rules.type then
+            mismatches[#mismatches + 1] = {
+                name = name,
+                expected = rules,
+                actual = { instanceMode = actualMode, usable = usable, type = definition.type }
+            }
+        end
+    end
+    if #mismatches > 0 then
+        return Failure(nil, "Inventory item definitions do not match the Weapons contract", {
+            mismatches = mismatches
+        })
+    end
 
     return WeaponResult.Ok(true)
 end
@@ -278,9 +316,47 @@ local function RegisterUsableWeapons()
                 end
                 TriggerClientEvent("feather-weapons:client:useInventoryWeapon", source, item.id)
                 if done then done() end
-            end)
+            end, GetCurrentResourceName())
             if type(registered) == "table" and registered.ok ~= true then
                 return Failure(nil, "Weapon usable-item registration failed", {
+                    itemName = definition.itemName,
+                    code = registered.error and registered.error.code,
+                    reason = registered.error and registered.error.message
+                })
+            end
+        end
+    end
+    return WeaponResult.Ok(true)
+end
+
+local function RegisterUsableAmmunition()
+    local listed = DefinitionRegistry.List("ammunition")
+    if not listed.ok then return listed end
+    for _, definition in ipairs(listed.value) do
+        if DefinitionIds[definition.itemName] then
+            local registered = Inventory.Items.RegisterUsableItem(definition.itemName, function(_, source, done)
+                local runtime = WeaponRuntime.Get(source)
+                local result
+                local weapon = runtime and runtime.equipped
+                    and DefinitionRegistry.Get("weapon", runtime.equipped.definitionId) or nil
+                if not runtime or not runtime.equipped then
+                    result = WeaponResult.Error(WeaponErrors.NOT_EQUIPPED,
+                        "Equip a compatible weapon before using ammunition")
+                elseif not weapon or not weapon.ok or weapon.value.ammunitionType ~= definition.id then
+                    result = WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+                        "This ammunition is not compatible with the equipped weapon")
+                else
+                    result = AmmoService.Escrow(source, {
+                        characterId = runtime.characterId,
+                        sessionId = runtime.sessionId,
+                        correlationId = ("inventory-ammo:%s:%s"):format(tostring(source), tostring(GetGameTimer()))
+                    })
+                end
+                TriggerClientEvent("feather-weapons:client:inventoryAmmoResult", source, result)
+                if done then done() end
+            end, GetCurrentResourceName())
+            if type(registered) == "table" and registered.ok ~= true then
+                return Failure(nil, "Ammunition usable-item registration failed", {
                     itemName = definition.itemName,
                     code = registered.error and registered.error.code,
                     reason = registered.error and registered.error.message
@@ -319,42 +395,10 @@ local function RegisterUsableRepairItems()
                 end
                 TriggerClientEvent("feather-weapons:client:inventoryRepairResult", source, result)
                 if done then done() end
-            end)
+            end, GetCurrentResourceName())
             if type(registered) == "table" and registered.ok ~= true then
                 return Failure(nil, "Repair usable-item registration failed", {
                     itemName = itemName,
-                    code = registered.error and registered.error.code,
-                    reason = registered.error and registered.error.message
-                })
-            end
-        end
-    end
-    return WeaponResult.Ok(true)
-end
-
-local function RegisterUsableAttachments()
-    local listed = DefinitionRegistry.List("attachment")
-    if not listed.ok then return listed end
-    for _, definition in ipairs(listed.value) do
-        if DefinitionIds[definition.itemName] then
-            local registered = Inventory.Items.RegisterUsableItem(definition.itemName, function(_, source, done)
-                local runtime = WeaponRuntime.Get(source)
-                local result
-                if not runtime or not runtime.equipped then
-                    result = WeaponResult.Error(WeaponErrors.NOT_EQUIPPED, "Equip a compatible weapon first")
-                else
-                    result = AttachmentService.Install(source, {
-                        characterId = runtime.characterId,
-                        sessionId = runtime.sessionId,
-                        correlationId = ("inventory-attachment:%s:%s"):format(tostring(source), tostring(GetGameTimer()))
-                    }, definition.id)
-                end
-                TriggerClientEvent("feather-weapons:client:attachmentResult", source, result)
-                if done then done() end
-            end)
-            if type(registered) == "table" and registered.ok ~= true then
-                return Failure(nil, "Attachment usable-item registration failed", {
-                    itemName = definition.itemName,
                     code = registered.error and registered.error.code,
                     reason = registered.error and registered.error.message
                 })
@@ -480,16 +524,16 @@ function InstallFeatherInventoryProvider()
         return weapons
     end
 
+    local ammunition = RegisterUsableAmmunition()
+    if type(ammunition) == "table" and ammunition.ok ~= true then
+        Inventory, InventoryCapabilities = nil, nil
+        return ammunition
+    end
+
     local repairs = RegisterUsableRepairItems()
     if type(repairs) == "table" and repairs.ok ~= true then
         Inventory, InventoryCapabilities = nil, nil
         return repairs
-    end
-
-    local attachments = RegisterUsableAttachments()
-    if type(attachments) == "table" and attachments.ok ~= true then
-        Inventory, InventoryCapabilities = nil, nil
-        return attachments
     end
 
     local guards = RegisterGuards()

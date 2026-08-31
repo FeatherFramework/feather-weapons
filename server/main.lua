@@ -1,7 +1,7 @@
 local function FailStartup(message, details)
     print(("[feather-weapons] startup failed: %s"):format(message))
     if details and Config.DevMode then print(json.encode(details)) end
-    if Config.StrictStartup then error(message) end
+    error(message)
 end
 
 local coreResult = CoreAdapter.CheckCapabilities()
@@ -32,10 +32,4 @@ if InventoryAdapter.IsReady() then
     local capabilities = InventoryAdapter.GetCapabilities()
     print(("[feather-weapons] inventory provider active: %s")
         :format(tostring(capabilities.provider or "unknown")))
-    if capabilities.missingDefinitions and #capabilities.missingDefinitions > 0 then
-        print(("[feather-weapons] missing inventory definitions: %s")
-            :format(table.concat(capabilities.missingDefinitions, ", ")))
-    end
-else
-    print("[feather-weapons] inventory provider pending; persistence and equip features remain disabled")
 end
