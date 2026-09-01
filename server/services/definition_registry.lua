@@ -75,19 +75,24 @@ end
 function DefinitionRegistry.ValidateAttachmentSet(weaponId, installed)
     local weapon = registry.weapon[weaponId]
     if not weapon then
-        return WeaponResult.Error(WeaponErrors.DEFINITION_NOT_FOUND, "Definition was not found", { kind = "weapon", id = weaponId })
+        return WeaponResult.Error(WeaponErrors.DEFINITION_NOT_FOUND, "Definition was not found",
+            { kind = "weapon", id = weaponId })
     end
     local present = {}
     for index, entry in ipairs(installed or {}) do
         local attachment = registry.attachment[entry.definitionId]
         if not attachment then
-            return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Installed attachment definition was not found", { index = index, attachmentId = entry.definitionId })
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Installed attachment definition was not found",
+                { index = index, attachmentId = entry.definitionId })
         end
         if entry.slot ~= attachment.slot then
-            return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Installed attachment slot does not match its definition", { index = index, attachmentId = entry.definitionId, expected = attachment.slot, actual = entry.slot })
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+                "Installed attachment slot does not match its definition",
+                { index = index, attachmentId = entry.definitionId, expected = attachment.slot, actual = entry.slot })
         end
         if not DefinitionRegistry.IsAttachmentCompatible(weaponId, entry.definitionId) then
-            return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Attachment is not compatible with this weapon", { index = index, weaponId = weaponId, attachmentId = entry.definitionId })
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Attachment is not compatible with this weapon",
+                { index = index, weaponId = weaponId, attachmentId = entry.definitionId })
         end
         present[entry.definitionId] = true
     end
@@ -95,7 +100,8 @@ function DefinitionRegistry.ValidateAttachmentSet(weaponId, installed)
         local attachment = registry.attachment[entry.definitionId]
         for _, conflictId in ipairs(attachment.conflicts or {}) do
             if present[conflictId] then
-                return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Installed attachments conflict", { attachmentId = entry.definitionId, conflictId = conflictId })
+                return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Installed attachments conflict",
+                    { attachmentId = entry.definitionId, conflictId = conflictId })
             end
         end
     end
@@ -115,7 +121,8 @@ end
 function DefinitionRegistry.ListCompatibleAttachments(weaponId)
     local weapon = registry.weapon[weaponId]
     if not weapon then
-        return WeaponResult.Error(WeaponErrors.DEFINITION_NOT_FOUND, "Definition was not found", { kind = "weapon", id = weaponId })
+        return WeaponResult.Error(WeaponErrors.DEFINITION_NOT_FOUND, "Definition was not found",
+            { kind = "weapon", id = weaponId })
     end
     local result = {}
     for _, attachmentIds in pairs(weapon.attachmentSlots or {}) do

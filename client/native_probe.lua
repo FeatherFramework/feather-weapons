@@ -13,6 +13,7 @@ local previous = nil
 local marks = {}
 local markCounter = 0
 local logicalItem = 'unlabeled'
+local nativeRemoveReason = joaat('REMOVE_REASON_CLIENT_PURGED')
 
 local function NativeTrue(value)
     return value == true or value == 1
@@ -76,7 +77,8 @@ local function PrintSnapshot(label, snapshot)
         .. 'ammoTypeTotal=%d reloading=%s shooting=%s dead=%s mounted=%s walking=%s running=%s '
         .. 'sprinting=%s cover=%s firstPersonAim=%s carrying=%s'):format(
         tostring(label), tostring(snapshot.logicalItem), tostring(snapshot.selected), tostring(snapshot.weapon),
-        tostring(snapshot.clipOk), snapshot.loaded, snapshot.weaponTotal, snapshot.ammoTypeTotal, tostring(snapshot.reloading),
+        tostring(snapshot.clipOk), snapshot.loaded, snapshot.weaponTotal, snapshot.ammoTypeTotal,
+        tostring(snapshot.reloading),
         tostring(snapshot.shooting), tostring(snapshot.dead), tostring(snapshot.mounted),
         tostring(snapshot.walking), tostring(snapshot.running), tostring(snapshot.sprinting),
         tostring(snapshot.inCover), tostring(snapshot.firstPersonAim),
@@ -98,11 +100,11 @@ local function ClearNativeTestState(ped)
     local amount = math.max(0, math.floor(tonumber(GetPedAmmoByType(ped, ammoHash)) or 0))
     if amount > 0 then
         Citizen.InvokeNative(0xB6CFEC32E3742779, ped, ammoHash, amount, 0xA07362E6)
-            -- _REMOVE_AMMO_FROM_PED_BY_TYPE, REMOVE_REASON_DEBUG
+        -- _REMOVE_AMMO_FROM_PED_BY_TYPE, REMOVE_REASON_DEBUG
     end
     local afterTypeRemoval = math.max(0,
         math.floor(tonumber(GetPedAmmoByType(ped, ammoHash)) or 0))
-    RemoveWeaponFromPed(ped, weaponHash)
+    RemoveWeaponFromPed(ped, weaponHash, true, nativeRemoveReason)
     local afterWeaponRemoval = math.max(0,
         math.floor(tonumber(GetPedAmmoByType(ped, ammoHash)) or 0))
     print(('[WeaponNativeProbe] cleanup requested=%d afterType=%d afterWeapon=%d'):format(
@@ -119,7 +121,21 @@ RegisterCommand('WeaponNativeProbePrepare', function(_, args)
 
     local ped = PlayerPedId()
     ClearNativeTestState(ped)
-    GiveWeaponToPed(ped, weaponHash, 0, false, true)
+    GiveWeaponToPed(
+        ped,
+        weaponHash,
+        0,
+        false,
+        true,
+        0,
+        false,
+        0.5,
+        1.0,
+        joaat('ADD_REASON_DEFAULT'),
+        true,
+        0.0,
+        false
+    )
     local clipSet = SetAmmoInClip(ped, weaponHash, loaded)
     SetPedAmmoByType(ped, ammoHash, total)
     SetCurrentPedWeapon(ped, weaponHash, true, 0, false, false)

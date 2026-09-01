@@ -29,7 +29,8 @@ end
 
 local function NextToken(runtime)
     tokenCounter = tokenCounter + 1
-    return ("%s:%s:%s:%s"):format(runtime.sessionId, tostring(GetGameTimer()), tostring(tokenCounter), tostring(math.random(100000, 999999)))
+    return ("%s:%s:%s:%s"):format(runtime.sessionId, tostring(GetGameTimer()), tostring(tokenCounter),
+        tostring(math.random(100000, 999999)))
 end
 
 function WeaponRuntime.Get(source)
@@ -75,7 +76,8 @@ end
 function WeaponRuntime.RestoreEquipped(source, sessionId, item, definition, correlationId)
     local runtime = sessions[source]
     if not runtime or runtime.sessionId ~= sessionId or runtime.state == "leaving" then
-        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil, correlationId)
+        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil,
+            correlationId)
     end
     runtime.pending = nil
     local generation = NextGeneration(runtime)
@@ -101,15 +103,18 @@ end
 function WeaponRuntime.BeginEquip(source, sessionId, item, definition, correlationId)
     local runtime = sessions[source]
     if not runtime or runtime.sessionId ~= sessionId or runtime.state == "leaving" then
-        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil, correlationId)
+        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil,
+            correlationId)
     end
     if runtime.pending then
-        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Another weapon operation is pending", nil, correlationId)
+        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Another weapon operation is pending", nil,
+            correlationId)
     end
     if runtime.equipped then
-        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Unequip the current weapon before equipping another", {
-            itemInstanceId = runtime.equipped.itemInstanceId
-        }, correlationId)
+        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Unequip the current weapon before equipping another",
+            {
+                itemInstanceId = runtime.equipped.itemInstanceId
+            }, correlationId)
     end
 
     local token = NextToken(runtime)
@@ -157,7 +162,8 @@ function WeaponRuntime.CompleteEquip(source, sessionId, token, correlationId)
     local runtime = sessions[source]
     local pending = runtime and runtime.pending
     if not runtime or runtime.sessionId ~= sessionId or not pending or pending.token ~= token then
-        return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID, "Equip authorization is invalid or expired", nil, correlationId)
+        return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID, "Equip authorization is invalid or expired", nil,
+            correlationId)
     end
     if GetGameTimer() > pending.expiresAt then
         runtime.pending = nil
@@ -187,7 +193,8 @@ end
 function WeaponRuntime.SetAmmo(source, sessionId, total, loaded, correlationId)
     local runtime = sessions[source]
     if not runtime or runtime.sessionId ~= sessionId then
-        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil, correlationId)
+        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil,
+            correlationId)
     end
     if not runtime.equipped then
         return WeaponResult.Error(WeaponErrors.NOT_EQUIPPED, "No weapon is equipped", nil, correlationId)
@@ -223,7 +230,8 @@ end
 function WeaponRuntime.SetCondition(source, sessionId, condition, correlationId)
     local runtime = sessions[source]
     if not runtime or runtime.sessionId ~= sessionId then
-        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil, correlationId)
+        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil,
+            correlationId)
     end
     if not runtime.equipped then
         return WeaponResult.Error(WeaponErrors.NOT_EQUIPPED, "No weapon is equipped", nil, correlationId)
@@ -235,7 +243,8 @@ end
 function WeaponRuntime.SetAttachments(source, sessionId, attachments, correlationId)
     local runtime = sessions[source]
     if not runtime or runtime.sessionId ~= sessionId then
-        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil, correlationId)
+        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil,
+            correlationId)
     end
     if not runtime.equipped then
         return WeaponResult.Error(WeaponErrors.NOT_EQUIPPED, "No weapon is equipped", nil, correlationId)
@@ -247,7 +256,8 @@ end
 function WeaponRuntime.Unequip(source, sessionId, correlationId)
     local runtime = sessions[source]
     if not runtime or runtime.sessionId ~= sessionId then
-        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil, correlationId)
+        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil,
+            correlationId)
     end
     if not runtime.equipped and not runtime.pending then
         return WeaponResult.Error(WeaponErrors.NOT_EQUIPPED, "No weapon is equipped", nil, correlationId)

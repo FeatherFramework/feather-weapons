@@ -7,6 +7,7 @@ local function Context(source, rpcContext, reason)
         characterId = rpcContext.characterId,
         sessionId = rpcContext.sessionId,
         correlationId = rpcContext.correlationId,
+        activeUseToken = rpcContext.activeUseToken,
         reason = reason,
         resource = "feather-weapons"
     }
@@ -23,7 +24,7 @@ end
 local function ValidateLease(source, equipped, rpcContext, params)
     params = type(params) == "table" and params or {}
     if not WeaponRuntime.MatchesLease(source, rpcContext.sessionId,
-        params.itemInstanceId, params.generation) then
+            params.itemInstanceId, params.generation) then
         return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID,
             "Weapon runtime lease is stale", {
                 expectedGeneration = equipped.generation
@@ -39,7 +40,8 @@ local function Reload(source, rpcContext, requested)
         requested = math.floor(tonumber(requested) or -1)
     end
     if requested ~= nil and requested < 1 then
-        return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Ammunition amount must be a positive integer", nil, rpcContext.correlationId)
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Ammunition amount must be a positive integer", nil,
+            rpcContext.correlationId)
     end
 
     local definitionResult = DefinitionRegistry.Get("weapon", equipped.definitionId)
@@ -49,7 +51,8 @@ local function Reload(source, rpcContext, requested)
 
     local transactionResult = InventoryAdapter.Transaction(context, function(tx)
         local item = tx:GetItemForUpdate(equipped.itemInstanceId)
-        if not item then return WeaponResult.Error(WeaponErrors.ITEM_NOT_OWNED, "Equipped weapon is no longer owned", nil, context.correlationId) end
+        if not item then return WeaponResult.Error(WeaponErrors.ITEM_NOT_OWNED, "Equipped weapon is no longer owned", nil,
+                context.correlationId) end
         local metadataResult = WeaponMetadata.Validate(item.metadata, definition, context.correlationId)
         if not metadataResult.ok then return metadataResult end
 
@@ -70,9 +73,11 @@ local function Reload(source, rpcContext, requested)
         local needed = maxTotal - total
         local available = tx:GetQuantity(definition.ammunitionType)
         local moved = math.min(needed, available, requested or refillAmount)
-        if moved <= 0 then return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "No compatible ammunition can enter escrow", nil, context.correlationId) end
+        if moved <= 0 then return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+                "No compatible ammunition can enter escrow", nil, context.correlationId) end
         if not tx:RemoveQuantity(definition.ammunitionType, moved) then
-            return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Ammunition changed during reload", nil, context.correlationId)
+            return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Ammunition changed during reload", nil,
+                context.correlationId)
         end
         local newTotal = total + moved
         local newLoaded = loaded
@@ -88,7 +93,8 @@ local function Reload(source, rpcContext, requested)
         item.metadata.ammo.chambered = newLoaded > 0
 
         if not tx:SetMetadata(item.id, item.metadata, item.metadataRevision) then
-            return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Weapon metadata changed during ammunition operation", nil, context.correlationId)
+            return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+                "Weapon metadata changed during ammunition operation", nil, context.correlationId)
         end
         return {
             total = newTotal,
@@ -180,17 +186,20 @@ function AmmoService.SyncConsumption(source, rpcContext, params)
     if not definitionResult.ok then return definitionResult end
     if reportedTotal < 0 or reportedTotal > equipped.ammo or reportedLoaded < 0
         or reportedLoaded > definitionResult.value.capacity or reportedLoaded > reportedTotal then
-        return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Reported ammunition is outside the approved range", nil, rpcContext.correlationId)
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Reported ammunition is outside the approved range", nil,
+            rpcContext.correlationId)
     end
     local context = Context(source, rpcContext, "fire_checkpoint")
     local transactionResult = InventoryAdapter.Transaction(context, function(tx)
         local item = tx:GetItemForUpdate(equipped.itemInstanceId)
-        if not item then return WeaponResult.Error(WeaponErrors.ITEM_NOT_OWNED, "Equipped weapon is no longer owned", nil, context.correlationId) end
+        if not item then return WeaponResult.Error(WeaponErrors.ITEM_NOT_OWNED, "Equipped weapon is no longer owned", nil,
+                context.correlationId) end
         local current = tonumber(item.metadata.ammo.loaded) or 0
         local currentReserve = tonumber(item.metadata.ammo.reserve) or 0
         local currentTotal = current + currentReserve
         if reportedTotal > currentTotal then
-            return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Ammunition increases are not accepted from the client", nil, context.correlationId)
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Ammunition increases are not accepted from the client",
+                nil, context.correlationId)
         end
         local consumed = currentTotal - reportedTotal
         local condition = tonumber(item.metadata.condition) or definitionResult.value.condition.maximum
@@ -200,7 +209,8 @@ function AmmoService.SyncConsumption(source, rpcContext, params)
         item.metadata.ammo.chambered = reportedLoaded > 0
         item.metadata.condition = math.max(definitionResult.value.condition.minimum, condition - wear)
         if not tx:SetMetadata(item.id, item.metadata, item.metadataRevision) then
-            return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Weapon metadata changed during ammunition checkpoint", nil, context.correlationId)
+            return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+                "Weapon metadata changed during ammunition checkpoint", nil, context.correlationId)
         end
         return {
             total = reportedTotal,

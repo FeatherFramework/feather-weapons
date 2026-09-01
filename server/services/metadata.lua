@@ -34,7 +34,9 @@ end
 
 function WeaponMetadata.Validate(metadata, definition, correlationId)
     if type(metadata) == "table" and type(metadata.ammo) == "table"
-        and metadata.ammo.reserve == nil then metadata.ammo.reserve = 0 end
+        and metadata.ammo.reserve == nil then
+        metadata.ammo.reserve = 0
+    end
     local valid, errors = WeaponValidation.Metadata(metadata, definition)
     if not valid then
         return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Weapon item metadata is invalid", errors, correlationId)

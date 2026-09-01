@@ -1,5 +1,8 @@
 local FeatherInventoryProvider = {}
-local Inventory = nil
+-- Kept as a table so every adapter call has one stable API shape. Failed
+-- installation attempts clear the cached surface before returning.
+---@type table
+local Inventory = {}
 local DefinitionIds = {}
 local MissingDefinitions = {}
 local DuplicateDefinitions = {}
@@ -68,8 +71,12 @@ local function BuildDefinitionIndex()
     end
 
     MissingDefinitions = {}
-    local required = { cattleman_revolver = true, revolver_standard = true, weapon_repair_kit = true,
-        cattleman_long_barrel = true }
+    local required = {
+        cattleman_revolver = true,
+        revolver_standard = true,
+        weapon_repair_kit = true,
+        cattleman_long_barrel = true
+    }
     for name in pairs(required) do
         if not DefinitionIds[name] then MissingDefinitions[#MissingDefinitions + 1] = name end
     end
@@ -202,16 +209,19 @@ function FeatherInventoryProvider.Transaction(context, callback)
         local catalogDefinitionId = DefinitionIds[definitionName]
         local wanted = math.floor(tonumber(quantity) or 0)
         local available = self:GetQuantity(definitionName)
+        local item = currentItem
+        if not item then return false end
         local ids = quantityInstanceIds[definitionName] or {}
         local first = ids[1] and Inventory.Instances.GetInstance(ids[1]) or nil
         local firstValue = first and first.ok and first.value or nil
         local definitionId = firstValue and firstValue.definition and tonumber(firstValue.definition.id)
             or catalogDefinitionId
         if Config.DevMode then
-            print(("[feather-weapons] inventory removal planned inventory=%s actualInventory=%s item=%s definition=%s catalogDefinition=%s available=%s requested=%s firstInstance=%s"):format(
-                tostring(currentItem and currentItem.inventoryId), tostring(firstValue and firstValue.inventoryId),
-                tostring(definitionName), tostring(definitionId), tostring(catalogDefinitionId),
-                tostring(available), tostring(wanted), tostring(ids[1])))
+            print(("[feather-weapons] inventory removal planned inventory=%s actualInventory=%s item=%s definition=%s catalogDefinition=%s available=%s requested=%s firstInstance=%s")
+                :format(
+                    tostring(item.inventoryId), tostring(firstValue and firstValue.inventoryId),
+                    tostring(definitionName), tostring(definitionId), tostring(catalogDefinitionId),
+                    tostring(available), tostring(wanted), tostring(ids[1])))
         end
         if not definitionId or wanted < 1 or available < wanted then return false end
         local selected = {}
@@ -219,7 +229,7 @@ function FeatherInventoryProvider.Transaction(context, callback)
             local id = table.remove(ids, 1)
             local instance = id and Inventory.Instances.GetInstance(id) or nil
             local value = instance and instance.ok and instance.value or nil
-            if not value or tostring(value.inventoryId) ~= tostring(currentItem.inventoryId)
+            if not value or tostring(value.inventoryId) ~= tostring(item.inventoryId)
                 or not value.definition or tonumber(value.definition.id) ~= tonumber(definitionId) then
                 return false
             end
@@ -304,6 +314,7 @@ function FeatherInventoryProvider.Transaction(context, callback)
 
     return WeaponResult.Ok(outcome, context.correlationId)
 end
+
 local function RegisterUsableWeapons()
     local listed = DefinitionRegistry.List("weapon")
     if not listed.ok then return listed end
@@ -334,27 +345,29 @@ local function RegisterUsableAmmunition()
     if not listed.ok then return listed end
     for _, definition in ipairs(listed.value) do
         if DefinitionIds[definition.itemName] then
-            local registered = Inventory.Items.RegisterUsableItem(definition.itemName, function(_, source, done)
-                local runtime = WeaponRuntime.Get(source)
-                local result
-                local weapon = runtime and runtime.equipped
-                    and DefinitionRegistry.Get("weapon", runtime.equipped.definitionId) or nil
-                if not runtime or not runtime.equipped then
-                    result = WeaponResult.Error(WeaponErrors.NOT_EQUIPPED,
-                        "Equip a compatible weapon before using ammunition")
-                elseif not weapon or not weapon.ok or weapon.value.ammunitionType ~= definition.id then
-                    result = WeaponResult.Error(WeaponErrors.ITEM_INVALID,
-                        "This ammunition is not compatible with the equipped weapon")
-                else
-                    result = AmmoService.Escrow(source, {
-                        characterId = runtime.characterId,
-                        sessionId = runtime.sessionId,
-                        correlationId = ("inventory-ammo:%s:%s"):format(tostring(source), tostring(GetGameTimer()))
-                    })
-                end
-                TriggerClientEvent("feather-weapons:client:inventoryAmmoResult", source, result)
-                if done then done() end
-            end, GetCurrentResourceName())
+            local registered = Inventory.Items.RegisterUsableItem(definition.itemName,
+                function(_, source, done, useContext)
+                    local runtime = WeaponRuntime.Get(source)
+                    local result
+                    local weapon = runtime and runtime.equipped
+                        and DefinitionRegistry.Get("weapon", runtime.equipped.definitionId) or nil
+                    if not runtime or not runtime.equipped then
+                        result = WeaponResult.Error(WeaponErrors.NOT_EQUIPPED,
+                            "Equip a compatible weapon before using ammunition")
+                    elseif not weapon or not weapon.ok or weapon.value.ammunitionType ~= definition.id then
+                        result = WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+                            "This ammunition is not compatible with the equipped weapon")
+                    else
+                        result = AmmoService.Escrow(source, {
+                            characterId = runtime.characterId,
+                            sessionId = runtime.sessionId,
+                            correlationId = ("inventory-ammo:%s:%s"):format(tostring(source), tostring(GetGameTimer())),
+                            activeUseToken = type(useContext) == "table" and useContext.activeUseToken or nil
+                        })
+                    end
+                    TriggerClientEvent("feather-weapons:client:inventoryAmmoResult", source, result)
+                    if done then done() end
+                end, GetCurrentResourceName())
             if type(registered) == "table" and registered.ok ~= true then
                 return Failure(nil, "Ammunition usable-item registration failed", {
                     itemName = definition.itemName,
@@ -376,7 +389,7 @@ local function RegisterUsableRepairItems()
         local itemName = repair and repair.itemDefinitionId
         if itemName and DefinitionIds[itemName] and not registered[itemName] then
             registered[itemName] = true
-            local registered = Inventory.Items.RegisterUsableItem(itemName, function(item, source, done)
+            local registered = Inventory.Items.RegisterUsableItem(itemName, function(item, source, done, useContext)
                 if Config.DevMode then
                     print(("[feather-weapons] inventory repair use item=%s source=%s")
                         :format(tostring(item.id), tostring(source)))
@@ -389,7 +402,8 @@ local function RegisterUsableRepairItems()
                     local rpcContext = {
                         characterId = runtime.characterId,
                         sessionId = runtime.sessionId,
-                        correlationId = ("inventory-repair:%s:%s"):format(tostring(source), tostring(GetGameTimer()))
+                        correlationId = ("inventory-repair:%s:%s"):format(tostring(source), tostring(GetGameTimer())),
+                        activeUseToken = type(useContext) == "table" and useContext.activeUseToken or nil
                     }
                     result = RepairService.Repair(source, rpcContext, runtime.equipped.itemInstanceId)
                 end
@@ -453,7 +467,8 @@ function InstallFeatherInventoryProvider()
         return Failure(nil, "feather-inventory API is unavailable", { reason = tostring(api) })
     end
 
-    local required = { "Items", "Instances", "Equipment", "Guards", "Transaction", "MutateItem", "CreateInstance", "GetCapabilities",
+    local required = { "Items", "Instances", "Equipment", "Guards", "Transaction", "MutateItem", "CreateInstance",
+        "GetCapabilities",
         "GetItemForCharacter", "GetEquippedForCharacter", "SetEquippedForCharacter" }
     for _, name in ipairs(required) do
         if api[name] == nil then
@@ -476,7 +491,7 @@ function InstallFeatherInventoryProvider()
     -- can never fail.
     local reported = api.GetCapabilities()
     if type(reported) ~= "table" or reported.ok ~= true or type(reported.value) ~= "table" then
-        Inventory = nil
+        Inventory = {}
         return Failure(nil, "feather-inventory capabilities are unavailable", {
             reason = type(reported) == "table" and reported.error and reported.error.message or nil
         })
@@ -484,7 +499,7 @@ function InstallFeatherInventoryProvider()
 
     local contractVersion = tonumber(reported.value.contractVersion) or 0
     if contractVersion < Config.Inventory.requiredContract then
-        Inventory = nil
+        Inventory = {}
         return Failure(nil, "feather-inventory contract is too old", {
             required = Config.Inventory.requiredContract,
             actual = contractVersion,
@@ -494,12 +509,12 @@ function InstallFeatherInventoryProvider()
 
     local characterIdentity = reported.value.characterIdentity
     if type(characterIdentity) ~= "table" or characterIdentity.uuid ~= true then
-        Inventory = nil
+        Inventory = {}
         return Failure(nil, "feather-inventory does not support canonical character IDs")
     end
     local expectedMode = "uuid"
     if characterIdentity.mode ~= expectedMode then
-        Inventory = nil
+        Inventory = {}
         return Failure(nil, "feather-inventory character identity mode does not match weapons", {
             expected = expectedMode,
             actual = characterIdentity.mode
@@ -514,31 +529,31 @@ function InstallFeatherInventoryProvider()
     -- inventory will happily move an equipped weapon.
     local indexed = BuildDefinitionIndex()
     if not indexed.ok then
-        Inventory, InventoryCapabilities = nil, nil
+        Inventory, InventoryCapabilities = {}, nil
         return indexed
     end
 
     local weapons = RegisterUsableWeapons()
     if type(weapons) == "table" and weapons.ok ~= true then
-        Inventory, InventoryCapabilities = nil, nil
+        Inventory, InventoryCapabilities = {}, nil
         return weapons
     end
 
     local ammunition = RegisterUsableAmmunition()
     if type(ammunition) == "table" and ammunition.ok ~= true then
-        Inventory, InventoryCapabilities = nil, nil
+        Inventory, InventoryCapabilities = {}, nil
         return ammunition
     end
 
     local repairs = RegisterUsableRepairItems()
     if type(repairs) == "table" and repairs.ok ~= true then
-        Inventory, InventoryCapabilities = nil, nil
+        Inventory, InventoryCapabilities = {}, nil
         return repairs
     end
 
     local guards = RegisterGuards()
     if type(guards) == "table" and guards.ok ~= true then
-        Inventory, InventoryCapabilities = nil, nil
+        Inventory, InventoryCapabilities = {}, nil
         return guards
     end
 
