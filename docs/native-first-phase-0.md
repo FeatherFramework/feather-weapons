@@ -396,3 +396,8 @@ The final release contract smoke test passed `8/8`: exact definition counts,
 Inventory readiness, native reload/escrow capabilities, runtime and attachment
 routes, retired reload-route absence, disabled native probe, and active metadata
 validation all passed. Phase 6 code and contract gates are complete.
+
+A coordinated recipe installation against a fresh database also passed. The
+four supported Inventory definitions were created with the expected usable,
+type, category, and unique/stack settings, and Weapons passed its startup
+contract without relying on upgrade history.

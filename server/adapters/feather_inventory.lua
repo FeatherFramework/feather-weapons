@@ -334,7 +334,7 @@ local function RegisterUsableAmmunition()
     if not listed.ok then return listed end
     for _, definition in ipairs(listed.value) do
         if DefinitionIds[definition.itemName] then
-            local registered = Inventory.Items.RegisterUsableItem(definition.itemName, function(_, source, done)
+            local registered = Inventory.Items.RegisterUsableItem(definition.itemName, function(_, source, done, useContext)
                 local runtime = WeaponRuntime.Get(source)
                 local result
                 local weapon = runtime and runtime.equipped
@@ -349,7 +349,8 @@ local function RegisterUsableAmmunition()
                     result = AmmoService.Escrow(source, {
                         characterId = runtime.characterId,
                         sessionId = runtime.sessionId,
-                        correlationId = ("inventory-ammo:%s:%s"):format(tostring(source), tostring(GetGameTimer()))
+                        correlationId = ("inventory-ammo:%s:%s"):format(tostring(source), tostring(GetGameTimer())),
+                        activeUseToken = type(useContext) == "table" and useContext.activeUseToken or nil
                     })
                 end
                 TriggerClientEvent("feather-weapons:client:inventoryAmmoResult", source, result)
@@ -376,7 +377,7 @@ local function RegisterUsableRepairItems()
         local itemName = repair and repair.itemDefinitionId
         if itemName and DefinitionIds[itemName] and not registered[itemName] then
             registered[itemName] = true
-            local registered = Inventory.Items.RegisterUsableItem(itemName, function(item, source, done)
+            local registered = Inventory.Items.RegisterUsableItem(itemName, function(item, source, done, useContext)
                 if Config.DevMode then
                     print(("[feather-weapons] inventory repair use item=%s source=%s")
                         :format(tostring(item.id), tostring(source)))
@@ -389,7 +390,8 @@ local function RegisterUsableRepairItems()
                     local rpcContext = {
                         characterId = runtime.characterId,
                         sessionId = runtime.sessionId,
-                        correlationId = ("inventory-repair:%s:%s"):format(tostring(source), tostring(GetGameTimer()))
+                        correlationId = ("inventory-repair:%s:%s"):format(tostring(source), tostring(GetGameTimer())),
+                        activeUseToken = type(useContext) == "table" and useContext.activeUseToken or nil
                     }
                     result = RepairService.Repair(source, rpcContext, runtime.equipped.itemInstanceId)
                 end

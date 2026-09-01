@@ -7,6 +7,7 @@ local function Context(source, rpcContext)
         characterId = rpcContext.characterId,
         sessionId = rpcContext.sessionId,
         correlationId = rpcContext.correlationId,
+        activeUseToken = rpcContext.activeUseToken,
         reason = "repair",
         resource = "feather-weapons"
     }
