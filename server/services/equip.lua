@@ -66,7 +66,8 @@ end
 
 function EquipService.Acknowledge(source, rpcContext, token)
     if type(token) ~= "string" or #token > 256 then
-        return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID, "Equip authorization is invalid", nil, rpcContext.correlationId)
+        return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID, "Equip authorization is invalid", nil,
+            rpcContext.correlationId)
     end
 
     local result = WeaponRuntime.CompleteEquip(source, rpcContext.sessionId, token, rpcContext.correlationId)
@@ -92,7 +93,8 @@ end
 function EquipService.Unequip(source, rpcContext)
     local runtime = WeaponRuntime.Get(source)
     if not runtime or runtime.sessionId ~= rpcContext.sessionId then
-        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil, rpcContext.correlationId)
+        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil,
+            rpcContext.correlationId)
     end
 
     local context = BuildContext(source, rpcContext, rpcContext.correlationId, "unequip")

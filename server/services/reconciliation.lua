@@ -13,7 +13,8 @@ local function ContextForSession(session, correlationId)
 end
 
 function ReconciliationService.RehydrateSession(session)
-    local context = ContextForSession(session, ("rehydrate:%s:%s"):format(tostring(session.characterId), tostring(GetGameTimer())))
+    local context = ContextForSession(session,
+        ("rehydrate:%s:%s"):format(tostring(session.characterId), tostring(GetGameTimer())))
     local equippedResult = InventoryAdapter.GetEquippedForCharacter(context)
     if not equippedResult.ok or not equippedResult.value then return equippedResult end
 
@@ -29,7 +30,8 @@ end
 function ReconciliationService.Snapshot(source, sessionId, correlationId)
     local runtime = WeaponRuntime.Get(source)
     if not runtime or runtime.sessionId ~= sessionId then
-        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil, correlationId)
+        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil,
+            correlationId)
     end
 
     local equipped = nil
@@ -106,11 +108,13 @@ end
 function ReconciliationService.BootstrapActiveSessions()
     for _, playerId in ipairs(GetPlayers()) do
         local source = tonumber(playerId)
-        local sessionResult = CoreAdapter.ResolveSession(source)
-        if sessionResult.ok then
-            WeaponRuntime.Begin(sessionResult.value)
-            ReconciliationService.RehydrateSession(sessionResult.value)
-            TriggerClientEvent("feather-weapons:client:reconcile", source)
+        if source then
+            local sessionResult = CoreAdapter.ResolveSession(source)
+            if sessionResult.ok then
+                WeaponRuntime.Begin(sessionResult.value)
+                ReconciliationService.RehydrateSession(sessionResult.value)
+                TriggerClientEvent("feather-weapons:client:reconcile", source)
+            end
         end
     end
 end
@@ -122,6 +126,9 @@ end, { requireCharacter = true, windowMs = 1000, maxCalls = 4, maxPayloadBytes =
 AddEventHandler("onResourceStop", function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
     for _, playerId in ipairs(GetPlayers()) do
-        TriggerClientEvent("feather-weapons:client:clearSession", tonumber(playerId))
+        local source = tonumber(playerId)
+        if source then
+            TriggerClientEvent("feather-weapons:client:clearSession", source)
+        end
     end
 end)

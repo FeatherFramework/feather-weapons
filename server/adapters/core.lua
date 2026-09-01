@@ -19,15 +19,22 @@ function CoreAdapter.CheckCapabilities()
     end
 
     local reported = exports["feather-core"]:GetCapabilities()
-    local capabilities = type(reported) == "table" and reported.ok == true and reported.value or nil
-    local contractVersion = capabilities and tonumber(capabilities.contract) or 0
+    if type(reported) ~= "table" or reported.ok ~= true or type(reported.value) ~= "table" then
+        return WeaponResult.Error(WeaponErrors.DEPENDENCY_UNAVAILABLE,
+            "feather-core returned an invalid capability contract")
+    end
+
+    local capabilities = reported.value
+    local contractVersion = tonumber(capabilities.contract) or 0
     if contractVersion < Config.RequiredCoreContract then
         return WeaponResult.Error(WeaponErrors.DEPENDENCY_UNAVAILABLE, "feather-core contract is too old", {
             required = Config.RequiredCoreContract,
-            actual = capabilities and capabilities.contract or nil
+            actual = capabilities.contract
         })
     end
-    if not capabilities.features or (tonumber(capabilities.features.sessions) or 0) < 1 then
+
+    local features = type(capabilities.features) == "table" and capabilities.features or nil
+    if not features or (tonumber(features.sessions) or 0) < 1 then
         return WeaponResult.Error(WeaponErrors.DEPENDENCY_UNAVAILABLE,
             "feather-core session capability is unavailable")
     end

@@ -108,8 +108,12 @@ function AttachmentService.Install(source, rpcContext, attachmentId)
             return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Weapon metadata changed during installation", nil,
                 context.correlationId)
         end
-        return { itemInstanceId = item.id, attachmentId = attachment.id, installed = true,
-            attachments = ClientAttachments(metadata) }
+        return {
+            itemInstanceId = item.id,
+            attachmentId = attachment.id,
+            installed = true,
+            attachments = ClientAttachments(metadata)
+        }
     end)
     if not transaction.ok then return transaction end
     WeaponRuntime.SetAttachments(source, rpcContext.sessionId, transaction.value.attachments, rpcContext.correlationId)
@@ -150,17 +154,22 @@ function AttachmentService.Remove(source, rpcContext, attachmentId)
                 context.correlationId)
         end
         if not tx:AddQuantity(attachment.itemName, 1) then
-            return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Inventory cannot accept the removed attachment", {
-                itemName = attachment.itemName
-            }, context.correlationId)
+            return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Inventory cannot accept the removed attachment",
+                {
+                    itemName = attachment.itemName
+                }, context.correlationId)
         end
         metadata.attachments = remaining
         if not tx:SetMetadata(item.id, metadata, item.metadataRevision) then
             return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Weapon metadata changed during removal", nil,
                 context.correlationId)
         end
-        return { itemInstanceId = item.id, attachmentId = attachment.id, installed = false,
-            attachments = ClientAttachments(metadata) }
+        return {
+            itemInstanceId = item.id,
+            attachmentId = attachment.id,
+            installed = false,
+            attachments = ClientAttachments(metadata)
+        }
     end)
     if not transaction.ok then return transaction end
     WeaponRuntime.SetAttachments(source, rpcContext.sessionId, transaction.value.attachments, rpcContext.correlationId)

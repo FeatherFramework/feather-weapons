@@ -27,17 +27,29 @@ if Config.DevMode then
         local expectedMode = "uuid"
         local tests = {
             { name = "core session capability", passed = coreCapabilities.ok == true },
-            { name = "current session resolved", passed = session.ok == true,
-                detail = targetSource and ("source=" .. tostring(targetSource)) or "no player" },
-            { name = "character id accepted", passed = session.ok == true
-                and CoreAdapter.NormalizeCharacterId(session.value.characterId) == session.value.characterId },
-            { name = "session is current", passed = session.ok == true
-                and CoreAdapter.IsSessionCurrent(targetSource, session.value.sessionId, session.value.characterId) },
-            { name = "inventory identity mode", passed = type(inventoryCapabilities) == "table"
-                and type(inventoryCapabilities.characterIdentity) == "table"
-                and inventoryCapabilities.characterIdentity.uuid == true
-                and inventoryCapabilities.characterIdentity.mode == expectedMode,
-                detail = "mode=" .. tostring(expectedMode) }
+            {
+                name = "current session resolved",
+                passed = session.ok == true,
+                detail = targetSource and ("source=" .. tostring(targetSource)) or "no player"
+            },
+            {
+                name = "character id accepted",
+                passed = session.ok == true
+                    and CoreAdapter.NormalizeCharacterId(session.value.characterId) == session.value.characterId
+            },
+            {
+                name = "session is current",
+                passed = session.ok == true
+                    and CoreAdapter.IsSessionCurrent(targetSource, session.value.sessionId, session.value.characterId)
+            },
+            {
+                name = "inventory identity mode",
+                passed = type(inventoryCapabilities) == "table"
+                    and type(inventoryCapabilities.characterIdentity) == "table"
+                    and inventoryCapabilities.characterIdentity.uuid == true
+                    and inventoryCapabilities.characterIdentity.mode == expectedMode,
+                detail = "mode=" .. tostring(expectedMode)
+            }
         }
 
         local passed = 0
@@ -59,16 +71,29 @@ if Config.DevMode then
         end
         local runtime = targetSource and WeaponRuntime.Get(targetSource) or nil
         local equipped = runtime and runtime.equipped or nil
+        local sessionId = runtime and runtime.sessionId or nil
         local tests = {
             { name = "active equipped lease", passed = equipped ~= nil },
-            { name = "current lease accepted", passed = equipped ~= nil and WeaponRuntime.MatchesLease(
-                targetSource, runtime.sessionId, equipped.itemInstanceId, equipped.generation) },
-            { name = "stale generation rejected", passed = equipped ~= nil and not WeaponRuntime.MatchesLease(
-                targetSource, runtime.sessionId, equipped.itemInstanceId, (equipped.generation or 0) - 1) },
-            { name = "foreign item rejected", passed = equipped ~= nil and not WeaponRuntime.MatchesLease(
-                targetSource, runtime.sessionId, "foreign-item", equipped.generation) },
-            { name = "foreign session rejected", passed = equipped ~= nil and not WeaponRuntime.MatchesLease(
-                targetSource, "foreign-session", equipped.itemInstanceId, equipped.generation) }
+            {
+                name = "current lease accepted",
+                passed = equipped ~= nil and WeaponRuntime.MatchesLease(
+                    targetSource, sessionId, equipped.itemInstanceId, equipped.generation)
+            },
+            {
+                name = "stale generation rejected",
+                passed = equipped ~= nil and not WeaponRuntime.MatchesLease(
+                    targetSource, sessionId, equipped.itemInstanceId, (equipped.generation or 0) - 1)
+            },
+            {
+                name = "foreign item rejected",
+                passed = equipped ~= nil and not WeaponRuntime.MatchesLease(
+                    targetSource, sessionId, "foreign-item", equipped.generation)
+            },
+            {
+                name = "foreign session rejected",
+                passed = equipped ~= nil and not WeaponRuntime.MatchesLease(
+                    targetSource, "foreign-session", equipped.itemInstanceId, equipped.generation)
+            }
         }
         local passed = 0
         for _, test in ipairs(tests) do
@@ -149,7 +174,8 @@ RegisterCommand("WeaponMetadataInspect", function(source, args)
             tostring(targetSource), tostring(value.characterId)))
         return
     end
-    print(("[WeaponMetadataInspect] PASS source=%s item=%s definition=%s serial=%s total=%s loaded=%s reserve=%s condition=%s attachments=%s runtimeMatch=%s"):format(
+    print(("[WeaponMetadataInspect] PASS source=%s item=%s definition=%s serial=%s total=%s loaded=%s reserve=%s condition=%s attachments=%s runtimeMatch=%s")
+    :format(
         tostring(targetSource), tostring(value.itemInstanceId), tostring(value.definitionId),
         tostring(value.serialNumber), tostring((tonumber(value.loaded) or 0) + (tonumber(value.reserve) or 0)),
         tostring(value.loaded), tostring(value.reserve), tostring(value.condition),
@@ -192,30 +218,48 @@ if Config.DevMode then
         end
         local metadata = targetSource and ReconciliationService.InspectMetadata(targetSource) or nil
         local tests = {
-            { name = "definitions ready", passed = capabilities.ready == true
-                and capabilities.definitions.weapon == 1
-                and capabilities.definitions.ammunition == 1
-                and capabilities.definitions.attachment == 1,
+            {
+                name = "definitions ready",
+                passed = capabilities.ready == true
+                    and capabilities.definitions.weapon == 1
+                    and capabilities.definitions.ammunition == 1
+                    and capabilities.definitions.attachment == 1,
                 detail = ("weapon=%s ammunition=%s attachment=%s"):format(
                     tostring(capabilities.definitions.weapon),
                     tostring(capabilities.definitions.ammunition),
-                    tostring(capabilities.definitions.attachment)) },
-            { name = "inventory ready", passed = capabilities.inventory.ready == true },
-            { name = "native reload surface", passed = capabilities.features.nativeReload == true
-                and capabilities.features.ammoEscrow == true
-                and capabilities.features.reload == nil },
-            { name = "runtime routes present", passed = routes["feather-weapons:equip:request"] == true
-                and routes["feather-weapons:ammo:sync"] == true
-                and routes["feather-weapons:ammo:unload"] == true },
-            { name = "attachment routes present", passed = routes["feather-weapons:attachment:install"] == true
-                and routes["feather-weapons:attachment:remove"] == true },
+                    tostring(capabilities.definitions.attachment))
+            },
+            { name = "inventory ready",      passed = capabilities.inventory.ready == true },
+            {
+                name = "native reload surface",
+                passed = capabilities.features.nativeReload == true
+                    and capabilities.features.ammoEscrow == true
+                    and capabilities.features.reload == nil
+            },
+            {
+                name = "runtime routes present",
+                passed = routes["feather-weapons:equip:request"] == true
+                    and routes["feather-weapons:ammo:sync"] == true
+                    and routes["feather-weapons:ammo:unload"] == true
+            },
+            {
+                name = "attachment routes present",
+                passed = routes["feather-weapons:attachment:install"] == true
+                    and routes["feather-weapons:attachment:remove"] == true
+            },
             { name = "legacy reload absent", passed = routes["feather-weapons:ammo:reload"] ~= true },
-            { name = "native probe disabled", passed = Config.NativeProbe
-                and Config.NativeProbe.enabled ~= true },
-            { name = "active metadata valid", passed = type(metadata) == "table"
-                and metadata.ok == true and metadata.value.equipped == true
-                and metadata.value.runtimeMatches == true,
-                detail = targetSource and ("source=" .. tostring(targetSource)) or "no player" }
+            {
+                name = "native probe disabled",
+                passed = Config.NativeProbe
+                    and Config.NativeProbe.enabled ~= true
+            },
+            {
+                name = "active metadata valid",
+                passed = type(metadata) == "table"
+                    and metadata.ok == true and metadata.value.equipped == true
+                    and metadata.value.runtimeMatches == true,
+                detail = targetSource and ("source=" .. tostring(targetSource)) or "no player"
+            }
         }
         local passed = 0
         for _, test in ipairs(tests) do

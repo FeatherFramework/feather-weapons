@@ -47,9 +47,11 @@ function WeaponValidation.Definition(definition, expectedKind)
     if not IsNonEmptyString(definition.label) then AddError(errors, "label", "must be a non-empty string") end
 
     if expectedKind == "weapon" then
-        if not IsNonEmptyString(definition.nativeWeaponName) then AddError(errors, "nativeWeaponName", "must be a non-empty string") end
+        if not IsNonEmptyString(definition.nativeWeaponName) then AddError(errors, "nativeWeaponName",
+                "must be a non-empty string") end
         if not WeaponConstants.WeaponSlots[definition.slot] then AddError(errors, "slot", "is not supported") end
-        if not IsNonEmptyString(definition.ammunitionType) then AddError(errors, "ammunitionType", "must reference ammunition") end
+        if not IsNonEmptyString(definition.ammunitionType) then AddError(errors, "ammunitionType",
+                "must reference ammunition") end
         if type(definition.capacity) ~= "number" or definition.capacity < 1 or definition.capacity % 1 ~= 0 then
             AddError(errors, "capacity", "must be a positive integer")
         end
@@ -68,7 +70,8 @@ function WeaponValidation.Definition(definition, expectedKind)
         if type(repair) ~= "table" or not IsNonEmptyString(repair.itemDefinitionId)
             or type(repair.quantity) ~= "number" or repair.quantity < 1 or repair.quantity % 1 ~= 0
             or type(repair.restore) ~= "number" or repair.restore <= 0 then
-            AddError(errors, "condition.repair", "must define an item, positive integer quantity, and positive restore amount")
+            AddError(errors, "condition.repair",
+                "must define an item, positive integer quantity, and positive restore amount")
         end
         if type(definition.attachmentSlots) ~= "table" then
             AddError(errors, "attachmentSlots", "must be a table keyed by supported slot")
@@ -82,10 +85,12 @@ function WeaponValidation.Definition(definition, expectedKind)
             end
         end
     elseif expectedKind == "ammunition" then
-        if not IsNonEmptyString(definition.nativeAmmoName) then AddError(errors, "nativeAmmoName", "must be a non-empty string") end
+        if not IsNonEmptyString(definition.nativeAmmoName) then AddError(errors, "nativeAmmoName",
+        "must be a non-empty string") end
     elseif expectedKind == "attachment" then
         if not WeaponConstants.AttachmentSlots[definition.slot] then AddError(errors, "slot", "is not supported") end
-        if not IsNonEmptyString(definition.nativeComponentName) then AddError(errors, "nativeComponentName", "must be a non-empty string") end
+        if not IsNonEmptyString(definition.nativeComponentName) then AddError(errors, "nativeComponentName",
+                "must be a non-empty string") end
         ValidateStringArray(errors, "conflicts", definition.conflicts)
         if type(definition.removable) ~= "boolean" then AddError(errors, "removable", "must be boolean") end
     end

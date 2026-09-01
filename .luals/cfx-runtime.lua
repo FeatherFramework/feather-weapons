@@ -52,9 +52,10 @@ function CancelEvent() end
 ---@param restricted? boolean
 function RegisterCommand(commandName, cb, restricted) end
 
----@param resourceName string
----@return table
-function exports(resourceName) end
+---@param name string Resource name when reading exports, or export name when registering one.
+---@param cb? function Export callback when registering an export.
+---@return table?
+function exports(name, cb) end
 
 ---@return number
 function GetGameTimer() end
@@ -145,6 +146,20 @@ function Citizen.Wait(ms) end
 
 ---@param msg string
 function Citizen.Trace(msg) end
+
+---@param value CfxPromise
+---@return any
+function Citizen.Await(value) end
+
+---@class CfxPromise
+---@field resolve fun(self: CfxPromise, ...: any)
+---@field reject fun(self: CfxPromise, ...: any)
+
+---@class CfxPromiseLibrary
+promise = {}
+
+---@return CfxPromise
+function promise.new() end
 
 json = {}
 
