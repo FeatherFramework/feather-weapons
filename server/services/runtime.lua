@@ -1,6 +1,25 @@
 WeaponRuntime = {}
 local sessions = {}
 local tokenCounter = 0
+local validSlots = { primary = true, offhand = true }
+
+function WeaponRuntime.NormalizeSlot(slot)
+    slot = slot or "primary"
+    return validSlots[slot] and slot or nil
+end
+
+local function RefreshCompatibility(runtime)
+    runtime.equipped = runtime.slots and runtime.slots.primary or nil
+    local occupied = runtime.slots
+        and (runtime.slots.primary ~= nil or runtime.slots.offhand ~= nil)
+    runtime.state = runtime.pending and "equipping" or (occupied and "equipped" or "idle")
+end
+
+function WeaponRuntime.GetSlot(source, slot)
+    local runtime = sessions[tonumber(source) or source]
+    slot = WeaponRuntime.NormalizeSlot(slot)
+    return runtime and slot and runtime.slots and runtime.slots[slot] or nil
+end
 
 local function NextGeneration(runtime)
     runtime.generation = (tonumber(runtime.generation) or 0) + 1
@@ -44,9 +63,10 @@ local function AmmoSnapshot(metadata, definition)
     return loaded, reserve, loaded + reserve
 end
 
-function WeaponRuntime.MatchesLease(source, sessionId, itemInstanceId, generation)
+function WeaponRuntime.MatchesLease(source, sessionId, itemInstanceId, generation, slot)
     local runtime = sessions[tonumber(source) or source]
-    local equipped = runtime and runtime.equipped
+    slot = WeaponRuntime.NormalizeSlot(slot)
+    local equipped = runtime and slot and runtime.slots and runtime.slots[slot]
     return runtime ~= nil and equipped ~= nil
         and tostring(runtime.sessionId or "") == tostring(sessionId or "")
         and tostring(equipped.sessionId or "") == tostring(sessionId or "")
@@ -60,6 +80,7 @@ function WeaponRuntime.Begin(session)
         characterId = session.characterId,
         sessionId = session.sessionId,
         equipped = nil,
+        slots = { primary = nil, offhand = nil },
         pending = nil,
         generation = 0,
         state = "idle"
@@ -73,16 +94,30 @@ function WeaponRuntime.Clear(source)
     return previous
 end
 
-function WeaponRuntime.RestoreEquipped(source, sessionId, item, definition, correlationId)
+function WeaponRuntime.RestoreEquipped(source, sessionId, item, definition, correlationId, slot)
     local runtime = sessions[source]
     if not runtime or runtime.sessionId ~= sessionId or runtime.state == "leaving" then
         return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil,
             correlationId)
     end
+    slot = WeaponRuntime.NormalizeSlot(slot)
+    if not slot then
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Weapon equipment slot is invalid", nil, correlationId)
+    end
     runtime.pending = nil
+    runtime.slots = runtime.slots or { primary = runtime.equipped, offhand = nil }
+    local otherSlot = slot == "primary" and "offhand" or "primary"
+    local other = runtime.slots[otherSlot]
+    if other and other.nativeWeaponName == definition.nativeWeaponName then
+        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+            "Two equipped weapons cannot use the same native weapon", {
+                slot = slot, otherSlot = otherSlot, nativeWeaponName = definition.nativeWeaponName
+            }, correlationId)
+    end
     local generation = NextGeneration(runtime)
     local loaded, reserve, total = AmmoSnapshot(item.metadata, definition)
-    runtime.equipped = {
+    runtime.slots[slot] = {
+        slot = slot,
         itemInstanceId = item.id,
         definitionId = definition.id,
         nativeWeaponName = definition.nativeWeaponName,
@@ -96,30 +131,45 @@ function WeaponRuntime.RestoreEquipped(source, sessionId, item, definition, corr
         sessionId = runtime.sessionId,
         equippedAt = os.time()
     }
-    runtime.state = "equipped"
-    return WeaponResult.Ok(runtime.equipped, correlationId)
+    RefreshCompatibility(runtime)
+    return WeaponResult.Ok(runtime.slots[slot], correlationId)
 end
 
-function WeaponRuntime.BeginEquip(source, sessionId, item, definition, correlationId)
+function WeaponRuntime.BeginEquip(source, sessionId, item, definition, correlationId, slot)
     local runtime = sessions[source]
     if not runtime or runtime.sessionId ~= sessionId or runtime.state == "leaving" then
         return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil,
             correlationId)
     end
+    slot = WeaponRuntime.NormalizeSlot(slot)
+    if not slot then
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Weapon equipment slot is invalid", nil, correlationId)
+    end
+    runtime.slots = runtime.slots or { primary = runtime.equipped, offhand = nil }
     if runtime.pending then
         return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Another weapon operation is pending", nil,
             correlationId)
     end
-    if runtime.equipped then
-        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Unequip the current weapon before equipping another",
+    if runtime.slots[slot] then
+        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Unequip the current weapon slot before equipping another",
             {
-                itemInstanceId = runtime.equipped.itemInstanceId
+                slot = slot,
+                itemInstanceId = runtime.slots[slot].itemInstanceId
+            }, correlationId)
+    end
+    local otherSlot = slot == "primary" and "offhand" or "primary"
+    local other = runtime.slots[otherSlot]
+    if other and other.nativeWeaponName == definition.nativeWeaponName then
+        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+            "Two equipped weapons cannot use the same native weapon", {
+                slot = slot, otherSlot = otherSlot, nativeWeaponName = definition.nativeWeaponName
             }, correlationId)
     end
 
     local token = NextToken(runtime)
     local loaded, reserve, total = AmmoSnapshot(item.metadata, definition)
     runtime.pending = {
+        slot = slot,
         token = token,
         itemInstanceId = item.id,
         definitionId = definition.id,
@@ -139,12 +189,13 @@ function WeaponRuntime.BeginEquip(source, sessionId, item, definition, correlati
         local current = sessions[source]
         if not current or not current.pending or current.pending.token ~= token then return end
         current.pending = nil
-        current.state = current.equipped and "equipped" or "idle"
+        RefreshCompatibility(current)
         TriggerClientEvent("feather-weapons:client:clearAuthorization", source, token)
     end)
 
     return WeaponResult.Ok({
         token = token,
+        slot = slot,
         itemInstanceId = item.id,
         definitionId = definition.id,
         nativeWeaponName = definition.nativeWeaponName,
@@ -167,11 +218,14 @@ function WeaponRuntime.CompleteEquip(source, sessionId, token, correlationId)
     end
     if GetGameTimer() > pending.expiresAt then
         runtime.pending = nil
-        runtime.state = runtime.equipped and "equipped" or "idle"
+        RefreshCompatibility(runtime)
         return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID, "Equip authorization expired", nil, correlationId)
     end
 
-    runtime.equipped = {
+    local slot = WeaponRuntime.NormalizeSlot(pending.slot)
+    runtime.slots = runtime.slots or { primary = runtime.equipped, offhand = nil }
+    runtime.slots[slot] = {
+        slot = slot,
         itemInstanceId = pending.itemInstanceId,
         definitionId = pending.definitionId,
         nativeWeaponName = pending.nativeWeaponName,
@@ -186,33 +240,69 @@ function WeaponRuntime.CompleteEquip(source, sessionId, token, correlationId)
         equippedAt = os.time()
     }
     runtime.pending = nil
-    runtime.state = "equipped"
-    return WeaponResult.Ok(runtime.equipped, correlationId)
+    RefreshCompatibility(runtime)
+    return WeaponResult.Ok(runtime.slots[slot], correlationId)
 end
 
-function WeaponRuntime.SetAmmo(source, sessionId, total, loaded, correlationId)
+function WeaponRuntime.SetSlotAmmo(source, sessionId, slot, total, loaded, correlationId)
     local runtime = sessions[source]
+    slot = WeaponRuntime.NormalizeSlot(slot)
+    local equipped = runtime and slot and runtime.slots and runtime.slots[slot]
     if not runtime or runtime.sessionId ~= sessionId then
-        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil,
-            correlationId)
+        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED,
+            "Character session is no longer active", nil, correlationId)
     end
-    if not runtime.equipped then
-        return WeaponResult.Error(WeaponErrors.NOT_EQUIPPED, "No weapon is equipped", nil, correlationId)
+    if not equipped then
+        return WeaponResult.Error(WeaponErrors.NOT_EQUIPPED,
+            "No weapon is equipped in that slot", { slot = slot }, correlationId)
     end
-    local definitionResult = DefinitionRegistry.Get("weapon", runtime.equipped.definitionId)
+    local definitionResult = DefinitionRegistry.Get("weapon", equipped.definitionId)
     if not definitionResult.ok then return definitionResult end
     total = math.floor(tonumber(total) or -1)
     loaded = math.floor(tonumber(loaded) or -1)
     local maxTotal = math.max(definitionResult.value.capacity,
-        math.floor(tonumber(Config.Escrow and Config.Escrow.maxTotal) or definitionResult.value.capacity))
+        math.floor(tonumber(Config.Escrow and Config.Escrow.maxTotal)
+            or definitionResult.value.capacity))
     if total < 0 or total > maxTotal or loaded < 0
         or loaded > definitionResult.value.capacity or loaded > total then
-        return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Ammunition is outside weapon capacity", nil, correlationId)
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+            "Ammunition is outside weapon capacity", { slot = slot }, correlationId)
     end
-    runtime.equipped.ammo = total
-    runtime.equipped.loaded = loaded
-    runtime.equipped.reserve = total - loaded
-    return WeaponResult.Ok({ total = total, loaded = loaded, reserve = total - loaded }, correlationId)
+    equipped.ammo = total
+    equipped.loaded = loaded
+    equipped.reserve = total - loaded
+    return WeaponResult.Ok({ slot = slot, total = total, loaded = loaded,
+        reserve = total - loaded }, correlationId)
+end
+
+function WeaponRuntime.SetSlotCondition(source, sessionId, slot, condition, correlationId)
+    local equipped = WeaponRuntime.GetSlot(source, slot)
+    local runtime = sessions[source]
+    if not runtime or runtime.sessionId ~= sessionId then
+        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED,
+            "Character session is no longer active", nil, correlationId)
+    end
+    if not equipped then
+        return WeaponResult.Error(WeaponErrors.NOT_EQUIPPED,
+            "No weapon is equipped in that slot", { slot = slot }, correlationId)
+    end
+    equipped.condition = tonumber(condition)
+    return WeaponResult.Ok({ slot = slot, condition = equipped.condition }, correlationId)
+end
+
+function WeaponRuntime.SetSlotAttachments(source, sessionId, slot, attachments, correlationId)
+    local equipped = WeaponRuntime.GetSlot(source, slot)
+    local runtime = sessions[source]
+    if not runtime or runtime.sessionId ~= sessionId then
+        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED,
+            "Character session is no longer active", nil, correlationId)
+    end
+    if not equipped then
+        return WeaponResult.Error(WeaponErrors.NOT_EQUIPPED,
+            "No weapon is equipped in that slot", { slot = slot }, correlationId)
+    end
+    equipped.attachments = attachments or {}
+    return WeaponResult.Ok({ slot = slot, attachments = equipped.attachments }, correlationId)
 end
 
 function WeaponRuntime.ResetForReconcile(source, sessionId, correlationId)
@@ -223,51 +313,55 @@ function WeaponRuntime.ResetForReconcile(source, sessionId, correlationId)
     end
     runtime.pending = nil
     runtime.equipped = nil
-    runtime.state = "idle"
+    runtime.slots = { primary = nil, offhand = nil }
+    RefreshCompatibility(runtime)
     return WeaponResult.Ok({ generation = runtime.generation }, correlationId)
 end
 
-function WeaponRuntime.SetCondition(source, sessionId, condition, correlationId)
+function WeaponRuntime.Unequip(source, sessionId, correlationId, slot)
     local runtime = sessions[source]
     if not runtime or runtime.sessionId ~= sessionId then
         return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil,
             correlationId)
     end
-    if not runtime.equipped then
-        return WeaponResult.Error(WeaponErrors.NOT_EQUIPPED, "No weapon is equipped", nil, correlationId)
+    slot = WeaponRuntime.NormalizeSlot(slot)
+    if not slot then
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Weapon equipment slot is invalid", nil, correlationId)
     end
-    runtime.equipped.condition = tonumber(condition)
-    return WeaponResult.Ok({ condition = runtime.equipped.condition }, correlationId)
-end
-
-function WeaponRuntime.SetAttachments(source, sessionId, attachments, correlationId)
-    local runtime = sessions[source]
-    if not runtime or runtime.sessionId ~= sessionId then
-        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil,
-            correlationId)
-    end
-    if not runtime.equipped then
-        return WeaponResult.Error(WeaponErrors.NOT_EQUIPPED, "No weapon is equipped", nil, correlationId)
-    end
-    runtime.equipped.attachments = attachments or {}
-    return WeaponResult.Ok({ attachments = runtime.equipped.attachments }, correlationId)
-end
-
-function WeaponRuntime.Unequip(source, sessionId, correlationId)
-    local runtime = sessions[source]
-    if not runtime or runtime.sessionId ~= sessionId then
-        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED, "Character session is no longer active", nil,
-            correlationId)
-    end
-    if not runtime.equipped and not runtime.pending then
+    runtime.slots = runtime.slots or { primary = runtime.equipped, offhand = nil }
+    local pendingForSlot = runtime.pending and runtime.pending.slot == slot
+    if not runtime.slots[slot] and not pendingForSlot then
         return WeaponResult.Error(WeaponErrors.NOT_EQUIPPED, "No weapon is equipped", nil, correlationId)
     end
 
-    local previous = runtime.equipped
-    runtime.equipped = nil
-    runtime.pending = nil
-    runtime.state = "idle"
+    local previous = runtime.slots[slot]
+    runtime.slots[slot] = nil
+    if pendingForSlot then runtime.pending = nil end
+    RefreshCompatibility(runtime)
     return WeaponResult.Ok(previous, correlationId)
+end
+
+function WeaponRuntime.PromoteOffhand(source, sessionId, correlationId)
+    local runtime = sessions[source]
+    if not runtime or runtime.sessionId ~= sessionId then
+        return WeaponResult.Error(WeaponErrors.SESSION_EXPIRED,
+            "Character session is no longer active", nil, correlationId)
+    end
+    runtime.slots = runtime.slots or { primary = runtime.equipped, offhand = nil }
+    local promoted = runtime.slots.offhand
+    if not promoted then
+        return WeaponResult.Error(WeaponErrors.NOT_EQUIPPED,
+            "No offhand weapon is available for promotion", nil, correlationId)
+    end
+    local removed = runtime.slots.primary
+    promoted.slot = "primary"
+    promoted.generation = NextGeneration(runtime)
+    promoted.equippedAt = os.time()
+    runtime.slots.primary = promoted
+    runtime.slots.offhand = nil
+    runtime.pending = nil
+    RefreshCompatibility(runtime)
+    return WeaponResult.Ok({ removed = removed, promoted = promoted }, correlationId)
 end
 
 AddEventHandler("core.session.ready.v1", function(session)
@@ -284,6 +378,7 @@ AddEventHandler("core.session.leaving.v1", function(session)
         runtime.state = "leaving"
         runtime.pending = nil
         runtime.equipped = nil
+        runtime.slots = { primary = nil, offhand = nil }
         TriggerClientEvent("feather-weapons:client:clearSession", session.source, session.sessionId)
     end
 end)

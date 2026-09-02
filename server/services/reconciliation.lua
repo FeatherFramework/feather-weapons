@@ -15,16 +15,25 @@ end
 function ReconciliationService.RehydrateSession(session)
     local context = ContextForSession(session,
         ("rehydrate:%s:%s"):format(tostring(session.characterId), tostring(GetGameTimer())))
-    local equippedResult = InventoryAdapter.GetEquippedForCharacter(context)
-    if not equippedResult.ok or not equippedResult.value then return equippedResult end
+    local equippedResult = InventoryAdapter.GetEquippedSlotsForCharacter(context)
+    if not equippedResult.ok then return equippedResult end
 
-    local restoreResult = EquipService.Restore(session.source, session, equippedResult.value, context.correlationId)
-    if not restoreResult.ok then
-        InventoryAdapter.SetEquippedForCharacter(context, nil)
-        print(("[feather-weapons] rejected saved equipped item for character %s: %s")
-            :format(tostring(session.characterId), restoreResult.error.code))
+    local restored = {}
+    for _, slot in ipairs({ "primary", "offhand" }) do
+        local itemInstanceId = equippedResult.value and equippedResult.value[slot] or nil
+        if itemInstanceId then
+            local restoreResult = EquipService.Restore(
+                session.source, session, itemInstanceId, context.correlationId, slot)
+            if not restoreResult.ok then
+                InventoryAdapter.SetEquippedSlotForCharacter(context, slot, nil)
+                print(("[feather-weapons] rejected saved equipped item character=%s slot=%s code=%s")
+                    :format(tostring(session.characterId), slot, restoreResult.error.code))
+            else
+                restored[slot] = restoreResult.value
+            end
+        end
     end
-    return restoreResult
+    return WeaponResult.Ok({ slots = restored, equipped = restored.primary }, context.correlationId)
 end
 
 function ReconciliationService.Snapshot(source, sessionId, correlationId)
@@ -50,7 +59,27 @@ function ReconciliationService.Snapshot(source, sessionId, correlationId)
             attachments = runtime.equipped.attachments or {}
         }
     end
-    return WeaponResult.Ok({ state = runtime.state, equipped = equipped }, correlationId)
+    local slots = {}
+    for _, slot in ipairs({ "primary", "offhand" }) do
+        local value = runtime.slots and runtime.slots[slot] or nil
+        if value then
+            slots[slot] = {
+                slot = slot,
+                itemInstanceId = value.itemInstanceId,
+                definitionId = value.definitionId,
+                nativeWeaponName = value.nativeWeaponName,
+                nativeAmmoName = value.nativeAmmoName,
+                ammo = value.ammo,
+                loaded = value.loaded,
+                reserve = value.reserve,
+                condition = value.condition,
+                generation = value.generation,
+                sessionId = value.sessionId,
+                attachments = value.attachments or {}
+            }
+        end
+    end
+    return WeaponResult.Ok({ state = runtime.state, equipped = equipped, slots = slots }, correlationId)
 end
 
 function ReconciliationService.InspectMetadata(source)
@@ -59,32 +88,42 @@ function ReconciliationService.InspectMetadata(source)
     local session = sessionResult.value
     local context = ContextForSession(session,
         ("metadata-inspect:%s:%s"):format(tostring(source), tostring(GetGameTimer())))
-    local equippedResult = InventoryAdapter.GetEquippedForCharacter(context)
+    local equippedResult = InventoryAdapter.GetEquippedSlotsForCharacter(context)
     if not equippedResult.ok then return equippedResult end
-    if not equippedResult.value then
-        return WeaponResult.Ok({ equipped = false, characterId = session.characterId }, context.correlationId)
-    end
-    local itemResult = InventoryAdapter.GetItemForCharacter(context, equippedResult.value)
-    if not itemResult.ok then return itemResult end
-    local item = itemResult.value
-    local definitionId = item.metadata and item.metadata.weaponDefinitionId
-    local definitionResult = DefinitionRegistry.Get("weapon", definitionId)
-    if not definitionResult.ok then return definitionResult end
-    local validation = WeaponMetadata.Validate(item.metadata, definitionResult.value, context.correlationId)
-    if not validation.ok then return validation end
     local runtime = WeaponRuntime.Get(source)
-    local runtimeItem = runtime and runtime.equipped and runtime.equipped.itemInstanceId or nil
+    local slots = {}
+    for _, slot in ipairs({ "primary", "offhand" }) do
+        local itemInstanceId = equippedResult.value and equippedResult.value[slot] or nil
+        if itemInstanceId then
+            local itemResult = InventoryAdapter.GetItemForCharacter(context, itemInstanceId)
+            if not itemResult.ok then return itemResult end
+            local item = itemResult.value
+            local definitionId = item.metadata and item.metadata.weaponDefinitionId
+            local definitionResult = DefinitionRegistry.Get("weapon", definitionId)
+            if not definitionResult.ok then return definitionResult end
+            local validation = WeaponMetadata.Validate(
+                item.metadata, definitionResult.value, context.correlationId)
+            if not validation.ok then return validation end
+            local runtimeItem = runtime and runtime.slots and runtime.slots[slot]
+            slots[slot] = {
+                slot = slot,
+                itemInstanceId = item.id,
+                definitionId = definitionId,
+                serialNumber = item.metadata.serialNumber,
+                condition = item.metadata.condition,
+                loaded = item.metadata.ammo.loaded,
+                reserve = item.metadata.ammo.reserve,
+                attachments = item.metadata.attachments or {},
+                runtimeMatches = runtimeItem ~= nil
+                    and tostring(runtimeItem.itemInstanceId) == tostring(item.id),
+                generation = runtimeItem and runtimeItem.generation or nil
+            }
+        end
+    end
     return WeaponResult.Ok({
-        equipped = true,
+        equipped = slots.primary ~= nil or slots.offhand ~= nil,
         characterId = session.characterId,
-        itemInstanceId = item.id,
-        definitionId = definitionId,
-        serialNumber = item.metadata.serialNumber,
-        condition = item.metadata.condition,
-        loaded = item.metadata.ammo.loaded,
-        reserve = item.metadata.ammo.reserve,
-        attachments = item.metadata.attachments or {},
-        runtimeMatches = runtimeItem ~= nil and tostring(runtimeItem) == tostring(item.id)
+        slots = slots
     }, context.correlationId)
 end
 

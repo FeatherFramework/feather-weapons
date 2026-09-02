@@ -6,7 +6,9 @@ Server operation, recovery, integration, and trust boundaries are documented in
 [`docs/operations.md`](docs/operations.md).
 
 > [!WARNING]
-> This resource is still a development preview. The Cattleman Revolver lifecycle and Inventory Contract 2 integration are working end to end. Attachment foundations are now in development; the full catalog, installation gameplay, shops, transfers, and administrative recovery tools are not finished.
+> This alpha release supports primary-only weapons and distinct-hash dual wield
+> with the Cattleman and Schofield revolvers. The wider catalog, shops,
+> transfers, evidence flows, and licenses are not included yet.
 
 > [!IMPORTANT]
 > This is a native-first implementation. RedM owns live draw, fire, reload, and
@@ -16,13 +18,14 @@ Server operation, recovery, integration, and trust boundaries are documented in
 ## Current features
 
 - Equip a weapon by using its item in Feather Inventory.
+- Equip a second supported sidearm and use RedM's native dual-wield controls.
 - Unequip it by using the same item again.
 - Restore the equipped weapon after reconnects and resource or server restarts.
 - Reload with the player-remappable `R` key.
 - Atomically remove compatible ammunition items during reloads.
 - Persist loaded ammunition after firing.
 - Apply and persist condition loss per shot.
-- Repair the equipped weapon by using a repair kit in inventory.
+- Select and repair either equipped weapon by using a repair kit in Inventory.
 - Atomically consume the repair kit and update weapon condition.
 - Prevent equipped weapon instances from being moved or destroyed.
 - Reject stale, concurrent, invalid, or unauthorized mutations.
@@ -30,7 +33,8 @@ Server operation, recovery, integration, and trust boundaries are documented in
 - Resolve active characters through Feather Core Contract 1 sessions.
 - Preserve canonical UUID character IDs through issuance, equipment, and Inventory calls.
 
-The current configured weapon is the Cattleman Revolver using standard revolver ammunition.
+The configured weapons are the Cattleman and Schofield revolvers using standard
+revolver ammunition.
 
 ## Requirements
 
@@ -38,7 +42,9 @@ The current configured weapon is the Cattleman Revolver using standard revolver 
 - `oxmysql`
 - `feather-core` Contract 1 with the session capability
 - Current `feather-character` with logout checkpoint support
-- Current `feather-inventory` Contract 2 with transactions, item instances, guards, equipment persistence, and canonical character-ID capabilities
+- Current `feather-inventory` Contract 4 with transactions, item instances,
+  named equipment slots, atomic metadata, equipment promotion, guards, and
+  canonical character-ID capabilities
 - `feather-menu` for the weapon modification screen
 
 Recommended start order:
@@ -77,7 +83,7 @@ Config = {
     DevMode = false,
     RequiredCoreContract = 1,
     Inventory = {
-        requiredContract = 2,
+        requiredContract = 4,
         equipmentSlot = "weapon"
     },
     Runtime = {
@@ -89,6 +95,14 @@ Config = {
     Escrow = {
         maxTotal = 30,
         refillAmount = 30
+    },
+    Offhand = {
+        enabled = true,
+        allowedFamilies = { revolver = true },
+        allowedWeaponSlots = { sidearm = true },
+        provisionNativeEntitlement = true,
+        primaryAttachPoint = 2,
+        offhandAttachPoint = 3
     },
     Attachments = {
         requireStation = true,
@@ -116,6 +130,12 @@ Config = {
 }
 ```
 
+`Offhand.enabled` controls dual-slot equipment. The two allowlists use weapon
+definition `family` and `slot` values; only entries set to `true` are accepted.
+Keep automatic entitlement provisioning enabled unless another resource owns
+RedM's offhand holster unlock. Attach-point values should only be changed for a
+clothing setup that has been tested in game.
+
 Startup always fails closed when required dependencies, definitions, or contracts are unavailable. `Inventory.requiredContract` must match the contract feather-inventory reports from `GetCapabilities().value.contractVersion` -- it is checked before any definition, usable callback or guard is registered, and a version below it aborts installation rather than degrading to an empty index. `DevMode` enables diagnostic output and development-only weapon grants; disable it on production servers. Keep `authoritativeNativeAmmo = true` when Feather Weapons owns all weapons and ammunition. At weapon boundaries, this clears the player's native ammo—including ammo granted by other resources—before restoring the equipped inventory item's saved rounds.
 
 Trusted server resources issue unique weapons through the stable named export:
@@ -128,10 +148,12 @@ local result = exports['feather-weapons']:IssueWeapon(request, context)
 
 The following commands are server-console only:
 
-- `WeaponMetadataInspect [serverId]` validates the equipped Inventory instance
-  and reports its serial, ammunition, condition, attachments, and runtime match.
+- `WeaponMetadataInspect [serverId]` validates both named Inventory weapon slots
+  and reports each serial, ammunition state, condition, attachments, generation,
+  and runtime match.
 - `WeaponReconcile [serverId]` discards unaccepted native state and restores the
-  character's last accepted Inventory snapshot with a new lease generation.
+  character's accepted primary/offhand Inventory snapshots with new lease
+  generations.
 
 Run the inspection command first. Reconciliation is an explicit recovery action,
 not routine gameplay synchronization.
@@ -154,13 +176,16 @@ Press `U` with an armed weapon equipped. The server returns its loaded and reser
 
 ### Condition and repair
 
-Accepted shots lower condition according to the weapon definition. Use a `weapon_repair_kit` from inventory to restore up to 25 condition on the equipped Cattleman. Full-condition and invalid repairs do not consume a kit.
+Accepted shots lower condition according to the weapon definition. Use a
+`weapon_repair_kit` from Inventory to restore up to 25 condition. When two
+weapons are equipped, choose the primary or offhand weapon from the repair
+menu. Full-condition, stale-slot, and invalid repairs do not consume a kit.
 
 ### Weapon modifications
 
 Attachment installation and removal require proximity to a configured gunsmith bench. Equip the weapon at the Valentine bench, then press `F6` or use `/weaponmods` to install an owned compatible attachment or remove an installed one. The Long Barrel is not a usable item; the server verifies distance and ownership before starting the Inventory transaction.
 
-## Current Cattleman settings
+## Current revolver settings
 
 | Setting | Value |
 | --- | --- |
@@ -189,18 +214,28 @@ When `DevMode = true`, `/weaponstate` prints the authoritative equipped item ID,
 
 ## Known limitations
 
-- Only the Cattleman Revolver is configured.
-- Switching directly between two equipped weapon items is not implemented; unequip first.
+- Dual wield requires two different native weapon hashes; identical-hash pairs
+  remain a deferred experiment.
+- Ammunition refill and unload remain primary-only while an offhand is equipped.
 - The first Long Barrel attachment is available; additional attachment definitions remain unfinished.
 - Alternate ammunition, expanded provenance, evidence, licenses, shops, and crafting remain planned.
 
 ## Validation status
 
-The current vertical slice has passed runtime tests for Inventory Contract 2 startup gates, unique issuance, equip/unequip, reload/unload, firing and condition, repair, inventory movement guards, ground drop/pickup, cross-container movement, concurrency rejection, reconnect persistence, resource restart, and full server restart.
+The current release has passed Inventory Contract 4 startup gates, unique
+issuance, both equip orders, alternating fire/reload, per-item condition,
+slot-aware repair and attachments, movement guards, reconciliation, entitlement
+recovery, reconnect/resource/server restart, Admin operations, and two-player
+isolation. Primary-only behavior has also been regression tested.
 
 ## Attachment phase
 
-The first attachment vertical slice uses a Cattleman Long Barrel inventory item mapped to `COMPONENT_REVOLVER_CATTLEMAN_BARREL_LONG`. Using the item with a compatible weapon equipped installs it atomically. Open `/weaponmods` or press `F6` to remove it through the modification menu and atomically return the item. Both operations rebuild the approved native weapon without changing its saved ammunition or condition.
+The first attachment vertical slice uses a Cattleman Long Barrel inventory item
+mapped to `COMPONENT_REVOLVER_CATTLEMAN_BARREL_LONG`. Open `/weaponmods` or press
+`F6`, choose the primary or offhand weapon when a pair is equipped, then install
+or remove the component. Both operations validate the selected slot lease,
+commit atomically, and rebuild the approved native pair without changing saved
+ammunition or condition.
 
 ## Developer API
 
@@ -231,9 +266,9 @@ Operations return a consistent result envelope:
 
 ## Next milestones
 
-1. Runtime-test the Cattleman Long Barrel install/remove and restart lifecycle.
-2. Replace the development removal command with the production gunsmith interaction.
-3. Add transfers, storage, drops, evidence, destruction, and recovery flows.
-4. Add shops, licenses, jobs, crafting, admin tooling, and release hardening.
+1. Add explicit paired ammunition refill and unload semantics.
+2. Add transfers, storage, evidence, destruction, and recovery flows.
+3. Add more weapons, attachments, shops, licenses, jobs, and crafting.
+4. Revisit identical-hash dual wield after the distinct-hash release.
 
 See [`MASTER_PLAN.md`](MASTER_PLAN.md) for the complete build plan.

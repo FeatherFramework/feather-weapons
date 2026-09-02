@@ -108,7 +108,8 @@ local function Reload(source, rpcContext, requested)
     if not transactionResult.ok then return transactionResult end
 
     local value = transactionResult.value
-    WeaponRuntime.SetAmmo(source, rpcContext.sessionId, value.total, value.loaded, rpcContext.correlationId)
+    WeaponRuntime.SetSlotAmmo(source, rpcContext.sessionId, "primary",
+        value.total, value.loaded, rpcContext.correlationId)
     return WeaponResult.Ok(value, rpcContext.correlationId)
 end
 
@@ -170,8 +171,9 @@ function AmmoService.Unload(source, rpcContext, requested)
     end)
     if not transactionResult.ok then return transactionResult end
 
-    WeaponRuntime.SetAmmo(source, rpcContext.sessionId, transactionResult.value.total,
-        transactionResult.value.loaded, rpcContext.correlationId)
+    WeaponRuntime.SetSlotAmmo(source, rpcContext.sessionId, "primary",
+        transactionResult.value.total, transactionResult.value.loaded,
+        rpcContext.correlationId)
     return WeaponResult.Ok(transactionResult.value, rpcContext.correlationId)
 end
 
@@ -222,14 +224,136 @@ function AmmoService.SyncConsumption(source, rpcContext, params)
         }
     end)
     if not transactionResult.ok then return transactionResult end
-    WeaponRuntime.SetAmmo(source, rpcContext.sessionId, reportedTotal, reportedLoaded, rpcContext.correlationId)
-    WeaponRuntime.SetCondition(source, rpcContext.sessionId, transactionResult.value.condition, rpcContext.correlationId)
+    WeaponRuntime.SetSlotAmmo(source, rpcContext.sessionId, "primary",
+        reportedTotal, reportedLoaded, rpcContext.correlationId)
+    WeaponRuntime.SetSlotCondition(source, rpcContext.sessionId, "primary",
+        transactionResult.value.condition, rpcContext.correlationId)
     if transactionResult.value.broken then
-        local persistResult = InventoryAdapter.SetEquippedForCharacter(context, nil)
+        local persistResult = InventoryAdapter.SetEquippedSlotForCharacter(context, "primary", nil)
         if not persistResult.ok then return persistResult end
-        WeaponRuntime.Unequip(source, rpcContext.sessionId, rpcContext.correlationId)
+        WeaponRuntime.Unequip(source, rpcContext.sessionId, rpcContext.correlationId, "primary")
     end
     return WeaponResult.Ok(transactionResult.value, rpcContext.correlationId)
+end
+
+function AmmoService.SyncPair(source, rpcContext, params)
+    local runtime = WeaponRuntime.Get(source)
+    local slots = runtime and runtime.slots or nil
+    if not runtime or runtime.sessionId ~= rpcContext.sessionId
+        or not slots or not slots.primary or not slots.offhand then
+        return WeaponResult.Error(WeaponErrors.NOT_EQUIPPED,
+            "A primary and offhand weapon must both be equipped", nil, rpcContext.correlationId)
+    end
+    params = type(params) == "table" and params or {}
+    local reports = type(params.slots) == "table" and params.slots or {}
+    local reportedTotal = math.floor(tonumber(params.total) or -1)
+    local prepared = {}
+    local expectedTotal = 0
+    local context = Context(source, rpcContext, "pair_checkpoint")
+
+    for _, slot in ipairs({ "primary", "offhand" }) do
+        local equipped = slots[slot]
+        local report = type(reports[slot]) == "table" and reports[slot] or {}
+        if not WeaponRuntime.MatchesLease(source, rpcContext.sessionId,
+                report.itemInstanceId, report.generation, slot) then
+            return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID,
+                "Weapon runtime lease is stale", { slot = slot,
+                    expectedGeneration = equipped.generation }, rpcContext.correlationId)
+        end
+        local definitionResult = DefinitionRegistry.Get("weapon", equipped.definitionId)
+        if not definitionResult.ok then return definitionResult end
+        local itemResult = InventoryAdapter.GetItemForCharacter(context, equipped.itemInstanceId)
+        if not itemResult.ok then return itemResult end
+        local item = itemResult.value
+        local metadataResult = WeaponMetadata.Validate(
+            item.metadata, definitionResult.value, context.correlationId)
+        if not metadataResult.ok then return metadataResult end
+
+        local oldLoaded = math.floor(tonumber(item.metadata.ammo.loaded) or 0)
+        local oldReserve = math.floor(tonumber(item.metadata.ammo.reserve) or 0)
+        local loaded = math.floor(tonumber(report.loaded) or -1)
+        if loaded < 0 or loaded > definitionResult.value.capacity then
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+                "Reported loaded ammunition is outside weapon capacity", { slot = slot },
+                rpcContext.correlationId)
+        end
+        local fired = math.floor(tonumber(report.consumed) or -1)
+        local reloaded = loaded - oldLoaded + fired
+        if fired < 0 or reloaded < 0 then
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+                "Reported pair ammunition transition is invalid", { slot = slot },
+                rpcContext.correlationId)
+        end
+        if reloaded > oldReserve then
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+                "Native reload crossed weapon escrow ownership", {
+                    slot = slot, requested = reloaded, reserve = oldReserve
+                }, rpcContext.correlationId)
+        end
+        local nextReserve = oldReserve - reloaded
+        local nextTotal = loaded + nextReserve
+        expectedTotal = expectedTotal + nextTotal
+        local condition = tonumber(item.metadata.condition)
+            or definitionResult.value.condition.maximum
+        item.metadata.ammo.loaded = loaded
+        item.metadata.ammo.reserve = nextReserve
+        item.metadata.ammo.chambered = loaded > 0
+        item.metadata.condition = math.max(definitionResult.value.condition.minimum,
+            condition - (fired * definitionResult.value.condition.wearPerShot))
+        prepared[slot] = {
+            item = item,
+            total = nextTotal,
+            loaded = loaded,
+            reserve = nextReserve,
+            fired = fired,
+            condition = item.metadata.condition
+        }
+    end
+
+    if reportedTotal ~= expectedTotal then
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+            "Shared native ammunition does not match weapon escrow", {
+                reported = reportedTotal, expected = expectedTotal
+            }, rpcContext.correlationId)
+    end
+
+    local mutations = {}
+    for _, slot in ipairs({ "primary", "offhand" }) do
+        local value = prepared[slot]
+        mutations[#mutations + 1] = {
+            itemInstanceId = value.item.id,
+            expectedRevision = value.item.metadataRevision,
+            metadata = value.item.metadata
+        }
+    end
+    local committed = InventoryAdapter.MutateWeaponMetadataBatch(context, mutations)
+    if not committed.ok then return committed end
+
+    local responseSlots = {}
+    for _, slot in ipairs({ "primary", "offhand" }) do
+        local value = prepared[slot]
+        WeaponRuntime.SetSlotAmmo(source, rpcContext.sessionId, slot,
+            value.total, value.loaded, rpcContext.correlationId)
+        WeaponRuntime.SetSlotCondition(source, rpcContext.sessionId, slot,
+            value.condition, rpcContext.correlationId)
+        responseSlots[slot] = {
+            total = value.total,
+            loaded = value.loaded,
+            reserve = value.reserve,
+            consumed = value.fired,
+            condition = value.condition
+        }
+    end
+    if Config.DevMode then
+        print(("[feather-weapons] pair checkpoint total=%d primary=%d/%d consumed=%d condition=%s offhand=%d/%d consumed=%d condition=%s")
+            :format(reportedTotal,
+                responseSlots.primary.loaded, responseSlots.primary.reserve,
+                responseSlots.primary.consumed, tostring(responseSlots.primary.condition),
+                responseSlots.offhand.loaded, responseSlots.offhand.reserve,
+                responseSlots.offhand.consumed, tostring(responseSlots.offhand.condition)))
+    end
+    return WeaponResult.Ok({ total = reportedTotal, slots = responseSlots },
+        rpcContext.correlationId)
 end
 
 FeatherCore.RPC.Register("feather-weapons:ammo:unload", function(params, respond, source, context)
@@ -239,3 +363,7 @@ end, { requireCharacter = true, windowMs = 1000, maxCalls = 4, maxPayloadBytes =
 FeatherCore.RPC.Register("feather-weapons:ammo:sync", function(params, respond, source, context)
     respond(AmmoService.SyncConsumption(source, context, params))
 end, { requireCharacter = true, windowMs = 5000, maxCalls = 12, maxPayloadBytes = 256 })
+
+FeatherCore.RPC.Register("feather-weapons:ammo:pairSync", function(params, respond, source, context)
+    respond(AmmoService.SyncPair(source, context, params))
+end, { requireCharacter = true, windowMs = 5000, maxCalls = 12, maxPayloadBytes = 768 })

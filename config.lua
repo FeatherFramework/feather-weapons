@@ -2,8 +2,13 @@ Config = {
     DevMode = false,
     RequiredCoreContract = 1,
     Inventory = {
-        requiredContract = 2,
-        equipmentSlot = "weapon"
+        requiredContract = 4,
+        -- Stable Inventory equipment keys. Do not rename these after launch.
+        equipmentSlot = "weapon", -- Legacy alias for the primary slot.
+        equipmentSlots = {
+            primary = "weapon",
+            offhand = "weapon_offhand"
+        }
     },
     Runtime = {
         authorizationTtlMs = 5000,
@@ -17,12 +22,28 @@ Config = {
         -- Using compatible ammunition fills up to this boundary.
         refillAmount = 30
     },
+    Offhand = {
+        -- Disable to run this server in primary-weapon-only mode.
+        enabled = true,
+        -- Only definition families/slots set to true may use the offhand.
+        allowedFamilies = { revolver = true },
+        allowedWeaponSlots = { sidearm = true },
+        -- Automatically provide RedM's offhand holster entitlement when needed.
+        provisionNativeEntitlement = true,
+        -- Native holster points; change only for a tested clothing setup.
+        primaryAttachPoint = 2,
+        offhandAttachPoint = 3
+    },
     NativeProbe = {
         -- Isolated Phase 1 diagnostic. Enable only on a development server.
         enabled = false,
         weapon = "WEAPON_REVOLVER_CATTLEMAN",
+        -- Second native used only by the Phase 7 offhand/dual-wield probe.
+        offhandWeapon = "WEAPON_REVOLVER_SCHOFIELD",
         ammo = "AMMO_REVOLVER",
         capacity = 6,
+        primaryAttachPoint = 2,
+        offhandAttachPoint = 3,
         observationIntervalMs = 50
     },
     Attachments = {

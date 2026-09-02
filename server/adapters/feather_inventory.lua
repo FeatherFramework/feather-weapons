@@ -73,6 +73,7 @@ local function BuildDefinitionIndex()
     MissingDefinitions = {}
     local required = {
         cattleman_revolver = true,
+        schofield_revolver = true,
         revolver_standard = true,
         weapon_repair_kit = true,
         cattleman_long_barrel = true
@@ -95,6 +96,7 @@ local function BuildDefinitionIndex()
 
     local expected = {
         cattleman_revolver = { instanceMode = "unique", usable = true, type = "item_weapon" },
+        schofield_revolver = { instanceMode = "unique", usable = true, type = "item_weapon" },
         revolver_standard = { instanceMode = "stack", usable = true, type = "item_ammo" },
         weapon_repair_kit = { instanceMode = "stack", usable = true, type = "item_item" },
         cattleman_long_barrel = { instanceMode = "stack", usable = false, type = "item_item" }
@@ -162,6 +164,39 @@ function FeatherInventoryProvider.SetEquippedForCharacter(context, itemInstanceI
     local result = Inventory.SetEquippedForCharacter(context.characterId, Config.Inventory.equipmentSlot, itemInstanceId)
     if not result.ok then return result end
     return WeaponResult.Ok(itemInstanceId, context.correlationId)
+end
+
+function FeatherInventoryProvider.GetEquippedSlotsForCharacter(context)
+    local result = Inventory.GetEquippedForCharacter(context.characterId)
+    if not result.ok then return result end
+    local configured = Config.Inventory.equipmentSlots or {}
+    return WeaponResult.Ok({
+        primary = result.value and result.value[configured.primary or Config.Inventory.equipmentSlot] or nil,
+        offhand = result.value and result.value[configured.offhand or "weapon_offhand"] or nil
+    }, context.correlationId)
+end
+
+function FeatherInventoryProvider.SetEquippedSlotForCharacter(context, slot, itemInstanceId)
+    local configured = Config.Inventory.equipmentSlots or {}
+    local inventorySlot = configured[slot]
+    if not inventorySlot then
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Weapon equipment slot is invalid", {
+            slot = slot
+        }, context.correlationId)
+    end
+    local result = Inventory.SetEquippedForCharacter(context.characterId, inventorySlot, itemInstanceId)
+    if not result.ok then return result end
+    return WeaponResult.Ok({ slot = slot, itemInstanceId = itemInstanceId }, context.correlationId)
+end
+
+function FeatherInventoryProvider.PromoteOffhandToPrimary(context)
+    local configured = Config.Inventory.equipmentSlots or {}
+    local result = Inventory.PromoteEquippedSlot(context.characterId,
+        configured.offhand or "weapon_offhand",
+        configured.primary or Config.Inventory.equipmentSlot)
+    if not result.ok then return result end
+    return WeaponResult.Ok({ itemInstanceId = result.value.instanceId,
+        fromSlot = "offhand", toSlot = "primary" }, context.correlationId)
 end
 
 function FeatherInventoryProvider.CreateWeapon(context, definition, metadata)
@@ -315,6 +350,12 @@ function FeatherInventoryProvider.Transaction(context, callback)
     return WeaponResult.Ok(outcome, context.correlationId)
 end
 
+function FeatherInventoryProvider.MutateWeaponMetadataBatch(context, mutations)
+    local result = Inventory.MutateItems(context, { items = mutations })
+    if not result.ok then return result end
+    return WeaponResult.Ok(result.value, context.correlationId)
+end
+
 local function RegisterUsableWeapons()
     local listed = DefinitionRegistry.List("weapon")
     if not listed.ok then return listed end
@@ -354,6 +395,9 @@ local function RegisterUsableAmmunition()
                     if not runtime or not runtime.equipped then
                         result = WeaponResult.Error(WeaponErrors.NOT_EQUIPPED,
                             "Equip a compatible weapon before using ammunition")
+                    elseif runtime.slots and runtime.slots.offhand then
+                        result = WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+                            "Unequip the offhand weapon before adding ammunition")
                     elseif not weapon or not weapon.ok or weapon.value.ammunitionType ~= definition.id then
                         result = WeaponResult.Error(WeaponErrors.ITEM_INVALID,
                             "This ammunition is not compatible with the equipped weapon")
@@ -405,7 +449,16 @@ local function RegisterUsableRepairItems()
                         correlationId = ("inventory-repair:%s:%s"):format(tostring(source), tostring(GetGameTimer())),
                         activeUseToken = type(useContext) == "table" and useContext.activeUseToken or nil
                     }
-                    result = RepairService.Repair(source, rpcContext, runtime.equipped.itemInstanceId)
+                    if runtime.slots and runtime.slots.offhand then
+                        result = RepairService.BeginSelection(source, rpcContext, done)
+                        if result.ok then return end
+                    else
+                        result = RepairService.Repair(source, rpcContext, {
+                            slot = "primary",
+                            itemInstanceId = runtime.equipped.itemInstanceId,
+                            generation = runtime.equipped.generation
+                        })
+                    end
                 end
                 TriggerClientEvent("feather-weapons:client:inventoryRepairResult", source, result)
                 if done then done() end
@@ -467,7 +520,8 @@ function InstallFeatherInventoryProvider()
         return Failure(nil, "feather-inventory API is unavailable", { reason = tostring(api) })
     end
 
-    local required = { "Items", "Instances", "Equipment", "Guards", "Transaction", "MutateItem", "CreateInstance",
+    local required = { "Items", "Instances", "Equipment", "Guards", "Transaction", "MutateItem", "MutateItems", "CreateInstance",
+        "PromoteEquippedSlot",
         "GetCapabilities",
         "GetItemForCharacter", "GetEquippedForCharacter", "SetEquippedForCharacter" }
     for _, name in ipairs(required) do

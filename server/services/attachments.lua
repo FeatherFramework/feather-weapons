@@ -12,13 +12,25 @@ local function Context(source, rpcContext, reason)
     }
 end
 
-local function Equipped(source, rpcContext)
+local function Equipped(source, rpcContext, request)
+    request = type(request) == "table" and request or {}
+    local slot = WeaponRuntime.NormalizeSlot(request.slot)
+    if not slot then
+        return nil, WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+            "Weapon equipment slot is invalid", nil, rpcContext.correlationId)
+    end
     local runtime = WeaponRuntime.Get(source)
-    if not runtime or runtime.sessionId ~= rpcContext.sessionId or not runtime.equipped then
+    local equipped = runtime and runtime.slots and runtime.slots[slot] or nil
+    if not runtime or runtime.sessionId ~= rpcContext.sessionId or not equipped then
         return nil, WeaponResult.Error(WeaponErrors.NOT_EQUIPPED, "Equip a weapon before modifying it", nil,
             rpcContext.correlationId)
     end
-    return runtime.equipped
+    if not WeaponRuntime.MatchesLease(source, rpcContext.sessionId,
+        request.itemInstanceId, tonumber(request.generation), slot) then
+        return nil, WeaponResult.Error(WeaponErrors.SESSION_EXPIRED,
+            "The equipped weapon lease is no longer current", { slot = slot }, rpcContext.correlationId)
+    end
+    return equipped, nil, slot
 end
 
 local function AtGunsmithStation(source, rpcContext)
@@ -59,11 +71,13 @@ local function ClientAttachments(metadata)
     return result
 end
 
-function AttachmentService.Install(source, rpcContext, attachmentId)
-    local equipped, failure = Equipped(source, rpcContext)
+function AttachmentService.Install(source, rpcContext, request)
+    request = type(request) == "table" and request or {}
+    local equipped, failure, slot = Equipped(source, rpcContext, request)
     if not equipped then return failure end
     local station = AtGunsmithStation(source, rpcContext)
     if not station.ok then return station end
+    local attachmentId = request.attachmentId
     local attachmentResult = DefinitionRegistry.Get("attachment", attachmentId)
     if not attachmentResult.ok then return attachmentResult end
     local attachment = attachmentResult.value
@@ -109,6 +123,8 @@ function AttachmentService.Install(source, rpcContext, attachmentId)
                 context.correlationId)
         end
         return {
+            slot = slot,
+            generation = equipped.generation,
             itemInstanceId = item.id,
             attachmentId = attachment.id,
             installed = true,
@@ -116,15 +132,21 @@ function AttachmentService.Install(source, rpcContext, attachmentId)
         }
     end)
     if not transaction.ok then return transaction end
-    WeaponRuntime.SetAttachments(source, rpcContext.sessionId, transaction.value.attachments, rpcContext.correlationId)
+    if WeaponRuntime.MatchesLease(source, rpcContext.sessionId, equipped.itemInstanceId,
+        equipped.generation, slot) then
+        WeaponRuntime.SetSlotAttachments(source, rpcContext.sessionId, slot,
+            transaction.value.attachments, rpcContext.correlationId)
+    end
     return WeaponResult.Ok(transaction.value, rpcContext.correlationId)
 end
 
-function AttachmentService.Remove(source, rpcContext, attachmentId)
-    local equipped, failure = Equipped(source, rpcContext)
+function AttachmentService.Remove(source, rpcContext, request)
+    request = type(request) == "table" and request or {}
+    local equipped, failure, slot = Equipped(source, rpcContext, request)
     if not equipped then return failure end
     local station = AtGunsmithStation(source, rpcContext)
     if not station.ok then return station end
+    local attachmentId = request.attachmentId
     local attachmentResult = DefinitionRegistry.Get("attachment", attachmentId)
     if not attachmentResult.ok then return attachmentResult end
     local attachment = attachmentResult.value
@@ -165,6 +187,8 @@ function AttachmentService.Remove(source, rpcContext, attachmentId)
                 context.correlationId)
         end
         return {
+            slot = slot,
+            generation = equipped.generation,
             itemInstanceId = item.id,
             attachmentId = attachment.id,
             installed = false,
@@ -172,14 +196,18 @@ function AttachmentService.Remove(source, rpcContext, attachmentId)
         }
     end)
     if not transaction.ok then return transaction end
-    WeaponRuntime.SetAttachments(source, rpcContext.sessionId, transaction.value.attachments, rpcContext.correlationId)
+    if WeaponRuntime.MatchesLease(source, rpcContext.sessionId, equipped.itemInstanceId,
+        equipped.generation, slot) then
+        WeaponRuntime.SetSlotAttachments(source, rpcContext.sessionId, slot,
+            transaction.value.attachments, rpcContext.correlationId)
+    end
     return WeaponResult.Ok(transaction.value, rpcContext.correlationId)
 end
 
 FeatherCore.RPC.Register("feather-weapons:attachment:install", function(params, respond, source, context)
-    respond(AttachmentService.Install(source, context, params and params.attachmentId))
+    respond(AttachmentService.Install(source, context, params))
 end, { requireCharacter = true, windowMs = 2000, maxCalls = 3, maxPayloadBytes = 256 })
 
 FeatherCore.RPC.Register("feather-weapons:attachment:remove", function(params, respond, source, context)
-    respond(AttachmentService.Remove(source, context, params and params.attachmentId))
+    respond(AttachmentService.Remove(source, context, params))
 end, { requireCharacter = true, windowMs = 2000, maxCalls = 3, maxPayloadBytes = 256 })

@@ -14,6 +14,12 @@ function WeaponAPI.GetCapabilities()
             inventoryPersistence = InventoryAdapter.IsReady(),
             equipAuthorization = true,
             equip = InventoryAdapter.IsReady(),
+            namedEquipmentSlots = InventoryAdapter.IsReady(),
+            offhandPolicy = true,
+            offhandEnabled = Config.Offhand and Config.Offhand.enabled == true,
+            slotInspection = InventoryAdapter.IsReady(),
+            slotRecovery = InventoryAdapter.IsReady(),
+            dualWield = true,
             ammunition = InventoryAdapter.IsReady(),
             ammoEscrow = InventoryAdapter.IsReady(),
             nativeReload = true,
@@ -21,9 +27,11 @@ function WeaponAPI.GetCapabilities()
             nativeObservation = InventoryAdapter.IsReady(),
             condition = InventoryAdapter.IsReady(),
             repair = InventoryAdapter.IsReady(),
+            slotRepair = InventoryAdapter.IsReady(),
             issuance = InventoryAdapter.IsReady(),
             attachmentDefinitions = true,
-            attachmentTransactions = InventoryAdapter.IsReady()
+            attachmentTransactions = InventoryAdapter.IsReady(),
+            slotAttachments = InventoryAdapter.IsReady()
         }
     }
 end
@@ -44,6 +52,14 @@ function WeaponAPI.GetRuntime(source)
     return WeaponRuntime.Get(source)
 end
 
+function WeaponAPI.InspectEquippedWeapons(source)
+    return ReconciliationService.InspectMetadata(tonumber(source))
+end
+
+function WeaponAPI.ReconcileEquippedWeapons(source)
+    return ReconciliationService.Force(tonumber(source))
+end
+
 function WeaponAPI.IssueWeapon(request, context)
     context = type(context) == "table" and context or {}
     context.resource = context.resource or GetInvokingResource() or "feather-weapons"
@@ -56,6 +72,10 @@ exports("initiate", function()
         Definitions = { Get = WeaponAPI.GetDefinition, List = WeaponAPI.ListDefinitions, ListCompatibleAttachments = WeaponAPI.ListCompatibleAttachments },
         Metadata = { Build = WeaponMetadata.Build, Validate = WeaponMetadata.Validate },
         Runtime = { Get = WeaponAPI.GetRuntime },
+        Inspection = {
+            Inspect = WeaponAPI.InspectEquippedWeapons,
+            Reconcile = WeaponAPI.ReconcileEquippedWeapons
+        },
         Issuance = { Issue = WeaponAPI.IssueWeapon },
         Inventory = {
             InstallProvider = InventoryAdapter.InstallProvider,
@@ -69,4 +89,12 @@ end)
 -- table boundary.
 exports("IssueWeapon", function(request, context)
     return WeaponAPI.IssueWeapon(request, context)
+end)
+
+exports("InspectEquippedWeapons", function(source)
+    return WeaponAPI.InspectEquippedWeapons(source)
+end)
+
+exports("ReconcileEquippedWeapons", function(source)
+    return WeaponAPI.ReconcileEquippedWeapons(source)
 end)

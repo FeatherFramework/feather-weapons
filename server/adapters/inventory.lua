@@ -1,13 +1,19 @@
 InventoryAdapter = {}
 local provider = nil
 
+local function IsCallable(value)
+    return type(value) == "function"
+        or (type(value) == "table"
+            and type(rawget(value, "__cfx_functionReference")) == "string")
+end
+
 local function Unavailable(context, operation)
     return WeaponResult.Error(WeaponErrors.INVENTORY_UNAVAILABLE,
         "Inventory provider does not support " .. operation, nil, context and context.correlationId)
 end
 
 function InventoryAdapter.InstallProvider(candidate)
-    if type(candidate) ~= "table" or type(candidate.GetCapabilities) ~= "function" then
+    if type(candidate) ~= "table" or not IsCallable(candidate.GetCapabilities) then
         return WeaponResult.Error(WeaponErrors.INVENTORY_UNAVAILABLE, "Inventory provider is invalid")
     end
 
@@ -19,11 +25,15 @@ function InventoryAdapter.InstallProvider(candidate)
             actual = capabilities and capabilities.contractVersion or nil
         })
     end
-    if type(candidate.GetItemForCharacter) ~= "function"
-        or type(candidate.GetEquippedForCharacter) ~= "function"
-        or type(candidate.SetEquippedForCharacter) ~= "function"
-        or type(candidate.CreateWeapon) ~= "function"
-        or type(candidate.Transaction) ~= "function" then
+    if not IsCallable(candidate.GetItemForCharacter)
+        or not IsCallable(candidate.GetEquippedForCharacter)
+        or not IsCallable(candidate.SetEquippedForCharacter)
+        or not IsCallable(candidate.GetEquippedSlotsForCharacter)
+        or not IsCallable(candidate.SetEquippedSlotForCharacter)
+        or not IsCallable(candidate.MutateWeaponMetadataBatch)
+        or not IsCallable(candidate.PromoteOffhandToPrimary)
+        or not IsCallable(candidate.CreateWeapon)
+        or not IsCallable(candidate.Transaction) then
         return WeaponResult.Error(WeaponErrors.INVENTORY_UNAVAILABLE, "Inventory provider is missing required operations")
     end
 
@@ -55,6 +65,26 @@ end
 function InventoryAdapter.SetEquippedForCharacter(context, itemInstanceId)
     if not provider then return Unavailable(context, "SetEquippedForCharacter") end
     return provider.SetEquippedForCharacter(context, itemInstanceId)
+end
+
+function InventoryAdapter.GetEquippedSlotsForCharacter(context)
+    if not provider then return Unavailable(context, "GetEquippedSlotsForCharacter") end
+    return provider.GetEquippedSlotsForCharacter(context)
+end
+
+function InventoryAdapter.SetEquippedSlotForCharacter(context, slot, itemInstanceId)
+    if not provider then return Unavailable(context, "SetEquippedSlotForCharacter") end
+    return provider.SetEquippedSlotForCharacter(context, slot, itemInstanceId)
+end
+
+function InventoryAdapter.MutateWeaponMetadataBatch(context, mutations)
+    if not provider then return Unavailable(context, "MutateWeaponMetadataBatch") end
+    return provider.MutateWeaponMetadataBatch(context, mutations)
+end
+
+function InventoryAdapter.PromoteOffhandToPrimary(context)
+    if not provider then return Unavailable(context, "PromoteOffhandToPrimary") end
+    return provider.PromoteOffhandToPrimary(context)
 end
 
 function InventoryAdapter.CreateWeapon(context, definition, metadata)

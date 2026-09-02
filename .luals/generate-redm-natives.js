@@ -32,6 +32,11 @@ const LUA_KEYWORDS = new Set([
   'then', 'true', 'until', 'while',
 ]);
 
+// Confirmed CFX runtime names that differ from the native database label.
+const LUA_NAME_OVERRIDES = new Map([
+  ['0x83B8D50EB9446BBA', 'SetAllowDualWield'],
+]);
+
 // ~26% of RDR3 natives have no confirmed name at all -- their "name" field
 // is just their own hash (optionally underscore-prefixed), e.g.
 // "_0x4B6C9A43F7D9109B". PascalCasing that produces garbage
@@ -39,6 +44,7 @@ const LUA_KEYWORDS = new Set([
 // convention for these is to expose them as N_0x<HASH> -- use that instead
 // of attempting a word-segment transform on something that isn't words.
 function toLuaName(nativeName, hash) {
+  if (LUA_NAME_OVERRIDES.has(hash)) return LUA_NAME_OVERRIDES.get(hash);
   const bare = nativeName.replace(/^_/, '');
   if (/^0x[0-9A-Fa-f]+$/i.test(bare)) {
     return 'N_' + hash;
