@@ -105,6 +105,91 @@ if Config.DevMode then
             passed, #tests, tostring(targetSource), tostring(equipped and equipped.generation)))
     end, true)
 
+    RegisterCommand("WeaponDualSlotContractSmokeTest", function(source, args)
+        if source ~= 0 then return end
+        local targetSource = tonumber(args and args[1])
+        if not targetSource then
+            local players = GetPlayers()
+            targetSource = players[1] and tonumber(players[1]) or nil
+        end
+        local runtime = targetSource and WeaponRuntime.Get(targetSource) or nil
+        local primary = runtime and runtime.slots and runtime.slots.primary or nil
+        local offhand = runtime and runtime.slots and runtime.slots.offhand or nil
+        local capabilities = WeaponAPI.GetCapabilities()
+        local tests = {
+            {
+                name = "named slot persistence",
+                passed = Config.Inventory.equipmentSlots
+                    and Config.Inventory.equipmentSlots.primary == Config.Inventory.equipmentSlot
+                    and Config.Inventory.equipmentSlots.offhand ~= Config.Inventory.equipmentSlots.primary
+            },
+            {
+                name = "slot runtime initialized",
+                passed = runtime ~= nil and type(runtime.slots) == "table"
+            },
+            {
+                name = "primary compatibility alias",
+                passed = runtime ~= nil and runtime.equipped == primary
+            },
+            {
+                name = "slot capability reported",
+                passed = capabilities.features.namedEquipmentSlots == true
+                    and capabilities.features.dualWield == true
+                    and capabilities.features.offhandEnabled == true
+            },
+            {
+                name = "offhand policy configured",
+                passed = capabilities.features.offhandPolicy == true
+                    and EquipService.ValidateConfiguration().ok == true
+            },
+            {
+                name = "slot repair capability",
+                passed = capabilities.features.slotRepair == true
+            },
+            {
+                name = "slot attachment capability",
+                passed = capabilities.features.slotAttachments == true
+            },
+            {
+                name = "atomic pair persistence",
+                passed = capabilities.inventory.contractVersion >= 4
+                    and capabilities.inventory.features
+                    and capabilities.inventory.features.atomicBatchMetadata == true
+                    and capabilities.inventory.features.atomicEquipmentPromotion == true
+            },
+            {
+                name = "distinct weapon catalog",
+                passed = capabilities.definitions.weapon >= 2
+                    and DefinitionRegistry.Get("weapon", "cattleman_revolver").ok == true
+                    and DefinitionRegistry.Get("weapon", "schofield_revolver").ok == true
+            },
+            {
+                name = "equipped hashes distinct",
+                passed = not offhand or (primary ~= nil
+                    and primary.nativeWeaponName ~= offhand.nativeWeaponName)
+            },
+            {
+                name = "primary lease scoped",
+                passed = not primary or WeaponRuntime.MatchesLease(targetSource,
+                    runtime.sessionId, primary.itemInstanceId, primary.generation, "primary")
+            },
+            {
+                name = "offhand lease scoped",
+                passed = not offhand or WeaponRuntime.MatchesLease(targetSource,
+                    runtime.sessionId, offhand.itemInstanceId, offhand.generation, "offhand")
+            }
+        }
+        local passed = 0
+        for _, test in ipairs(tests) do
+            if test.passed then passed = passed + 1 end
+            print(("[WeaponDualSlotContractSmokeTest] %-29s %s"):format(
+                test.name, test.passed and "PASS" or "FAIL"))
+        end
+        print(("[WeaponDualSlotContractSmokeTest] done %d/%d passed source=%s primary=%s offhand=%s")
+            :format(passed, #tests, tostring(targetSource),
+                tostring(primary and primary.itemInstanceId), tostring(offhand and offhand.itemInstanceId)))
+    end, true)
+
     RegisterCommand("grantweapon", function(source, args)
         local definitionId = args[1] or "cattleman_revolver"
         local targetSource = tonumber(args[2]) or (source > 0 and source or nil)
@@ -174,12 +259,18 @@ RegisterCommand("WeaponMetadataInspect", function(source, args)
             tostring(targetSource), tostring(value.characterId)))
         return
     end
-    print(("[WeaponMetadataInspect] PASS source=%s item=%s definition=%s serial=%s total=%s loaded=%s reserve=%s condition=%s attachments=%s runtimeMatch=%s")
-    :format(
-        tostring(targetSource), tostring(value.itemInstanceId), tostring(value.definitionId),
-        tostring(value.serialNumber), tostring((tonumber(value.loaded) or 0) + (tonumber(value.reserve) or 0)),
-        tostring(value.loaded), tostring(value.reserve), tostring(value.condition),
-        tostring(#(value.attachments or {})), tostring(value.runtimeMatches)))
+    for _, slot in ipairs({ "primary", "offhand" }) do
+        local item = value.slots and value.slots[slot] or nil
+        print(("[WeaponMetadataInspect] PASS source=%s slot=%s equipped=%s item=%s definition=%s serial=%s generation=%s total=%s loaded=%s reserve=%s condition=%s attachments=%s runtimeMatch=%s")
+        :format(
+            tostring(targetSource), slot, tostring(item ~= nil),
+            tostring(item and item.itemInstanceId), tostring(item and item.definitionId),
+            tostring(item and item.serialNumber), tostring(item and item.generation),
+            tostring(item and ((tonumber(item.loaded) or 0) + (tonumber(item.reserve) or 0))),
+            tostring(item and item.loaded), tostring(item and item.reserve),
+            tostring(item and item.condition), tostring(item and #(item.attachments or {})),
+            tostring(item and item.runtimeMatches or false)))
+    end
 end, true)
 
 RegisterCommand("WeaponReconcile", function(source, args)
@@ -195,11 +286,15 @@ RegisterCommand("WeaponReconcile", function(source, args)
             tostring(result.error and result.error.code), tostring(result.error and result.error.message)))
         return
     end
-    local equipped = result.value.equipped
-    print(("[WeaponReconcile] PASS source=%s equipped=%s item=%s generation=%s total=%s loaded=%s condition=%s"):format(
-        tostring(targetSource), tostring(equipped ~= nil), tostring(equipped and equipped.itemInstanceId),
-        tostring(equipped and equipped.generation), tostring(equipped and equipped.ammo),
-        tostring(equipped and equipped.loaded), tostring(equipped and equipped.condition)))
+    for _, slot in ipairs({ "primary", "offhand" }) do
+        local equipped = result.value.slots and result.value.slots[slot] or nil
+        print(("[WeaponReconcile] PASS source=%s slot=%s equipped=%s item=%s generation=%s total=%s loaded=%s reserve=%s condition=%s"):format(
+            tostring(targetSource), slot, tostring(equipped ~= nil),
+            tostring(equipped and equipped.itemInstanceId),
+            tostring(equipped and equipped.generation), tostring(equipped and equipped.ammo),
+            tostring(equipped and equipped.loaded), tostring(equipped and equipped.reserve),
+            tostring(equipped and equipped.condition)))
+    end
 end, true)
 
 if Config.DevMode then
@@ -221,7 +316,7 @@ if Config.DevMode then
             {
                 name = "definitions ready",
                 passed = capabilities.ready == true
-                    and capabilities.definitions.weapon == 1
+                    and capabilities.definitions.weapon == 2
                     and capabilities.definitions.ammunition == 1
                     and capabilities.definitions.attachment == 1,
                 detail = ("weapon=%s ammunition=%s attachment=%s"):format(
@@ -240,7 +335,9 @@ if Config.DevMode then
                 name = "runtime routes present",
                 passed = routes["feather-weapons:equip:request"] == true
                     and routes["feather-weapons:ammo:sync"] == true
+                    and routes["feather-weapons:ammo:pairSync"] == true
                     and routes["feather-weapons:ammo:unload"] == true
+                    and routes["feather-weapons:repair:select"] == true
             },
             {
                 name = "attachment routes present",
@@ -257,7 +354,11 @@ if Config.DevMode then
                 name = "active metadata valid",
                 passed = type(metadata) == "table"
                     and metadata.ok == true and metadata.value.equipped == true
-                    and metadata.value.runtimeMatches == true,
+                    and type(metadata.value.slots) == "table"
+                    and metadata.value.slots.primary ~= nil
+                    and metadata.value.slots.primary.runtimeMatches == true
+                    and (metadata.value.slots.offhand == nil
+                        or metadata.value.slots.offhand.runtimeMatches == true),
                 detail = targetSource and ("source=" .. tostring(targetSource)) or "no player"
             }
         }

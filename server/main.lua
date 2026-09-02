@@ -16,6 +16,12 @@ if not definitionResult.ok then
     return
 end
 
+local offhandConfigResult = EquipService.ValidateConfiguration()
+if not offhandConfigResult.ok then
+    FailStartup(offhandConfigResult.error.message, offhandConfigResult.error.details)
+    return
+end
+
 local inventoryProviderResult = InstallFeatherInventoryProvider()
 if not inventoryProviderResult.ok then
     FailStartup(inventoryProviderResult.error.message, inventoryProviderResult.error.details)

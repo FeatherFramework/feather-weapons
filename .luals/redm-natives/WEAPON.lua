@@ -1141,7 +1141,7 @@ function _SetActiveGunSpinningKitEmoteTwirl(ped, weaponEmoteTrickType, spin) end
 -- min build: 1207
 ---@param ped number
 ---@param allow boolean
-function _SetAllowDualWield(ped, allow) end
+function SetAllowDualWield(ped, allow) end
 
 -- _SET_AMMO_IN_TURRET  (0xBDDA0C290C228159)
 -- turretHash: WEAPON_TURRET_MAXIUM, WEAPON_TURRET_GATLING, WEAPON_TURRET_CANNON, WEAPON_TURRET_REVOLVING_CANNON

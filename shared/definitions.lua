@@ -43,6 +43,36 @@ WeaponDefinitionCatalog = {
                 serialRequired = true
             },
             tags = { "firearm", "sidearm", "revolver" }
+        },
+        schofield_revolver = {
+            id = "schofield_revolver",
+            kind = "weapon",
+            itemName = "schofield_revolver",
+            label = "Schofield Revolver",
+            nativeWeaponName = "WEAPON_REVOLVER_SCHOFIELD",
+            family = "revolver",
+            slot = "sidearm",
+            ammunitionType = "revolver_standard",
+            capacity = 6,
+            condition = {
+                minimum = 0,
+                maximum = 100,
+                equipMinimum = 1,
+                wearPerShot = 1,
+                repair = {
+                    itemDefinitionId = "weapon_repair_kit",
+                    quantity = 1,
+                    restore = 25
+                }
+            },
+            attachmentSlots = {},
+            policies = {
+                transferable = true,
+                droppable = true,
+                destructible = true,
+                serialRequired = true
+            },
+            tags = { "firearm", "sidearm", "revolver" }
         }
     },
     -- Each attachment defines: id, itemName, label, slot,
