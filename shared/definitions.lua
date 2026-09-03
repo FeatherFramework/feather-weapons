@@ -11,10 +11,10 @@ WeaponDefinitionCatalog = {
         }
     },
     weapons = {
-        cattleman_revolver = {
-            id = "cattleman_revolver",
+        revolver_cattleman = {
+            id = "revolver_cattleman",
             kind = "weapon",
-            itemName = "cattleman_revolver",
+            itemName = "revolver_cattleman",
             label = "Cattleman Revolver",
             nativeWeaponName = "WEAPON_REVOLVER_CATTLEMAN",
             family = "revolver",
@@ -44,10 +44,10 @@ WeaponDefinitionCatalog = {
             },
             tags = { "firearm", "sidearm", "revolver" }
         },
-        schofield_revolver = {
-            id = "schofield_revolver",
+        revolver_schofield = {
+            id = "revolver_schofield",
             kind = "weapon",
-            itemName = "schofield_revolver",
+            itemName = "revolver_schofield",
             label = "Schofield Revolver",
             nativeWeaponName = "WEAPON_REVOLVER_SCHOFIELD",
             family = "revolver",

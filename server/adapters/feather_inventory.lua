@@ -71,8 +71,8 @@ local function BuildDefinitionIndex()
 
     MissingDefinitions = {}
     local required = {
-        cattleman_revolver = true,
-        schofield_revolver = true,
+        revolver_cattleman = true,
+        revolver_schofield = true,
         revolver_standard = true,
         weapon_repair_kit = true,
         cattleman_long_barrel = true
@@ -94,8 +94,8 @@ local function BuildDefinitionIndex()
     end
 
     local expected = {
-        cattleman_revolver = { instanceMode = "unique", usable = true, type = "item_weapon" },
-        schofield_revolver = { instanceMode = "unique", usable = true, type = "item_weapon" },
+        revolver_cattleman = { instanceMode = "unique", usable = true, type = "item_weapon" },
+        revolver_schofield = { instanceMode = "unique", usable = true, type = "item_weapon" },
         revolver_standard = { instanceMode = "stack", usable = true, type = "item_ammo" },
         weapon_repair_kit = { instanceMode = "stack", usable = true, type = "item_item" },
         cattleman_long_barrel = { instanceMode = "stack", usable = false, type = "item_item" }

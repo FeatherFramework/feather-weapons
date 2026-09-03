@@ -75,6 +75,8 @@ write weapon metadata, equipment slots, or ammunition quantities directly.
 ## 4. Cross-cutting rules
 
 - One owned weapon is one unique Inventory item instance.
+- Weapon definition and Inventory item IDs use `<family>_<model>`, such as
+  `revolver_cattleman` and `revolver_schofield`.
 - Client observations may reduce or redistribute an approved budget, never
   create ownership, ammunition, condition, or attachments.
 - Every mutation is bound to the current session, character, item, slot, and
