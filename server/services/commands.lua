@@ -170,8 +170,8 @@ RegisterCommand("WeaponDualSlotContractSmokeTest", function(source, args)
             {
                 name = "distinct weapon catalog",
                 passed = capabilities.definitions.weapon >= 2
-                    and DefinitionRegistry.Get("weapon", "cattleman_revolver").ok == true
-                    and DefinitionRegistry.Get("weapon", "schofield_revolver").ok == true
+                    and DefinitionRegistry.Get("weapon", "revolver_cattleman").ok == true
+                    and DefinitionRegistry.Get("weapon", "revolver_schofield").ok == true
             },
             {
                 name = "slot item identities distinct",
@@ -204,7 +204,7 @@ RegisterCommand("WeaponDualSlotContractSmokeTest", function(source, args)
 
 if Config.DevMode then
     RegisterCommand("grantweapon", function(source, args)
-        local definitionId = args[1] or "cattleman_revolver"
+        local definitionId = args[1] or "revolver_cattleman"
         local targetSource = tonumber(args[2]) or (source > 0 and source or nil)
         if not targetSource then
             print("[feather-weapons] usage: grantweapon [definitionId] [targetServerId]")

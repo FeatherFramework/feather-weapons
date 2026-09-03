@@ -40,6 +40,9 @@ Server operation, recovery, integration, and trust boundaries are documented in
 The configured weapons are the Cattleman and Schofield revolvers using standard
 revolver ammunition.
 
+Weapon definition and Inventory item IDs follow `<family>_<model>`; for
+example, `revolver_cattleman` and `revolver_schofield`.
+
 ## Requirements
 
 - RedM server
@@ -70,15 +73,17 @@ character IDs are rejected and are not part of the release contract.
 ## Installation
 
 1. Install compatible versions of Feather Core and Feather Inventory.
-2. Run [`sql/install_items.sql`](sql/install_items.sql) after the Feather Inventory schema and migrations.
-3. Confirm `cattleman_revolver` exists as a unique, usable inventory definition.
-4. Ensure the resources in the order shown above.
-5. Restart the server; do not use a resource refresh for database migrations.
+2. For an existing alpha database, run
+   [`sql/rename_weapon_ids.sql`](sql/rename_weapon_ids.sql) once.
+3. Run [`sql/install_items.sql`](sql/install_items.sql) after the Feather Inventory schema and migrations.
+4. Confirm `revolver_cattleman` exists as a unique, usable inventory definition.
+5. Ensure the resources in the order shown above.
+6. Restart the server; do not use a resource refresh for database migrations.
 
 The installation SQL adds standard revolver ammunition, weapon repair kits, and the Cattleman Long Barrel; marks only the weapon, ammunition, and repair kit usable; and enforces unique/stack modes. It is idempotent and can be rerun. Startup fails closed if a required definition is missing, duplicated, or has incompatible usable, type, or instance-mode values.
 
 > [!NOTE]
-> Weapon instances are created through the inventory transaction service with unique serials and complete metadata. When `DevMode = true`, authorized staff can issue the configured Cattleman with `/grantweapon cattleman_revolver` in chat, or `grantweapon cattleman_revolver [targetServerId]` from the server console.
+> Weapon instances are created through the inventory transaction service with unique serials and complete metadata. When `DevMode = true`, authorized staff can issue the configured Cattleman with `/grantweapon revolver_cattleman` in chat, or `grantweapon revolver_cattleman [targetServerId]` from the server console.
 
 ## Configuration
 
