@@ -11,8 +11,7 @@ local function Notify(source, message, duration)
     end
 end
 
-if Config.DevMode then
-    RegisterCommand("WeaponCharacterIdentitySmokeTest", function(source, args)
+RegisterCommand("WeaponCharacterIdentitySmokeTest", function(source, args)
         if source ~= 0 then return end
         local targetSource = tonumber(args and args[1])
         if not targetSource then
@@ -62,7 +61,7 @@ if Config.DevMode then
         print(("[WeaponCharacterIdentitySmokeTest] done %d/%d passed"):format(passed, #tests))
     end, true)
 
-    RegisterCommand("WeaponRuntimeLeaseSmokeTest", function(source, args)
+RegisterCommand("WeaponRuntimeLeaseSmokeTest", function(source, args)
         if source ~= 0 then return end
         local targetSource = tonumber(args and args[1])
         if not targetSource then
@@ -105,7 +104,7 @@ if Config.DevMode then
             passed, #tests, tostring(targetSource), tostring(equipped and equipped.generation)))
     end, true)
 
-    RegisterCommand("WeaponDualSlotContractSmokeTest", function(source, args)
+RegisterCommand("WeaponDualSlotContractSmokeTest", function(source, args)
         if source ~= 0 then return end
         local targetSource = tonumber(args and args[1])
         if not targetSource then
@@ -115,6 +114,7 @@ if Config.DevMode then
         local runtime = targetSource and WeaponRuntime.Get(targetSource) or nil
         local primary = runtime and runtime.slots and runtime.slots.primary or nil
         local offhand = runtime and runtime.slots and runtime.slots.offhand or nil
+        local sessionId = runtime and runtime.sessionId or nil
         local capabilities = WeaponAPI.GetCapabilities()
         local tests = {
             {
@@ -136,6 +136,16 @@ if Config.DevMode then
                 passed = capabilities.features.namedEquipmentSlots == true
                     and capabilities.features.dualWield == true
                     and capabilities.features.offhandEnabled == true
+                    and capabilities.features.matchingHashDualWield == true
+            },
+            {
+                name = "pair ammo capability",
+                passed = capabilities.features.pairAmmoEscrow == true
+                    and capabilities.features.pairUnload == true
+            },
+            {
+                name = "restore holster capability",
+                passed = capabilities.features.restoredWeaponsHolstered == true
             },
             {
                 name = "offhand policy configured",
@@ -164,19 +174,21 @@ if Config.DevMode then
                     and DefinitionRegistry.Get("weapon", "schofield_revolver").ok == true
             },
             {
-                name = "equipped hashes distinct",
+                name = "slot item identities distinct",
                 passed = not offhand or (primary ~= nil
-                    and primary.nativeWeaponName ~= offhand.nativeWeaponName)
+                    and tostring(primary.itemInstanceId) ~= tostring(offhand.itemInstanceId))
             },
             {
                 name = "primary lease scoped",
-                passed = not primary or WeaponRuntime.MatchesLease(targetSource,
-                    runtime.sessionId, primary.itemInstanceId, primary.generation, "primary")
+                passed = not primary or (targetSource ~= nil and sessionId ~= nil
+                    and WeaponRuntime.MatchesLease(targetSource, sessionId,
+                        primary.itemInstanceId, primary.generation, "primary"))
             },
             {
                 name = "offhand lease scoped",
-                passed = not offhand or WeaponRuntime.MatchesLease(targetSource,
-                    runtime.sessionId, offhand.itemInstanceId, offhand.generation, "offhand")
+                passed = not offhand or (targetSource ~= nil and sessionId ~= nil
+                    and WeaponRuntime.MatchesLease(targetSource, sessionId,
+                        offhand.itemInstanceId, offhand.generation, "offhand"))
             }
         }
         local passed = 0
@@ -190,6 +202,7 @@ if Config.DevMode then
                 tostring(primary and primary.itemInstanceId), tostring(offhand and offhand.itemInstanceId)))
     end, true)
 
+if Config.DevMode then
     RegisterCommand("grantweapon", function(source, args)
         local definitionId = args[1] or "cattleman_revolver"
         local targetSource = tonumber(args[2]) or (source > 0 and source or nil)
@@ -297,8 +310,7 @@ RegisterCommand("WeaponReconcile", function(source, args)
     end
 end, true)
 
-if Config.DevMode then
-    RegisterCommand("WeaponReleaseContractSmokeTest", function(source, args)
+RegisterCommand("WeaponReleaseContractSmokeTest", function(source, args)
         if source ~= 0 then return end
         local targetSource = tonumber(args and args[1])
         if not targetSource then
@@ -329,6 +341,8 @@ if Config.DevMode then
                 name = "native reload surface",
                 passed = capabilities.features.nativeReload == true
                     and capabilities.features.ammoEscrow == true
+                    and capabilities.features.pairAmmoEscrow == true
+                    and capabilities.features.pairUnload == true
                     and capabilities.features.reload == nil
             },
             {
@@ -370,5 +384,4 @@ if Config.DevMode then
                 test.detail and ("  -- " .. test.detail) or ""))
         end
         print(("[WeaponReleaseContractSmokeTest] done %d/%d passed"):format(passed, #tests))
-    end, true)
-end
+end, true)

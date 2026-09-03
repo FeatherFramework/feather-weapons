@@ -866,7 +866,7 @@ function _HidePedWeapons(ped, p0, immediately) end
 ---@param p2 boolean
 ---@param p3 boolean
 ---@param immediately boolean
-function _HolsterPedWeapons(ped, p1, p2, p3, immediately) end
+function HolsterPedWeapons(ped, p1, p2, p3, immediately) end
 
 -- _IS_AMMO_SILENT  (0xD2866CBA797E872E)
 -- min build: 1232
@@ -1033,7 +1033,7 @@ function _ListenProjectileHitEvents(listen) end
 -- min build: 1207
 ---@param ped number
 ---@return any
-function _MakePedReload(ped) end
+function MakePedReload(ped) end
 
 -- _REFILL_AMMO_IN_CLIP  (0xDF4A3404D022ADDE)
 -- min build: 1207

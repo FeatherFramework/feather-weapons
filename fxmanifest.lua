@@ -37,6 +37,7 @@ server_scripts {
 
 client_scripts {
     '/client/imports.lua',
+    '/client/guid_weapons.lua',
     '/client/main.lua',
     '/client/native_probe.lua'
 }

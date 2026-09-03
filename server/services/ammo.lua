@@ -13,12 +13,14 @@ local function Context(source, rpcContext, reason)
     }
 end
 
-local function GetEquipped(source, rpcContext)
+local function GetEquipped(source, rpcContext, slot)
     local runtime = WeaponRuntime.Get(source)
-    if not runtime or runtime.sessionId ~= rpcContext.sessionId or not runtime.equipped then
+    slot = WeaponRuntime.NormalizeSlot(slot)
+    local equipped = runtime and slot and runtime.slots and runtime.slots[slot]
+    if not runtime or runtime.sessionId ~= rpcContext.sessionId or not equipped then
         return nil, WeaponResult.Error(WeaponErrors.NOT_EQUIPPED, "No weapon is equipped", nil, rpcContext.correlationId)
     end
-    return runtime.equipped
+    return equipped
 end
 
 local function ValidateLease(source, equipped, rpcContext, params)
@@ -33,8 +35,9 @@ local function ValidateLease(source, equipped, rpcContext, params)
     return nil
 end
 
-local function Reload(source, rpcContext, requested)
-    local equipped, failure = GetEquipped(source, rpcContext)
+local function Reload(source, rpcContext, requested, slot)
+    slot = WeaponRuntime.NormalizeSlot(slot) or "primary"
+    local equipped, failure = GetEquipped(source, rpcContext, slot)
     if not equipped then return failure end
     if requested ~= nil then
         requested = math.floor(tonumber(requested) or -1)
@@ -108,17 +111,36 @@ local function Reload(source, rpcContext, requested)
     if not transactionResult.ok then return transactionResult end
 
     local value = transactionResult.value
-    WeaponRuntime.SetSlotAmmo(source, rpcContext.sessionId, "primary",
+    WeaponRuntime.SetSlotAmmo(source, rpcContext.sessionId, slot,
         value.total, value.loaded, rpcContext.correlationId)
+    value.slot = slot
     return WeaponResult.Ok(value, rpcContext.correlationId)
 end
 
 function AmmoService.Escrow(source, rpcContext, amount)
-    return Reload(source, rpcContext, amount)
+    local runtime = WeaponRuntime.Get(source)
+    local slots = runtime and runtime.slots or nil
+    local slot = "primary"
+    if slots and slots.primary and slots.offhand then
+        -- Ammunition items are not tied to a hand. Fill the less-stocked
+        -- weapon first so repeated uses can provision both escrow pools.
+        slot = (tonumber(slots.offhand.ammo) or 0) < (tonumber(slots.primary.ammo) or 0)
+            and "offhand" or "primary"
+    end
+    return Reload(source, rpcContext, amount, slot)
 end
 
 function AmmoService.Unload(source, rpcContext, requested)
-    local equipped, failure = GetEquipped(source, rpcContext)
+    local runtime = WeaponRuntime.Get(source)
+    local slots = runtime and runtime.slots or nil
+    local slot = "primary"
+    if slots and slots.primary and slots.offhand then
+        -- Unload the better-stocked escrow first. Repeated uses naturally
+        -- drain both weapons without requiring either slot to be unequipped.
+        slot = (tonumber(slots.offhand.ammo) or 0) > (tonumber(slots.primary.ammo) or 0)
+            and "offhand" or "primary"
+    end
+    local equipped, failure = GetEquipped(source, rpcContext, slot)
     if not equipped then return failure end
     if requested ~= nil then requested = math.floor(tonumber(requested) or -1) end
     if requested ~= nil and requested < 1 then
@@ -171,14 +193,15 @@ function AmmoService.Unload(source, rpcContext, requested)
     end)
     if not transactionResult.ok then return transactionResult end
 
-    WeaponRuntime.SetSlotAmmo(source, rpcContext.sessionId, "primary",
+    WeaponRuntime.SetSlotAmmo(source, rpcContext.sessionId, slot,
         transactionResult.value.total, transactionResult.value.loaded,
         rpcContext.correlationId)
+    transactionResult.value.slot = slot
     return WeaponResult.Ok(transactionResult.value, rpcContext.correlationId)
 end
 
 function AmmoService.SyncConsumption(source, rpcContext, params)
-    local equipped, failure = GetEquipped(source, rpcContext)
+    local equipped, failure = GetEquipped(source, rpcContext, "primary")
     if not equipped then return failure end
     local leaseFailure = ValidateLease(source, equipped, rpcContext, params)
     if leaseFailure then return leaseFailure end
@@ -249,6 +272,9 @@ function AmmoService.SyncPair(source, rpcContext, params)
     local reportedTotal = math.floor(tonumber(params.total) or -1)
     local prepared = {}
     local expectedTotal = 0
+    local previousTotal = 0
+    local firedTotal = 0
+    local identical = slots.primary.nativeWeaponName == slots.offhand.nativeWeaponName
     local context = Context(source, rpcContext, "pair_checkpoint")
 
     for _, slot in ipairs({ "primary", "offhand" }) do
@@ -271,6 +297,7 @@ function AmmoService.SyncPair(source, rpcContext, params)
 
         local oldLoaded = math.floor(tonumber(item.metadata.ammo.loaded) or 0)
         local oldReserve = math.floor(tonumber(item.metadata.ammo.reserve) or 0)
+        previousTotal = previousTotal + oldLoaded + oldReserve
         local loaded = math.floor(tonumber(report.loaded) or -1)
         if loaded < 0 or loaded > definitionResult.value.capacity then
             return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
@@ -279,20 +306,21 @@ function AmmoService.SyncPair(source, rpcContext, params)
         end
         local fired = math.floor(tonumber(report.consumed) or -1)
         local reloaded = loaded - oldLoaded + fired
-        if fired < 0 or reloaded < 0 then
+        if fired < 0 or (not identical and reloaded < 0) then
             return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
                 "Reported pair ammunition transition is invalid", { slot = slot },
                 rpcContext.correlationId)
         end
-        if reloaded > oldReserve then
+        if not identical and reloaded > oldReserve then
             return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
                 "Native reload crossed weapon escrow ownership", {
                     slot = slot, requested = reloaded, reserve = oldReserve
                 }, rpcContext.correlationId)
         end
-        local nextReserve = oldReserve - reloaded
+        local nextReserve = identical and 0 or (oldReserve - reloaded)
         local nextTotal = loaded + nextReserve
         expectedTotal = expectedTotal + nextTotal
+        firedTotal = firedTotal + fired
         local condition = tonumber(item.metadata.condition)
             or definitionResult.value.condition.maximum
         item.metadata.ammo.loaded = loaded
@@ -305,9 +333,48 @@ function AmmoService.SyncPair(source, rpcContext, params)
             total = nextTotal,
             loaded = loaded,
             reserve = nextReserve,
+            maxTotal = math.max(definitionResult.value.capacity,
+                math.floor(tonumber(Config.Escrow and Config.Escrow.maxTotal)
+                    or definitionResult.value.capacity)),
             fired = fired,
             condition = item.metadata.condition
         }
+    end
+
+    if identical then
+        if reportedTotal ~= previousTotal - firedTotal then
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+                "Shared native ammunition consumption is inconsistent", {
+                    reported = reportedTotal, previous = previousTotal, fired = firedTotal
+                }, rpcContext.correlationId)
+        end
+        local loadedTotal = prepared.primary.loaded + prepared.offhand.loaded
+        if loadedTotal > reportedTotal then
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+                "Identical weapon clips exceed the shared ammunition pool", {
+                    reported = reportedTotal, loaded = loadedTotal
+                }, rpcContext.correlationId)
+        end
+        -- Equal native hashes share one RedM reserve. Preserve deterministic
+        -- primary-first ownership without exceeding either item's escrow cap.
+        local sharedReserve = reportedTotal - loadedTotal
+        local primaryRoom = math.max(0,
+            prepared.primary.maxTotal - prepared.primary.loaded)
+        prepared.primary.reserve = math.min(sharedReserve, primaryRoom)
+        prepared.offhand.reserve = sharedReserve - prepared.primary.reserve
+        if prepared.offhand.loaded + prepared.offhand.reserve > prepared.offhand.maxTotal then
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+                "Shared native ammunition exceeds pair escrow capacity", {
+                    reported = reportedTotal,
+                    primaryMaximum = prepared.primary.maxTotal,
+                    offhandMaximum = prepared.offhand.maxTotal
+                }, rpcContext.correlationId)
+        end
+        prepared.primary.total = prepared.primary.loaded + prepared.primary.reserve
+        prepared.offhand.total = prepared.offhand.loaded + prepared.offhand.reserve
+        prepared.primary.item.metadata.ammo.reserve = prepared.primary.reserve
+        prepared.offhand.item.metadata.ammo.reserve = prepared.offhand.reserve
+        expectedTotal = reportedTotal
     end
 
     if reportedTotal ~= expectedTotal then

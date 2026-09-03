@@ -16,8 +16,7 @@ local DuplicateDefinitions = {}
 local InventoryCapabilities = nil
 
 local function Failure(context, message, details)
-    return WeaponResult.Error(WeaponErrors.INVENTORY_UNAVAILABLE, message, details,
-        context and context.correlationId)
+    return WeaponResult.Error(WeaponErrors.INVENTORY_UNAVAILABLE, message, details, context and context.correlationId)
 end
 
 local function NormalizeItem(item)
@@ -395,9 +394,6 @@ local function RegisterUsableAmmunition()
                     if not runtime or not runtime.equipped then
                         result = WeaponResult.Error(WeaponErrors.NOT_EQUIPPED,
                             "Equip a compatible weapon before using ammunition")
-                    elseif runtime.slots and runtime.slots.offhand then
-                        result = WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
-                            "Unequip the offhand weapon before adding ammunition")
                     elseif not weapon or not weapon.ok or weapon.value.ammunitionType ~= definition.id then
                         result = WeaponResult.Error(WeaponErrors.ITEM_INVALID,
                             "This ammunition is not compatible with the equipped weapon")

@@ -6,8 +6,9 @@ Server operation, recovery, integration, and trust boundaries are documented in
 [`docs/operations.md`](docs/operations.md).
 
 > [!WARNING]
-> This alpha release supports primary-only weapons and distinct-hash dual wield
-> with the Cattleman and Schofield revolvers. The wider catalog, shops,
+> This alpha release supports primary and native dual-wield loadouts with
+> distinct or matching weapon hashes. The current catalog contains the
+> Cattleman and Schofield revolvers. The wider catalog, shops,
 > transfers, evidence flows, and licenses are not included yet.
 
 > [!IMPORTANT]
@@ -19,10 +20,13 @@ Server operation, recovery, integration, and trust boundaries are documented in
 
 - Equip a weapon by using its item in Feather Inventory.
 - Equip a second supported sidearm and use RedM's native dual-wield controls.
+- Keep matching-hash weapons distinct through native inventory GUIDs.
 - Unequip it by using the same item again.
 - Restore the equipped weapon after reconnects and resource or server restarts.
+- Finish reconnect and resource-start restoration with equipped guns holstered.
 - Reload with the player-remappable `R` key.
-- Atomically remove compatible ammunition items during reloads.
+- Atomically escrow compatible ammunition into single or dual weapon loadouts.
+- Return ammunition from either equipped slot without unequipping the pair.
 - Persist loaded ammunition after firing.
 - Apply and persist condition loss per shot.
 - Select and repair either equipped weapon by using a repair kit in Inventory.
@@ -84,7 +88,11 @@ Config = {
     RequiredCoreContract = 1,
     Inventory = {
         requiredContract = 4,
-        equipmentSlot = "weapon"
+        equipmentSlot = "weapon",
+        equipmentSlots = {
+            primary = "weapon",
+            offhand = "weapon_offhand"
+        }
     },
     Runtime = {
         authorizationTtlMs = 5000,
@@ -101,6 +109,10 @@ Config = {
         allowedFamilies = { revolver = true },
         allowedWeaponSlots = { sidearm = true },
         provisionNativeEntitlement = true,
+        nativeEntitlements = {
+            { itemName = "CLOTHING_ITEM_M_OFFHAND_000_TINT_001", slotId = 0xF20B6B4A },
+            { itemName = "UPGRADE_OFFHAND_HOLSTER", slotId = 0x39E57B01 }
+        },
         primaryAttachPoint = 2,
         offhandAttachPoint = 3
     },
@@ -133,8 +145,13 @@ Config = {
 `Offhand.enabled` controls dual-slot equipment. The two allowlists use weapon
 definition `family` and `slot` values; only entries set to `true` are accepted.
 Keep automatic entitlement provisioning enabled unless another resource owns
-RedM's offhand holster unlock. Attach-point values should only be changed for a
-clothing setup that has been tested in game.
+RedM's offhand holster unlock. Testing confirmed that the upgrade entitlement
+alone is insufficient: RedM also requires an offhand clothing entitlement.
+Testing the available tint variants produced no visible cosmetic difference,
+so Feather treats this item as a native inventory marker rather than character
+styling. `nativeEntitlements` remains server-owned. Replace its clothing item
+only after testing the alternative in game. Attach-point values should only be
+changed for a tested setup.
 
 Startup always fails closed when required dependencies, definitions, or contracts are unavailable. `Inventory.requiredContract` must match the contract feather-inventory reports from `GetCapabilities().value.contractVersion` -- it is checked before any definition, usable callback or guard is registered, and a version below it aborts installation rather than degrading to an empty index. `DevMode` enables diagnostic output and development-only weapon grants; disable it on production servers. Keep `authoritativeNativeAmmo = true` when Feather Weapons owns all weapons and ammunition. At weapon boundaries, this clears the player's native ammo—including ammo granted by other resources—before restoring the equipped inventory item's saved rounds.
 
@@ -164,15 +181,26 @@ Players can change Feather's registered bindings in their Cfx key-binding settin
 
 ### Equip and unequip
 
-Use a weapon item to equip it. Use that same item again to unequip it. A different weapon cannot be equipped until the current weapon is unequipped.
+Use a weapon item to equip it. Use that same item again to unequip it. When the
+configured offhand policy permits the weapon, using a second sidearm equips it
+in the offhand slot. Using the primary item promotes the offhand weapon; using
+the offhand item removes only that slot.
 
 ### Reload
 
-Use a compatible ammunition stack while its weapon is equipped to transfer cartridges transactionally into that weapon's bounded escrow. Refilling a completely empty Cattleman loads its cylinder immediately because RedM does this natively when a positive ammunition pool is granted. After firing, press native `R` to reload from the approved reserve. Feather observes and persists the resulting loaded/reserve distribution without reading or disabling the key.
+Use a compatible ammunition stack while a matching weapon is equipped to
+transfer cartridges transactionally into bounded weapon escrow. With two
+weapons equipped, the less-stocked slot is filled first; repeated uses can fill
+both slots. Refilling an empty revolver loads its cylinder when RedM grants the
+positive native pool. After firing, press native `R` to reload. Feather observes
+and persists each loaded/reserve distribution without intercepting the key.
 
 ### Unload
 
-Press `U` with an armed weapon equipped. The server returns its loaded and reserve cartridges to the character inventory and updates weapon metadata in one transaction, then clears the native ammunition pool.
+Press `U` with one or two weapons equipped. The server checkpoints the active
+loadout, returns the better-stocked slot's loaded and reserve cartridges to
+Inventory, and updates its metadata in one transaction. Repeated uses drain the
+other slot as well.
 
 ### Condition and repair
 
@@ -212,11 +240,13 @@ Attachment installation and removal require proximity to a configured gunsmith b
 
 When `DevMode = true`, `/weaponstate` prints the authoritative equipped item ID, loaded ammunition, and condition to F8. Normal equip, reload, unload, and repair testing uses gameplay interactions rather than test commands.
 
+The read-only `WeaponRuntimeLeaseSmokeTest`,
+`WeaponDualSlotContractSmokeTest`, and `WeaponReleaseContractSmokeTest`
+commands remain available from the server console with `DevMode` disabled.
+Development grants and native probes remain disabled.
+
 ## Known limitations
 
-- Dual wield requires two different native weapon hashes; identical-hash pairs
-  remain a deferred experiment.
-- Ammunition refill and unload remain primary-only while an offhand is equipped.
 - The first Long Barrel attachment is available; additional attachment definitions remain unfinished.
 - Alternate ammunition, expanded provenance, evidence, licenses, shops, and crafting remain planned.
 
@@ -226,7 +256,9 @@ The current release has passed Inventory Contract 4 startup gates, unique
 issuance, both equip orders, alternating fire/reload, per-item condition,
 slot-aware repair and attachments, movement guards, reconciliation, entitlement
 recovery, reconnect/resource/server restart, Admin operations, and two-player
-isolation. Primary-only behavior has also been regression tested.
+isolation. Matching-hash pair refill/unload and holstered restoration passed
+manual checks. The final runtime, dual-slot, and release gates passed `5/5`,
+`14/14`, and `8/8`; primary-only behavior also remains regression tested.
 
 ## Attachment phase
 
@@ -266,9 +298,12 @@ Operations return a consistent result envelope:
 
 ## Next milestones
 
-1. Add explicit paired ammunition refill and unload semantics.
-2. Add transfers, storage, evidence, destruction, and recovery flows.
-3. Add more weapons, attachments, shops, licenses, jobs, and crafting.
-4. Revisit identical-hash dual wield after the distinct-hash release.
+1. Complete male/female offhand entitlement validation.
+2. Expand the weapon catalog one tested family at a time.
+3. Add ammunition types and complete the modification catalog.
+4. Add transfers, storage, evidence, destruction, and recovery flows.
+5. Integrate shops, licenses, jobs, and crafting through public contracts.
 
-See [`MASTER_PLAN.md`](MASTER_PLAN.md) for the complete build plan.
+See [`MASTER_PLAN_NEXT.md`](MASTER_PLAN_NEXT.md) for the expansion plan. The
+completed native-first architecture and validation record remains in
+[`MASTER_PLAN.md`](MASTER_PLAN.md).

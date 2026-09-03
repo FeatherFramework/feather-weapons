@@ -1,4 +1,5 @@
 local settings = Config.NativeProbe or {}
+
 if Config.DevMode ~= true or settings.enabled ~= true then return end
 
 local weaponName = settings.weapon or 'WEAPON_REVOLVER_CATTLEMAN'
@@ -14,6 +15,8 @@ local offhandAttachPoint = math.floor(tonumber(settings.offhandAttachPoint) or 3
 local interval = math.max(25, math.floor(tonumber(settings.observationIntervalMs) or 50))
 local active = false
 local watching = false
+local dualWatching = false
+local previousDual = nil
 local previous = nil
 local marks = {}
 local markCounter = 0
@@ -23,11 +26,7 @@ local nativeRemoveReason = joaat('REMOVE_REASON_CLIENT_PURGED')
 local offhandUnlock = -200143754
 local dualOverride = nil
 local dualEntitlements = {}
-local dualWeaponCopies = {}
-
-local function NativeBuffer(length)
-    return string.rep('\0', math.max(41, length))
-end
+local dualWeaponCopies = nil
 
 local function NativeTrue(value)
     return value == true or value == 1
@@ -42,59 +41,57 @@ local function SetDualWieldAllowed(ped, allowed)
 end
 
 local function IsOffhandUnlocked()
-    return NativeTrue(Citizen.InvokeNative(0xC4B660C7B6040E75, offhandUnlock))
+    return NativeTrue(Citizen.InvokeNative(0xC4B660C7B6040E75, offhandUnlock)) -- UnlockIsUnlocked
 end
 
 local function IsOffhandVisible()
-    return NativeTrue(Citizen.InvokeNative(0x8588A14B75AF096B, offhandUnlock))
+    return NativeTrue(Citizen.InvokeNative(0x8588A14B75AF096B, offhandUnlock)) -- UnlockIsVisible
 end
 
 local function SetOffhandUnlocked(unlocked)
-    Citizen.InvokeNative(0x1B7C5ADA8A6910A0, offhandUnlock, unlocked == true)
+    Citizen.InvokeNative(0x1B7C5ADA8A6910A0, offhandUnlock, unlocked == true) -- UnlockSetUnlocked
 end
 
 local function SetOffhandVisible(visible)
-    Citizen.InvokeNative(0x46B901A8ECDB5A61, offhandUnlock, visible == true)
-end
-
-local function InventoryGuid(inventoryId, parentGuid, category, slotId)
-    local guid = NativeBuffer(8 * 13)
-    local resolved = Citizen.InvokeNative(0x886DFD3E185C8A89,
-        inventoryId, parentGuid, category, slotId, guid)
-    return NativeTrue(resolved) and guid or nil
+    Citizen.InvokeNative(0x46B901A8ECDB5A61, offhandUnlock, visible == true) -- UnlockSetVisible
 end
 
 local function AddNativeWardrobeEntitlement(itemName, slotId)
     local inventoryId = 1
     local itemHash = joaat(itemName)
-    local existing = math.max(0, math.floor(tonumber(Citizen.InvokeNative(
-        0xE787F05DFC977BDE, inventoryId, itemHash, false)) or 0))
+
+    -- InventoryGetInventoryItemCountWithItemid
+    local existing = math.max(0, math.floor(tonumber(Citizen.InvokeNative(0xE787F05DFC977BDE, inventoryId, itemHash, false)) or 0))
     if existing > 0 then
         return { ok = true, itemName = itemName, existing = true, count = existing }
     end
+
+    -- ItemdatabaseIsKeyValid
     if not NativeTrue(Citizen.InvokeNative(0x6D5D51B188333FD1, itemHash, 0)) then
         return { ok = false, itemName = itemName, stage = 'item-invalid' }
     end
 
-    local characterGuid = InventoryGuid(inventoryId, nil, joaat('CHARACTER'), 0xA1212100)
+    local characterGuid = FeatherGuidWeapons.ResolveGuid(inventoryId, nil, joaat('CHARACTER'), 0xA1212100)
     if not characterGuid then
         return { ok = false, itemName = itemName, stage = 'character-guid' }
     end
-    local wardrobeGuid = InventoryGuid(inventoryId, characterGuid, joaat('WARDROBE'), 0x3DABBFA7)
+
+    local wardrobeGuid = FeatherGuidWeapons.ResolveGuid(inventoryId, characterGuid, joaat('WARDROBE'), 0x3DABBFA7)
     if not wardrobeGuid then
         return { ok = false, itemName = itemName, stage = 'wardrobe-guid' }
     end
 
-    local itemGuid = NativeBuffer(8 * 13)
-    local added = Citizen.InvokeNative(0xCB5D11F9508A928D, inventoryId, itemGuid,
-        wardrobeGuid, itemHash, slotId, 1, addReason)
+    local itemGuid = FeatherGuidWeapons.NewBuffer(8 * 13)
+    local added = Citizen.InvokeNative(0xCB5D11F9508A928D, inventoryId, itemGuid, wardrobeGuid, itemHash, slotId, 1, addReason)
     if not NativeTrue(added) then
         return { ok = false, itemName = itemName, stage = 'add' }
     end
+
+    -- InventoryEquipItemWithGuid
     local equipped = Citizen.InvokeNative(0x734311E2852760D0, inventoryId, itemGuid, true)
     if not NativeTrue(equipped) then
-        Citizen.InvokeNative(0x3E4E811480B3AE79, inventoryId, itemGuid, 1,
-            joaat('REMOVE_REASON_DEFAULT'))
+        -- InventoryRemoveInventoryItemWithGuid
+        Citizen.InvokeNative(0x3E4E811480B3AE79, inventoryId, itemGuid, 1, joaat('REMOVE_REASON_DEFAULT'))
         return { ok = false, itemName = itemName, stage = 'equip' }
     end
 
@@ -109,93 +106,74 @@ end
 local function RemoveProbeEntitlements()
     for index = #dualEntitlements, 1, -1 do
         local entitlement = dualEntitlements[index]
-        local removed = Citizen.InvokeNative(0x3E4E811480B3AE79,
-            entitlement.inventoryId, entitlement.guid, 1, joaat('REMOVE_REASON_DEFAULT'))
-        print(('[WeaponNativeProbe] dual-entitlement remove item=%s removed=%s'):format(
-            entitlement.itemName, tostring(NativeTrue(removed))))
+
+        -- InventoryRemoveInventoryItemWithGuid
+        local removed = Citizen.InvokeNative(0x3E4E811480B3AE79, entitlement.inventoryId, entitlement.guid, 1, joaat('REMOVE_REASON_DEFAULT'))
+        print(('[WeaponNativeProbe] dual-entitlement remove item=%s removed=%s'):format(entitlement.itemName, tostring(NativeTrue(removed))))
     end
     dualEntitlements = {}
 end
 
 local function RemoveProbeWeaponCopies()
-    for index = #dualWeaponCopies, 1, -1 do
-        local copy = dualWeaponCopies[index]
-        local removed = Citizen.InvokeNative(0x3E4E811480B3AE79,
-            copy.inventoryId, copy.guid, 1, joaat('REMOVE_REASON_DEFAULT'))
-        print(('[WeaponNativeProbe] dual-copy remove slot=%d weapon=%s removed=%s'):format(
-            copy.slot, copy.weaponName, tostring(NativeTrue(removed))))
+    for _, outcome in ipairs(FeatherGuidWeapons.Destroy(dualWeaponCopies)) do
+        local copy = outcome.record
+        print(('[WeaponNativeProbe] dual-copy remove slot=%d weapon=%s removed=%s'):format(copy.slot, copy.weaponName, tostring(outcome.removed)))
     end
-    dualWeaponCopies = {}
+    dualWeaponCopies = nil
 end
 
-local function AddNativeWeaponCopy(ped, weapon, slot)
-    local inventoryId = 1
-    local itemHash = joaat(weapon)
-    if not NativeTrue(Citizen.InvokeNative(0x6D5D51B188333FD1, itemHash, 0)) then
-        return false, 'item-invalid'
-    end
+local function ReassertIdenticalWeaponPair(ped)
+    return FeatherGuidWeapons.Activate(ped, dualWeaponCopies)
+end
 
-    local characterGuid = InventoryGuid(inventoryId, nil, joaat('CHARACTER'), 0xA1212100)
-    if not characterGuid then return false, 'character-guid' end
-    local carriedGuid = InventoryGuid(inventoryId, characterGuid,
-        joaat('CARRIED_WEAPONS'), joaat('SLOTID_CARRIED_WEAPONS'))
-    if not carriedGuid then return false, 'carried-weapons-guid' end
-
-    local itemGuid = NativeBuffer(8 * 13)
-    local slotHash = joaat(('SLOTID_WEAPON_%d'):format(slot))
-    local added = Citizen.InvokeNative(0xCB5D11F9508A928D, inventoryId, itemGuid,
-        carriedGuid, itemHash, slotHash, 1, addReason)
-    if not NativeTrue(added) then return false, 'add' end
-
-    local equipped = Citizen.InvokeNative(0x734311E2852760D0, inventoryId, itemGuid, true)
-    if not NativeTrue(equipped) then
-        Citizen.InvokeNative(0x3E4E811480B3AE79, inventoryId, itemGuid, 1,
-            joaat('REMOVE_REASON_DEFAULT'))
-        return false, 'equip'
-    end
-
-    Citizen.InvokeNative(0x12FB95FE3D579238, ped, itemGuid, true, slot, false, false)
-    dualWeaponCopies[#dualWeaponCopies + 1] = {
-        inventoryId = inventoryId,
-        guid = itemGuid,
-        slot = slot,
-        weaponName = weapon
+local function DualGuidSnapshot()
+    local ped = PlayerPedId()
+    local selectedOk, selected = GetCurrentPedWeapon(ped, true, 0, false)
+    local snapshot = {
+        selected = NativeTrue(selectedOk) and selected or 0,
+        total = math.max(0, math.floor(tonumber(GetPedAmmoByType(ped, ammoHash)) or 0)),
+        slots = {}
     }
-    return true, 'ready'
+    for _, copy in ipairs(dualWeaponCopies and dualWeaponCopies.records or {}) do
+        local ok, loaded = FeatherGuidWeapons.ReadClip(ped, copy)
+        snapshot.slots[#snapshot.slots + 1] = {
+            slot = copy.slot,
+            ok = ok,
+            loaded = loaded,
+            weaponTotal = FeatherGuidWeapons.ReadTotal(ped, copy)
+        }
+    end
+
+    table.sort(snapshot.slots, function(left, right)
+        return left.slot < right.slot
+    end)
+
+    local signature = { tostring(snapshot.selected), tostring(snapshot.total) }
+    for _, slot in ipairs(snapshot.slots) do
+        signature[#signature + 1] = ('%d:%s:%d:%d'):format(slot.slot, tostring(slot.ok), slot.loaded, slot.weaponTotal)
+    end
+
+    snapshot.signature = table.concat(signature, '|')
+    return snapshot
 end
 
-local function MoveNativeWeaponCopy(copy, parentGuid, slot)
-    local movedGuid = NativeBuffer(8 * 13)
-    local moved = Citizen.InvokeNative(0xDCCAA7C3BFD88862,
-        copy.inventoryId, copy.guid, parentGuid,
-        joaat(('SLOTID_WEAPON_%d'):format(slot)), 1, movedGuid)
-    if not NativeTrue(moved) then return false, 'move' end
-    copy.guid = movedGuid
-    copy.slot = slot
-    return true, 'ready'
+local function PrintDualGuidSnapshot(label, snapshot)
+    local slots = {}
+    for _, slot in ipairs(snapshot.slots) do
+        slots[#slots + 1] = ('slot%d=%d/%d clipOk=%s'):format(
+            slot.slot, slot.loaded, slot.weaponTotal, tostring(slot.ok))
+    end
+    print(('[WeaponNativeProbe] dual-watch %s selected=%s total=%d guidAmmo=[%s]'):format(
+        label, tostring(snapshot.selected), snapshot.total, table.concat(slots, ', ')))
 end
 
 local function AddIdenticalWeaponPair(ped, weapon)
-    local firstOk, firstStage = AddNativeWeaponCopy(ped, weapon, 0)
-    if not firstOk then return false, false, firstStage, 'not-attempted' end
+    local created = FeatherGuidWeapons.CreateMatchingPair(ped, weapon)
+    if not created.ok then
+        return false, false, created.code or 'create-failed', 'not-ready'
+    end
 
-    local inventoryId = 1
-    local characterGuid = InventoryGuid(inventoryId, nil, joaat('CHARACTER'), 0xA1212100)
-    if not characterGuid then return true, false, 'ready', 'character-guid' end
-    local carriedGuid = InventoryGuid(inventoryId, characterGuid,
-        joaat('CARRIED_WEAPONS'), joaat('SLOTID_CARRIED_WEAPONS'))
-    if not carriedGuid then return true, false, 'ready', 'carried-weapons-guid' end
-
-    local firstCopy = dualWeaponCopies[#dualWeaponCopies]
-    local moved, moveStage = MoveNativeWeaponCopy(firstCopy, carriedGuid, 1)
-    if not moved then return true, false, 'ready', moveStage end
-
-    -- RedM's native inventory expects the newly added weapon in slot 0. The
-    -- existing GUID must be moved to slot 1 before the second copy is added.
-    local secondOk, secondStage = AddNativeWeaponCopy(ped, weapon, 0)
-    if not secondOk then return true, false, 'ready', secondStage end
-    Citizen.InvokeNative(0x12FB95FE3D579238,
-        ped, firstCopy.guid, true, 1, false, false)
+    dualWeaponCopies = created.value
     return true, true, 'ready', 'ready'
 end
 
@@ -249,6 +227,7 @@ end
 
 local function Same(left, right)
     if not left or not right then return false end
+
     for _, key in ipairs({ 'selected', 'clipOk', 'loaded', 'weaponTotal', 'ammoTypeTotal',
         'reloading', 'shooting', 'dead', 'mounted', 'walking', 'running', 'sprinting',
         'inCover', 'firstPersonAim', 'carrying' }) do
@@ -273,6 +252,7 @@ end
 local function RefuseInventoryWeapon()
     local isActive, state = InventoryWeaponActive()
     if not isActive then return false end
+
     print(('[WeaponNativeProbe] REFUSED -- unequip Inventory weapon item=%s definition=%s first'):format(
         tostring(state.itemInstanceId), tostring(state.definitionId)))
     return true
@@ -280,6 +260,7 @@ end
 
 local function RestoreDualWieldState()
     if not dualOverride then return end
+
     local ped = PlayerPedId()
     SetDualWieldAllowed(ped, dualOverride.allowed)
     SetOffhandUnlocked(dualOverride.unlocked)
@@ -297,18 +278,18 @@ local function ClearNativeTestState(ped)
     -- removing the weapon first left the prior ceiling behind.
     local amount = math.max(0, math.floor(tonumber(GetPedAmmoByType(ped, ammoHash)) or 0))
     if amount > 0 then
+        -- RemoveAmmoFromPedByType, REMOVE_REASON_DEBUG
         Citizen.InvokeNative(0xB6CFEC32E3742779, ped, ammoHash, amount, 0xA07362E6)
-        -- _REMOVE_AMMO_FROM_PED_BY_TYPE, REMOVE_REASON_DEBUG
     end
-    local afterTypeRemoval = math.max(0,
-        math.floor(tonumber(GetPedAmmoByType(ped, ammoHash)) or 0))
+
+    local afterTypeRemoval = math.max(0, math.floor(tonumber(GetPedAmmoByType(ped, ammoHash)) or 0))
     RemoveProbeWeaponCopies()
     RemoveWeaponFromPed(ped, weaponHash, true, nativeRemoveReason)
     if offhandWeaponHash ~= weaponHash then
         RemoveWeaponFromPed(ped, offhandWeaponHash, true, nativeRemoveReason)
     end
-    local afterWeaponRemoval = math.max(0,
-        math.floor(tonumber(GetPedAmmoByType(ped, ammoHash)) or 0))
+
+    local afterWeaponRemoval = math.max(0, math.floor(tonumber(GetPedAmmoByType(ped, ammoHash)) or 0))
     print(('[WeaponNativeProbe] cleanup requested=%d afterType=%d afterWeapon=%d'):format(
         amount, afterTypeRemoval, afterWeaponRemoval))
 end
@@ -333,6 +314,7 @@ end
 
 RegisterCommand('WeaponNativeProbePrepare', function(_, args)
     if RefuseInventoryWeapon() then return end
+
     local loaded = math.floor(tonumber(args and args[1]) or capacity)
     local total = math.floor(tonumber(args and args[2]) or loaded)
     logicalItem = tostring(args and args[3] or 'unlabeled')
@@ -342,14 +324,14 @@ RegisterCommand('WeaponNativeProbePrepare', function(_, args)
     local ped = PlayerPedId()
     ClearNativeTestState(ped)
     GiveProbeWeapon(ped, weaponHash, 0, false, false, true)
+
     local clipSet = SetAmmoInClip(ped, weaponHash, loaded)
     SetPedAmmoByType(ped, ammoHash, total)
     SetCurrentPedWeapon(ped, weaponHash, true, 0, false, false)
 
     active = true
     previous = Snapshot()
-    print(('[WeaponNativeProbe] prepare requestedLoaded=%d requestedTotal=%d clipSet=%s'):format(
-        loaded, total, tostring(clipSet)))
+    print(('[WeaponNativeProbe] prepare requestedLoaded=%d requestedTotal=%d clipSet=%s'):format(loaded, total, tostring(clipSet)))
     PrintSnapshot('prepared', previous)
     local setupPassed = previous.selected == weaponHash and previous.clipOk
         and previous.loaded == loaded and previous.weaponTotal == total
@@ -359,12 +341,10 @@ end, false)
 
 RegisterCommand('WeaponNativeProbeDualPrepare', function(_, args)
     if RefuseInventoryWeapon() then return end
-    local primaryLoaded = math.max(0, math.min(capacity,
-        math.floor(tonumber(args and args[1]) or capacity)))
-    local offhandLoaded = math.max(0, math.min(capacity,
-        math.floor(tonumber(args and args[2]) or capacity)))
-    local total = math.max(primaryLoaded + offhandLoaded,
-        math.floor(tonumber(args and args[3]) or (primaryLoaded + offhandLoaded)))
+
+    local primaryLoaded = math.max(0, math.min(capacity, math.floor(tonumber(args and args[1]) or capacity)))
+    local offhandLoaded = math.max(0, math.min(capacity, math.floor(tonumber(args and args[2]) or capacity)))
+    local total = math.max(primaryLoaded + offhandLoaded, math.floor(tonumber(args and args[3]) or (primaryLoaded + offhandLoaded)))
     local ped = PlayerPedId()
 
     ClearNativeTestState(ped)
@@ -379,35 +359,59 @@ RegisterCommand('WeaponNativeProbeDualPrepare', function(_, args)
         GiveProbeWeapon(ped, weaponHash, primaryAttachPoint, false, true, false)
         GiveProbeWeapon(ped, offhandWeaponHash, offhandAttachPoint, false, true, false)
     end
+
     -- The offhand weapon entity is not queryable immediately after its grant.
-    -- This probe-only settle point tests whether both requested clips can be
-    -- restored once RedM has built the native pair. Clips must still be set
-    -- before the shared total or RedM adds the clip values to that total.
+    -- Distinct hashes can receive their clips directly after this settle point;
+    -- identical hashes must remain GUID-managed below.
     Wait(100)
-    local primaryClipSet = SetAmmoInClip(ped, weaponHash, primaryLoaded)
-    local offhandClipSet = SetAmmoInClip(ped, offhandWeaponHash, offhandLoaded)
+    local sameHash = offhandWeaponHash == weaponHash
+    local primaryClipSet, offhandClipSet
+    if sameHash then
+        -- SET_AMMO_IN_CLIP is hash-addressed and cannot select one of two
+        -- identical GUID-backed weapons. Calling it here can collapse RedM's
+        -- active dual pair to either hand. Let native reload populate both
+        -- GUID clips from the shared pool instead.
+        primaryClipSet, offhandClipSet = 'guid-managed', 'guid-managed'
+    else
+        primaryClipSet = SetAmmoInClip(ped, weaponHash, primaryLoaded)
+        offhandClipSet = SetAmmoInClip(ped, offhandWeaponHash, offhandLoaded)
+    end
+
     SetPedAmmoByType(ped, ammoHash, total)
-    SetCurrentPedWeapon(ped, weaponHash, true, primaryAttachPoint, false, false)
+
+    if sameHash then
+        ReassertIdenticalWeaponPair(ped)
+        SetDualWieldAllowed(ped, true)
+        Wait(1000)
+        MakePedReload(ped)
+        Wait(100)
+    else
+        SetCurrentPedWeapon(ped, weaponHash, true, primaryAttachPoint, false, false)
+    end
+
+    SetDualWieldAllowed(ped, true)
 
     local primaryClipOk, observedPrimary = GetAmmoInClip(ped, weaponHash)
     local offhandClipOk, observedOffhand = GetAmmoInClip(ped, offhandWeaponHash)
     local selected = CurrentWeapon(ped)
-    local observedTotal = math.max(0,
-        math.floor(tonumber(GetPedAmmoByType(ped, ammoHash)) or 0))
+    local observedTotal = math.max(0, math.floor(tonumber(GetPedAmmoByType(ped, ammoHash)) or 0))
     active = true
     print(('[WeaponNativeProbe] dual-prepare primary=%s offhand=%s selected=%s total=%d '
         .. 'primaryLoaded=%d primaryClipOk=%s primarySet=%s offhandLoaded=%d offhandClipOk=%s offhandSet=%s '
-        .. 'attachPoints=%d/%d sameHash=%s grants=%s/%s stages=%s/%s'):format(
+        .. 'attachPoints=%d/%d sameHash=%s grants=%s/%s stages=%s/%s dualAllowed=%s'):format(
         weaponName, offhandWeaponName, tostring(selected), observedTotal,
         math.max(0, math.floor(tonumber(observedPrimary) or 0)), tostring(NativeTrue(primaryClipOk)),
         tostring(primaryClipSet), math.max(0, math.floor(tonumber(observedOffhand) or 0)),
         tostring(NativeTrue(offhandClipOk)), tostring(offhandClipSet), primaryAttachPoint,
-        offhandAttachPoint, tostring(weaponHash == offhandWeaponHash),
-        tostring(primaryGranted), tostring(offhandGranted), primaryStage, offhandStage))
+        offhandAttachPoint, tostring(sameHash),
+        tostring(primaryGranted), tostring(offhandGranted), primaryStage, offhandStage,
+        tostring(GetDualWieldAllowed(ped))
+    ))
 end, false)
 
 RegisterCommand('WeaponNativeProbeDualAllow', function(_, args)
     if RefuseInventoryWeapon() then return end
+
     local requested = tostring(args and args[1] or 'on'):lower()
     if requested == 'off' or requested == 'false' or requested == '0' then
         RestoreDualWieldState()
@@ -422,27 +426,36 @@ RegisterCommand('WeaponNativeProbeDualAllow', function(_, args)
             visible = IsOffhandVisible()
         }
     end
+
     SetOffhandUnlocked(true)
     SetOffhandVisible(true)
     SetDualWieldAllowed(ped, true)
     print(('[WeaponNativeProbe] dual-allow requested=true allowed=%s unlocked=%s visible=%s'):format(
         tostring(GetDualWieldAllowed(ped)),
         tostring(IsOffhandUnlocked()),
-        tostring(IsOffhandVisible())))
+        tostring(IsOffhandVisible())
+    ))
 end, false)
 
 RegisterCommand('WeaponNativeProbeDualEntitle', function()
     if RefuseInventoryWeapon() then return end
-    local clothing = AddNativeWardrobeEntitlement(
-        'CLOTHING_ITEM_M_OFFHAND_000_TINT_004', 0xF20B6B4A)
-    local upgrade = AddNativeWardrobeEntitlement('UPGRADE_OFFHAND_HOLSTER', 0x39E57B01)
+
+    local outcomes = {}
+    for _, entitlement in ipairs(Config.Offhand.nativeEntitlements) do
+        outcomes[#outcomes + 1] = AddNativeWardrobeEntitlement(
+            entitlement.itemName, entitlement.slotId)
+    end
+
     local ped = PlayerPedId()
     SetDualWieldAllowed(ped, true)
-    print(('[WeaponNativeProbe] dual-entitlement clothing=%s/%s existing=%s '
-        .. 'upgrade=%s/%s existing=%s allowed=%s'):format(
-        tostring(clothing.ok), tostring(clothing.stage or 'ready'), tostring(clothing.existing == true),
-        tostring(upgrade.ok), tostring(upgrade.stage or 'ready'), tostring(upgrade.existing == true),
-        tostring(GetDualWieldAllowed(ped))))
+    for _, outcome in ipairs(outcomes) do
+        print(('[WeaponNativeProbe] dual-entitlement item=%s result=%s/%s existing=%s'):format(
+            outcome.itemName, tostring(outcome.ok), tostring(outcome.stage or 'ready'),
+            tostring(outcome.existing == true)
+        ))
+    end
+
+    print(('[WeaponNativeProbe] dual-entitlement allowed=%s'):format(tostring(GetDualWieldAllowed(ped))))
 end, false)
 
 RegisterCommand('WeaponNativeProbeDualStatus', function()
@@ -454,19 +467,36 @@ RegisterCommand('WeaponNativeProbeDualStatus', function()
     local offhandOk, offhandWeapon = CurrentWeaponAt(ped, true, offhandAttachPoint, true)
     local primaryEntity = GetCurrentPedWeaponEntityIndex(ped, primaryAttachPoint)
     local offhandEntity = GetCurrentPedWeaponEntityIndex(ped, offhandAttachPoint)
+    local slot0Ok, slot0Weapon = CurrentWeaponAt(ped, true, 0, true)
+    local slot1Ok, slot1Weapon = CurrentWeaponAt(ped, true, 1, true)
+    local slot0Entity = GetCurrentPedWeaponEntityIndex(ped, 0)
+    local slot1Entity = GetCurrentPedWeaponEntityIndex(ped, 1)
+    local guidState = {}
+    for _, copy in ipairs(dualWeaponCopies and dualWeaponCopies.records or {}) do
+        local guidClipOk, guidLoaded = FeatherGuidWeapons.ReadClip(ped, copy)
+        guidState[#guidState + 1] = ('slot%d=%d/%d clipOk=%s'):format(
+            copy.slot, guidLoaded, FeatherGuidWeapons.ReadTotal(ped, copy), tostring(guidClipOk))
+    end
+
     print(('[WeaponNativeProbe] dual-status primary=%s offhand=%s selected=%s total=%d '
         .. 'primaryLoaded=%d primaryClipOk=%s primaryWeaponTotal=%d '
         .. 'offhandLoaded=%d offhandClipOk=%s offhandWeaponTotal=%d '
-        .. 'hand=%s/%s attach%d=%s/%s entity=%s attach%d=%s/%s entity=%s'):format(
+        .. 'hand=%s/%s slot0=%s/%s entity=%s slot1=%s/%s entity=%s '
+        .. 'attach%d=%s/%s entity=%s attach%d=%s/%s entity=%s copies=%d guidAmmo=[%s]'):format(
         weaponName, offhandWeaponName, tostring(CurrentWeapon(ped)),
         math.max(0, math.floor(tonumber(GetPedAmmoByType(ped, ammoHash)) or 0)),
         math.max(0, math.floor(tonumber(primaryLoaded) or 0)), tostring(NativeTrue(primaryClipOk)),
         math.max(0, math.floor(tonumber(GetAmmoInPedWeapon(ped, weaponHash)) or 0)),
         math.max(0, math.floor(tonumber(offhandLoaded) or 0)), tostring(NativeTrue(offhandClipOk)),
         math.max(0, math.floor(tonumber(GetAmmoInPedWeapon(ped, offhandWeaponHash)) or 0)),
-        tostring(handOk), tostring(handWeapon), primaryAttachPoint, tostring(primaryOk),
+        tostring(handOk), tostring(handWeapon), tostring(slot0Ok), tostring(slot0Weapon),
+        tostring(slot0Entity), tostring(slot1Ok), tostring(slot1Weapon), tostring(slot1Entity),
+        primaryAttachPoint, tostring(primaryOk),
         tostring(primaryWeapon), tostring(primaryEntity), offhandAttachPoint, tostring(offhandOk),
-        tostring(offhandWeapon), tostring(offhandEntity)))
+        tostring(offhandWeapon), tostring(offhandEntity),
+        dualWeaponCopies and #(dualWeaponCopies.records or {}) or 0,
+        table.concat(guidState, ', ')
+    ))
 end, false)
 
 RegisterCommand('WeaponNativeProbeStatus', function(_, args)
@@ -478,6 +508,13 @@ RegisterCommand('WeaponNativeProbeWatch', function()
     previous = Snapshot()
     print(('[WeaponNativeProbe] watch=%s intervalMs=%d'):format(tostring(watching), interval))
     if watching then PrintSnapshot('watch-start', previous) end
+end, false)
+
+RegisterCommand('WeaponNativeProbeDualWatch', function()
+    dualWatching = not dualWatching
+    previousDual = dualWatching and DualGuidSnapshot() or nil
+    print(('[WeaponNativeProbe] dual-watch=%s intervalMs=%d'):format(tostring(dualWatching), interval))
+    if previousDual then PrintDualGuidSnapshot('start', previousDual) end
 end, false)
 
 RegisterCommand('WeaponNativeProbeMark', function(_, args)
@@ -494,12 +531,14 @@ RegisterCommand('WeaponNativeProbeCompare', function(_, args)
         print('[WeaponNativeProbe] compare requires two existing mark names')
         return
     end
+
     print(('[WeaponNativeProbe] compare %s->%s pedChanged=%s selected=%s->%s dead=%s->%s '
         .. 'loaded=%+d weaponTotal=%+d ammoTypeTotal=%+d'):format(
         leftName, rightName, tostring(left.ped ~= right.ped), tostring(left.selected),
         tostring(right.selected), tostring(left.dead), tostring(right.dead),
         right.loaded - left.loaded, right.weaponTotal - left.weaponTotal,
-        right.ammoTypeTotal - left.ammoTypeTotal))
+        right.ammoTypeTotal - left.ammoTypeTotal
+    ))
 end, false)
 
 RegisterCommand('WeaponNativeProbeClear', function()
@@ -508,13 +547,15 @@ RegisterCommand('WeaponNativeProbeClear', function()
         RestoreDualWieldState()
         return
     end
+
     local ped = PlayerPedId()
     ClearNativeTestState(ped)
     RemoveProbeEntitlements()
     RestoreDualWieldState()
     offhandWeaponName = configuredOffhandWeaponName
     offhandWeaponHash = joaat(offhandWeaponName)
-    active, watching, previous, marks, markCounter, logicalItem = false, false, nil, {}, 0, 'unlabeled'
+    active, watching, dualWatching, previous, previousDual, marks, markCounter, logicalItem =
+        false, false, false, nil, nil, {}, 0, 'unlabeled'
     print('[WeaponNativeProbe] cleared')
 end, false)
 
@@ -536,12 +577,35 @@ CreateThread(function()
     end
 end)
 
+CreateThread(function()
+    while true do
+        if active and dualWatching then
+            local ok, current = pcall(DualGuidSnapshot)
+            if not ok then
+                dualWatching = false
+                print(('[WeaponNativeProbe] dual observer stopped after snapshot error: %s'):format(
+                    tostring(current)))
+            else
+                if not previousDual or previousDual.signature ~= current.signature then
+                    PrintDualGuidSnapshot('transition', current)
+                end
+                previousDual = current
+            end
+            Wait(interval)
+        else
+            Wait(250)
+        end
+    end
+end)
+
 AddEventHandler('onResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end
+
     local hasInventoryWeapon = InventoryWeaponActive()
     if active and not hasInventoryWeapon then
         ClearNativeTestState(PlayerPedId())
     end
+
     RemoveProbeEntitlements()
     RestoreDualWieldState()
 end)

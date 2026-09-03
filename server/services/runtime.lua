@@ -106,14 +106,6 @@ function WeaponRuntime.RestoreEquipped(source, sessionId, item, definition, corr
     end
     runtime.pending = nil
     runtime.slots = runtime.slots or { primary = runtime.equipped, offhand = nil }
-    local otherSlot = slot == "primary" and "offhand" or "primary"
-    local other = runtime.slots[otherSlot]
-    if other and other.nativeWeaponName == definition.nativeWeaponName then
-        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
-            "Two equipped weapons cannot use the same native weapon", {
-                slot = slot, otherSlot = otherSlot, nativeWeaponName = definition.nativeWeaponName
-            }, correlationId)
-    end
     local generation = NextGeneration(runtime)
     local loaded, reserve, total = AmmoSnapshot(item.metadata, definition)
     runtime.slots[slot] = {
@@ -150,22 +142,15 @@ function WeaponRuntime.BeginEquip(source, sessionId, item, definition, correlati
         return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Another weapon operation is pending", nil,
             correlationId)
     end
-    if runtime.slots[slot] then
+    ---@type table|nil
+    local occupiedSlot = runtime.slots[slot]
+    if occupiedSlot then
         return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Unequip the current weapon slot before equipping another",
             {
                 slot = slot,
-                itemInstanceId = runtime.slots[slot].itemInstanceId
+                itemInstanceId = occupiedSlot.itemInstanceId
             }, correlationId)
     end
-    local otherSlot = slot == "primary" and "offhand" or "primary"
-    local other = runtime.slots[otherSlot]
-    if other and other.nativeWeaponName == definition.nativeWeaponName then
-        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
-            "Two equipped weapons cannot use the same native weapon", {
-                slot = slot, otherSlot = otherSlot, nativeWeaponName = definition.nativeWeaponName
-            }, correlationId)
-    end
-
     local token = NextToken(runtime)
     local loaded, reserve, total = AmmoSnapshot(item.metadata, definition)
     runtime.pending = {
@@ -379,7 +364,7 @@ AddEventHandler("core.session.leaving.v1", function(session)
         runtime.pending = nil
         runtime.equipped = nil
         runtime.slots = { primary = nil, offhand = nil }
-        TriggerClientEvent("feather-weapons:client:clearSession", session.source, session.sessionId)
+        TriggerClientEvent("feather-weapons:client:clear", session.source)
     end
 end)
 
