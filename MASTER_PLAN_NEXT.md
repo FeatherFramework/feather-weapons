@@ -324,4 +324,3 @@ A phase is complete only when:
 4. Add one new sidearm as the first definition-driven catalog expansion slice.
 5. Begin the ammunition-type design only after that sidearm passes the full
    single/dual lifecycle matrix.
-
