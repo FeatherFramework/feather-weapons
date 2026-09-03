@@ -30,6 +30,12 @@ Config = {
         allowedWeaponSlots = { sidearm = true },
         -- Automatically provide RedM's offhand holster entitlement when needed.
         provisionNativeEntitlement = true,
+        -- RedM requires both an offhand clothing entitlement and its upgrade.
+        -- Tested tint variants did not visibly restyle the equipped holster.
+        nativeEntitlements = {
+            { itemName = "CLOTHING_ITEM_M_OFFHAND_000_TINT_001", slotId = 0xF20B6B4A },
+            { itemName = "UPGRADE_OFFHAND_HOLSTER", slotId = 0x39E57B01 }
+        },
         -- Native holster points; change only for a tested clothing setup.
         primaryAttachPoint = 2,
         offhandAttachPoint = 3

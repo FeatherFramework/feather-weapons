@@ -106,6 +106,21 @@ function EquipService.ValidateConfiguration()
         return WeaponResult.Error(WeaponErrors.INVALID_DEFINITION,
             "Offhand configuration is invalid")
     end
+    if settings.provisionNativeEntitlement then
+        if type(settings.nativeEntitlements) ~= "table"
+            or #settings.nativeEntitlements < 1 then
+            return WeaponResult.Error(WeaponErrors.INVALID_DEFINITION,
+                "Offhand native entitlements are invalid")
+        end
+        for _, entitlement in ipairs(settings.nativeEntitlements) do
+            local slotId = type(entitlement) == "table" and tonumber(entitlement.slotId) or nil
+            if type(entitlement) ~= "table" or type(entitlement.itemName) ~= "string"
+                or entitlement.itemName == "" or not slotId or slotId % 1 ~= 0 then
+                return WeaponResult.Error(WeaponErrors.INVALID_DEFINITION,
+                    "Offhand native entitlement entry is invalid")
+            end
+        end
+    end
     local primaryPoint = tonumber(settings.primaryAttachPoint)
     local offhandPoint = tonumber(settings.offhandAttachPoint)
     if not primaryPoint or primaryPoint % 1 ~= 0 or not offhandPoint
@@ -190,14 +205,14 @@ function EquipService.Unequip(source, rpcContext, slot)
             TriggerClientEvent("feather-weapons:client:forceReconcile", source)
             return promoted
         end
-        TriggerClientEvent("feather-weapons:client:clearEquipped", source, "primary")
+        TriggerClientEvent("feather-weapons:client:clear", source)
         return promoted
     end
     local persistResult = InventoryAdapter.SetEquippedSlotForCharacter(context, slot, nil)
     if not persistResult.ok then return persistResult end
 
     local result = WeaponRuntime.Unequip(source, rpcContext.sessionId, rpcContext.correlationId, slot)
-    if result.ok then TriggerClientEvent("feather-weapons:client:clearEquipped", source, slot) end
+    if result.ok then TriggerClientEvent("feather-weapons:client:clear", source) end
     return result
 end
 

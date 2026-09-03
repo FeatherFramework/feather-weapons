@@ -41,7 +41,7 @@ local function AtGunsmithStation(source, rpcContext)
         return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Unable to verify gunsmith location", nil,
             rpcContext.correlationId)
     end
-    local position = GetEntityCoords(ped)
+    local position = GetEntityCoords(ped, false, true)
     local tolerance = tonumber(settings.serverTolerance) or 3.0
     for stationId, station in pairs(settings.stations or {}) do
         local coords = station.coords

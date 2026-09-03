@@ -35,8 +35,7 @@ function CoreAdapter.CheckCapabilities()
 
     local features = type(capabilities.features) == "table" and capabilities.features or nil
     if not features or (tonumber(features.sessions) or 0) < 1 then
-        return WeaponResult.Error(WeaponErrors.DEPENDENCY_UNAVAILABLE,
-            "feather-core session capability is unavailable")
+        return WeaponResult.Error(WeaponErrors.DEPENDENCY_UNAVAILABLE, "feather-core session capability is unavailable")
     end
     return WeaponResult.Ok(capabilities)
 end
@@ -46,12 +45,13 @@ function CoreAdapter.ResolveSession(source)
     if type(result) ~= "table" or result.ok ~= true or type(result.value) ~= "table" then
         return WeaponResult.Error(WeaponErrors.CHARACTER_REQUIRED, "A current character session is required")
     end
+
     local session = result.value
     local characterId = CoreAdapter.NormalizeCharacterId(session.characterId)
     if not characterId then
-        return WeaponResult.Error(WeaponErrors.CHARACTER_REQUIRED,
-            "The current character identity is unsupported")
+        return WeaponResult.Error(WeaponErrors.CHARACTER_REQUIRED, "The current character identity is unsupported")
     end
+
     session.characterId = characterId
     return WeaponResult.Ok(session)
 end

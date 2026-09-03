@@ -136,7 +136,7 @@ function ReconciliationService.Force(source)
     if not reset.ok then return reset end
     local restored = ReconciliationService.RehydrateSession(session)
     if not restored.ok then
-        TriggerClientEvent("feather-weapons:client:clearSession", source)
+        TriggerClientEvent("feather-weapons:client:clear", source)
         return restored
     end
     TriggerClientEvent("feather-weapons:client:forceReconcile", source)
@@ -167,7 +167,7 @@ AddEventHandler("onResourceStop", function(resourceName)
     for _, playerId in ipairs(GetPlayers()) do
         local source = tonumber(playerId)
         if source then
-            TriggerClientEvent("feather-weapons:client:clearSession", source)
+            TriggerClientEvent("feather-weapons:client:clear", source)
         end
     end
 end)

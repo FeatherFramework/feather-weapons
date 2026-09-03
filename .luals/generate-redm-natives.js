@@ -35,6 +35,8 @@ const LUA_KEYWORDS = new Set([
 // Confirmed CFX runtime names that differ from the native database label.
 const LUA_NAME_OVERRIDES = new Map([
   ['0x83B8D50EB9446BBA', 'SetAllowDualWield'],
+  ['0x79E1E511FF7EFB13', 'MakePedReload'],
+  ['0x94A3C1B804D291EC', 'HolsterPedWeapons'],
 ]);
 
 // ~26% of RDR3 natives have no confirmed name at all -- their "name" field
