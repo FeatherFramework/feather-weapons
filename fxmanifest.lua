@@ -12,7 +12,9 @@ shared_scripts {
     'config.lua',
     '/shared/constants.lua',
     '/shared/errors.lua',
-    '/shared/definitions.lua',
+    '/shared/definitions/ammunition.lua',
+    '/shared/definitions/attachments.lua',
+    '/shared/definitions/weapons.lua',
     '/shared/validation.lua'
 }
 
@@ -46,5 +48,5 @@ dependencies {
     'feather-core',
     'feather-character',
     'feather-inventory',
-    'feather-menu'
+    'feather-menu-v2'
 }

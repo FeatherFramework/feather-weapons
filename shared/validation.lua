@@ -35,6 +35,15 @@ local function ValidateStringArray(errors, path, value)
     end
 end
 
+-- The singular field is the default; the array is the complete allowlist.
+function WeaponValidation.AcceptsAmmunition(definition, ammunitionType)
+    if type(definition.ammunitionTypes) ~= "table" then return false end
+    for _, id in ipairs(definition.ammunitionTypes or {}) do
+        if id == ammunitionType then return true end
+    end
+    return false
+end
+
 function WeaponValidation.Definition(definition, expectedKind)
     local errors = {}
     if type(definition) ~= "table" then
@@ -52,6 +61,10 @@ function WeaponValidation.Definition(definition, expectedKind)
         if not WeaponConstants.WeaponSlots[definition.slot] then AddError(errors, "slot", "is not supported") end
         if not IsNonEmptyString(definition.ammunitionType) then AddError(errors, "ammunitionType",
                 "must reference ammunition") end
+        ValidateStringArray(errors, "ammunitionTypes", definition.ammunitionTypes)
+        if not WeaponValidation.AcceptsAmmunition(definition, definition.ammunitionType) then
+            AddError(errors, "ammunitionTypes", "must include the default ammunitionType")
+        end
         if type(definition.capacity) ~= "number" or definition.capacity < 1 or definition.capacity % 1 ~= 0 then
             AddError(errors, "capacity", "must be a positive integer")
         end
@@ -121,6 +134,9 @@ function WeaponValidation.Metadata(metadata, definition)
     if type(metadata.ammo) ~= "table" then
         AddError(errors, "ammo", "must be a table")
     else
+        if not WeaponValidation.AcceptsAmmunition(definition, metadata.ammo.type or definition.ammunitionType) then
+            AddError(errors, "ammo.type", "must be compatible with this weapon")
+        end
         local loaded = tonumber(metadata.ammo.loaded)
         if not loaded or loaded < 0 or loaded > definition.capacity or loaded % 1 ~= 0 then
             AddError(errors, "ammo.loaded", "must be an integer within weapon capacity")

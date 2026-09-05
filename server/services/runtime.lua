@@ -26,8 +26,8 @@ local function NextGeneration(runtime)
     return runtime.generation
 end
 
-local function NativeAmmoName(definition)
-    local result = DefinitionRegistry.Get("ammunition", definition.ammunitionType)
+local function NativeAmmoName(definition, metadata)
+    local result = DefinitionRegistry.Get("ammunition", metadata.ammo.type or definition.ammunitionType)
     return result.ok and result.value.nativeAmmoName or nil
 end
 
@@ -113,7 +113,8 @@ function WeaponRuntime.RestoreEquipped(source, sessionId, item, definition, corr
         itemInstanceId = item.id,
         definitionId = definition.id,
         nativeWeaponName = definition.nativeWeaponName,
-        nativeAmmoName = NativeAmmoName(definition),
+        ammunitionType = item.metadata.ammo.type or definition.ammunitionType,
+        nativeAmmoName = NativeAmmoName(definition, item.metadata),
         ammo = total,
         loaded = loaded,
         reserve = reserve,
@@ -159,7 +160,8 @@ function WeaponRuntime.BeginEquip(source, sessionId, item, definition, correlati
         itemInstanceId = item.id,
         definitionId = definition.id,
         nativeWeaponName = definition.nativeWeaponName,
-        nativeAmmoName = NativeAmmoName(definition),
+        ammunitionType = item.metadata.ammo.type or definition.ammunitionType,
+        nativeAmmoName = NativeAmmoName(definition, item.metadata),
         ammo = total,
         loaded = loaded,
         reserve = reserve,
@@ -184,7 +186,8 @@ function WeaponRuntime.BeginEquip(source, sessionId, item, definition, correlati
         itemInstanceId = item.id,
         definitionId = definition.id,
         nativeWeaponName = definition.nativeWeaponName,
-        nativeAmmoName = NativeAmmoName(definition),
+        ammunitionType = item.metadata.ammo.type or definition.ammunitionType,
+        nativeAmmoName = NativeAmmoName(definition, item.metadata),
         ammo = total,
         loaded = loaded,
         reserve = reserve,
@@ -214,6 +217,7 @@ function WeaponRuntime.CompleteEquip(source, sessionId, token, correlationId)
         itemInstanceId = pending.itemInstanceId,
         definitionId = pending.definitionId,
         nativeWeaponName = pending.nativeWeaponName,
+        ammunitionType = pending.ammunitionType,
         nativeAmmoName = pending.nativeAmmoName,
         ammo = pending.ammo,
         loaded = pending.loaded,
@@ -227,6 +231,18 @@ function WeaponRuntime.CompleteEquip(source, sessionId, token, correlationId)
     runtime.pending = nil
     RefreshCompatibility(runtime)
     return WeaponResult.Ok(runtime.slots[slot], correlationId)
+end
+
+function WeaponRuntime.SetSlotAmmunitionType(source, sessionId, slot, ammunitionType)
+    local runtime = sessions[source]
+    local equipped = runtime and runtime.sessionId == sessionId and runtime.slots[slot]
+    if not equipped then return false end
+    local ammunition = DefinitionRegistry.Get("ammunition", ammunitionType)
+    if not ammunition.ok then return false end
+    equipped.ammunitionType = ammunitionType
+    equipped.nativeAmmoName = ammunition.value.nativeAmmoName
+    equipped.generation = NextGeneration(runtime)
+    return true
 end
 
 function WeaponRuntime.SetSlotAmmo(source, sessionId, slot, total, loaded, correlationId)

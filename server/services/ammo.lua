@@ -69,16 +69,19 @@ local function Reload(source, rpcContext, requested, slot)
         local loaded = tonumber(item.metadata.ammo.loaded) or 0
         local reserve = tonumber(item.metadata.ammo.reserve) or 0
         local total = loaded + reserve
+        local ammunition = DefinitionRegistry.Get("ammunition", item.metadata.ammo.type or definition.ammunitionType)
+        if not ammunition.ok then return ammunition end
+        local ammunitionItem = ammunition.value.itemName
         local maxTotal = math.max(definition.capacity,
             math.floor(tonumber(Config.Escrow and Config.Escrow.maxTotal) or definition.capacity))
         local refillAmount = math.max(1,
             math.floor(tonumber(Config.Escrow and Config.Escrow.refillAmount) or maxTotal))
         local needed = maxTotal - total
-        local available = tx:GetQuantity(definition.ammunitionType)
+        local available = tx:GetQuantity(ammunitionItem)
         local moved = math.min(needed, available, requested or refillAmount)
         if moved <= 0 then return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
                 "No compatible ammunition can enter escrow", nil, context.correlationId) end
-        if not tx:RemoveQuantity(definition.ammunitionType, moved) then
+        if not tx:RemoveQuantity(ammunitionItem, moved) then
             return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Ammunition changed during reload", nil,
                 context.correlationId)
         end
@@ -104,7 +107,7 @@ local function Reload(source, rpcContext, requested, slot)
             loaded = newLoaded,
             reserve = newReserve,
             moved = moved,
-            inventoryAmmo = tx:GetQuantity(definition.ammunitionType),
+            inventoryAmmo = tx:GetQuantity(ammunitionItem),
             nativeAmmoName = equipped.nativeAmmoName
         }
     end)
@@ -117,7 +120,58 @@ local function Reload(source, rpcContext, requested, slot)
     return WeaponResult.Ok(value, rpcContext.correlationId)
 end
 
-function AmmoService.Escrow(source, rpcContext, amount)
+-- Select only while every equipped escrow is empty. Pairs share a native
+-- pool, so selection is persisted atomically for both item identities.
+local function SelectAmmunition(source, rpcContext, ammunitionType)
+    local runtime = WeaponRuntime.Get(source)
+    if not runtime or runtime.sessionId ~= rpcContext.sessionId or not runtime.equipped then
+        return WeaponResult.Error(WeaponErrors.NOT_EQUIPPED, "Equip a weapon before using ammunition")
+    end
+    if runtime.pending then
+        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Finish equipping before changing ammunition")
+    end
+    local mutations, selected = {}, {}
+    local context = Context(source, rpcContext, "select_ammunition")
+    for _, slot in ipairs({ "primary", "offhand" }) do
+        local equipped = runtime.slots[slot]
+        if equipped then
+            local definition = DefinitionRegistry.Get("weapon", equipped.definitionId)
+            if not definition.ok then return definition end
+            if not WeaponValidation.AcceptsAmmunition(definition.value, ammunitionType) then
+                return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+                    "This ammunition is not compatible with every equipped weapon")
+            end
+            local itemResult = InventoryAdapter.GetItemForCharacter(context, equipped.itemInstanceId)
+            if not itemResult.ok then return itemResult end
+            local item = itemResult.value
+            local valid = WeaponMetadata.Validate(item.metadata, definition.value, context.correlationId)
+            if not valid.ok then return valid end
+            local currentType = item.metadata.ammo.type or definition.value.ammunitionType
+            if currentType ~= ammunitionType then
+                if (item.metadata.ammo.loaded + item.metadata.ammo.reserve) > 0 then
+                    return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+                        "Unload both equipped weapons before changing ammunition type")
+                end
+                item.metadata.ammo.type = ammunitionType
+                mutations[#mutations + 1] = {
+                    itemInstanceId = item.id, expectedRevision = item.metadataRevision, metadata = item.metadata
+                }
+                selected[#selected + 1] = slot
+            end
+        end
+    end
+    if #mutations == 0 then return WeaponResult.Ok(false) end
+    local committed = InventoryAdapter.MutateWeaponMetadataBatch(context, mutations)
+    if not committed.ok then return committed end
+    for _, slot in ipairs(selected) do
+        WeaponRuntime.SetSlotAmmunitionType(source, rpcContext.sessionId, slot, ammunitionType)
+    end
+    return WeaponResult.Ok(true)
+end
+
+function AmmoService.Escrow(source, rpcContext, amount, ammunitionType)
+    local selection = SelectAmmunition(source, rpcContext, ammunitionType)
+    if not selection.ok then return selection end
     local runtime = WeaponRuntime.Get(source)
     local slots = runtime and runtime.slots or nil
     local slot = "primary"
@@ -127,7 +181,13 @@ function AmmoService.Escrow(source, rpcContext, amount)
         slot = (tonumber(slots.offhand.ammo) or 0) < (tonumber(slots.primary.ammo) or 0)
             and "offhand" or "primary"
     end
-    return Reload(source, rpcContext, amount, slot)
+    local result = Reload(source, rpcContext, amount, slot)
+    if selection.value then
+        -- Selection can succeed even if the subsequent refill has no stock.
+        -- Always refresh the client to the committed type and renewed leases.
+        result.reconcile = true
+    end
+    return result
 end
 
 function AmmoService.Unload(source, rpcContext, requested)
@@ -164,12 +224,15 @@ function AmmoService.Unload(source, rpcContext, requested)
         local loaded = tonumber(item.metadata.ammo.loaded) or 0
         local reserve = tonumber(item.metadata.ammo.reserve) or 0
         local total = loaded + reserve
+        local ammunition = DefinitionRegistry.Get("ammunition", item.metadata.ammo.type or definition.ammunitionType)
+        if not ammunition.ok then return ammunition end
+        local ammunitionItem = ammunition.value.itemName
         local moved = math.min(total, requested or total)
         if moved <= 0 then
             return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "The equipped weapon is already empty", nil,
                 context.correlationId)
         end
-        if not tx:AddQuantity(definition.ammunitionType, moved) then
+        if not tx:AddQuantity(ammunitionItem, moved) then
             return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
                 "Inventory cannot accept the unloaded ammunition", nil, context.correlationId)
         end
@@ -187,7 +250,7 @@ function AmmoService.Unload(source, rpcContext, requested)
             loaded = item.metadata.ammo.loaded,
             reserve = item.metadata.ammo.reserve,
             moved = moved,
-            inventoryAmmo = tx:GetQuantity(definition.ammunitionType),
+            inventoryAmmo = tx:GetQuantity(ammunitionItem),
             nativeAmmoName = equipped.nativeAmmoName
         }
     end)

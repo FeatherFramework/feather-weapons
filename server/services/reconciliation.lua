@@ -49,6 +49,7 @@ function ReconciliationService.Snapshot(source, sessionId, correlationId)
             itemInstanceId = runtime.equipped.itemInstanceId,
             definitionId = runtime.equipped.definitionId,
             nativeWeaponName = runtime.equipped.nativeWeaponName,
+            ammunitionType = runtime.equipped.ammunitionType,
             nativeAmmoName = runtime.equipped.nativeAmmoName,
             ammo = runtime.equipped.ammo,
             loaded = runtime.equipped.loaded,
@@ -68,6 +69,7 @@ function ReconciliationService.Snapshot(source, sessionId, correlationId)
                 itemInstanceId = value.itemInstanceId,
                 definitionId = value.definitionId,
                 nativeWeaponName = value.nativeWeaponName,
+                ammunitionType = value.ammunitionType,
                 nativeAmmoName = value.nativeAmmoName,
                 ammo = value.ammo,
                 loaded = value.loaded,
@@ -111,11 +113,13 @@ function ReconciliationService.InspectMetadata(source)
                 definitionId = definitionId,
                 serialNumber = item.metadata.serialNumber,
                 condition = item.metadata.condition,
+                ammunitionType = item.metadata.ammo.type or definitionResult.value.ammunitionType,
                 loaded = item.metadata.ammo.loaded,
                 reserve = item.metadata.ammo.reserve,
                 attachments = item.metadata.attachments or {},
                 runtimeMatches = runtimeItem ~= nil
-                    and tostring(runtimeItem.itemInstanceId) == tostring(item.id),
+                    and tostring(runtimeItem.itemInstanceId) == tostring(item.id)
+                    and runtimeItem.ammunitionType == (item.metadata.ammo.type or definitionResult.value.ammunitionType),
                 generation = runtimeItem and runtimeItem.generation or nil
             }
         end

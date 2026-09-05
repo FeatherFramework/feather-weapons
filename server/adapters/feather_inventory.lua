@@ -71,12 +71,15 @@ local function BuildDefinitionIndex()
 
     MissingDefinitions = {}
     local required = {
-        revolver_cattleman = true,
-        revolver_schofield = true,
-        revolver_standard = true,
-        weapon_repair_kit = true,
+        gun_oil = true,
         cattleman_long_barrel = true
     }
+    for itemName in pairs(WeaponDefinitionCatalog.ammunition or {}) do
+        required[itemName] = true
+    end
+    for _, definition in pairs(WeaponDefinitionCatalog.weapons or {}) do
+        required[definition.itemName] = true
+    end
     for name in pairs(required) do
         if not DefinitionIds[name] then MissingDefinitions[#MissingDefinitions + 1] = name end
     end
@@ -94,12 +97,15 @@ local function BuildDefinitionIndex()
     end
 
     local expected = {
-        revolver_cattleman = { instanceMode = "unique", usable = true, type = "item_weapon" },
-        revolver_schofield = { instanceMode = "unique", usable = true, type = "item_weapon" },
-        revolver_standard = { instanceMode = "stack", usable = true, type = "item_ammo" },
-        weapon_repair_kit = { instanceMode = "stack", usable = true, type = "item_item" },
+        gun_oil = { instanceMode = "stack", usable = true, type = "item_item" },
         cattleman_long_barrel = { instanceMode = "stack", usable = false, type = "item_item" }
     }
+    for itemName in pairs(WeaponDefinitionCatalog.ammunition or {}) do
+        expected[itemName] = { instanceMode = "stack", usable = true, type = "item_ammo" }
+    end
+    for _, definition in pairs(WeaponDefinitionCatalog.weapons or {}) do
+        expected[definition.itemName] = { instanceMode = "unique", usable = true, type = "item_weapon" }
+    end
     local mismatches = {}
     for name, rules in pairs(expected) do
         local definition = definitionsByName[name]
@@ -394,7 +400,7 @@ local function RegisterUsableAmmunition()
                     if not runtime or not runtime.equipped then
                         result = WeaponResult.Error(WeaponErrors.NOT_EQUIPPED,
                             "Equip a compatible weapon before using ammunition")
-                    elseif not weapon or not weapon.ok or weapon.value.ammunitionType ~= definition.id then
+                    elseif not weapon or not weapon.ok or not WeaponValidation.AcceptsAmmunition(weapon.value, definition.id) then
                         result = WeaponResult.Error(WeaponErrors.ITEM_INVALID,
                             "This ammunition is not compatible with the equipped weapon")
                     else
@@ -403,7 +409,7 @@ local function RegisterUsableAmmunition()
                             sessionId = runtime.sessionId,
                             correlationId = ("inventory-ammo:%s:%s"):format(tostring(source), tostring(GetGameTimer())),
                             activeUseToken = type(useContext) == "table" and useContext.activeUseToken or nil
-                        })
+                        }, nil, definition.id)
                     end
                     TriggerClientEvent("feather-weapons:client:inventoryAmmoResult", source, result)
                     if done then done() end
@@ -437,7 +443,7 @@ local function RegisterUsableRepairItems()
                 local runtime = WeaponRuntime.Get(source)
                 local result
                 if not runtime or not runtime.equipped then
-                    result = WeaponResult.Error(WeaponErrors.NOT_EQUIPPED, "Equip a weapon before using a repair kit")
+                    result = WeaponResult.Error(WeaponErrors.NOT_EQUIPPED, "Equip a weapon before using gun oil")
                 else
                     local rpcContext = {
                         characterId = runtime.characterId,

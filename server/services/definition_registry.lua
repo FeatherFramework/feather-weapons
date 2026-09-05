@@ -36,12 +36,14 @@ function DefinitionRegistry.Start()
     RegisterGroup(WeaponDefinitionCatalog.weapons, "weapon", errors)
 
     for id, definition in pairs(registry.weapon) do
-        if not registry.ammunition[definition.ammunitionType] then
-            errors[#errors + 1] = {
-                kind = "weapon",
-                key = id,
-                errors = { { path = "ammunitionType", message = "references unknown ammunition " .. tostring(definition.ammunitionType) } }
-            }
+        for _, ammunitionType in ipairs(definition.ammunitionTypes) do
+            if not registry.ammunition[ammunitionType] then
+                errors[#errors + 1] = {
+                    kind = "weapon",
+                    key = id,
+                    errors = { { path = "ammunitionTypes", message = "references unknown ammunition " .. tostring(ammunitionType) } }
+                }
+            end
         end
     end
 
