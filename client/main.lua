@@ -150,6 +150,25 @@ local function SameInstance(left, right)
     return left ~= nil and right ~= nil and tostring(left) == tostring(right)
 end
 
+local function SelectNativeAmmoType(ped, nativeWeaponName, nativeAmmoName)
+    local weaponHash, ammoHash = joaat(nativeWeaponName), joaat(nativeAmmoName)
+    -- Inventory use owns selection. The wheel must not select an unescrowed
+    -- pool and turn its zero count into a false consumption checkpoint.
+    for _, definition in pairs(WeaponDefinitionCatalog.weapons) do
+        if definition.nativeWeaponName == nativeWeaponName then
+            for _, id in ipairs(definition.ammunitionTypes) do
+                local candidate = joaat(WeaponDefinitionCatalog.ammunition[id].nativeAmmoName)
+                if candidate ~= ammoHash then
+                    Citizen.InvokeNative(0xF0D728EEA3C99775, ped, weaponHash, candidate)
+                end
+            end
+            break
+        end
+    end
+    Citizen.InvokeNative(0x23FB9FACA28779C1, ped, weaponHash, ammoHash)
+    Citizen.InvokeNative(0xCC9C4393523833E2, ped, weaponHash, ammoHash)
+end
+
 local function SetNativeAmmo(nativeAmmoName, amount, nativeWeaponName, loaded)
     if not nativeAmmoName then return end
 
@@ -230,6 +249,9 @@ local function GiveApprovedNativeWeapon(nativeWeaponName, nativeAmmoName, amount
         false
     )
 
+    if ammoHash then
+        SelectNativeAmmoType(ped, nativeWeaponName, nativeAmmoName)
+    end
     SetAmmoInClip(ped, joaat(nativeWeaponName), math.max(0, math.floor(tonumber(loaded) or 0)))
     if ammoHash then
         SetPedAmmoByType(ped, ammoHash, amount)
@@ -271,6 +293,15 @@ local function RestoreApprovedNativePair(primary, secondary)
             offhandPoint, false, 0.5, 1.0, joaat('ADD_REASON_DEFAULT'), true, 0.0, false)
     end
 
+    -- Select the approved type before native reload; identical copies require
+    -- GUID addressing because a hash cannot distinguish the two inventories.
+    if identical then
+        for _, record in ipairs({ nativePairCopies.primary, nativePairCopies.offhand }) do
+            Citizen.InvokeNative(0xEBE46B501BC3FBCF, ped, record.guid, joaat(primary.nativeAmmoName))
+        end
+    end
+    SelectNativeAmmoType(ped, primary.nativeWeaponName, primary.nativeAmmoName)
+    SelectNativeAmmoType(ped, secondary.nativeWeaponName, secondary.nativeAmmoName)
     local primaryReady, secondaryReady = false, false
     if identical then
         SetPedAmmoByType(ped, joaat(primary.nativeAmmoName), primary.ammo + secondary.ammo)
@@ -368,6 +399,7 @@ local function ApprovedState(approved)
         itemInstanceId = approved.itemInstanceId,
         definitionId = approved.definitionId,
         nativeWeaponName = approved.nativeWeaponName,
+        ammunitionType = approved.ammunitionType,
         nativeAmmoName = approved.nativeAmmoName,
         ammo = tonumber(approved.ammo) or 0,
         condition = tonumber(approved.condition),
@@ -1081,41 +1113,75 @@ end
 
 RegisterNetEvent('feather-weapons:client:attachmentResult', HandleAttachmentResult)
 
-local ModificationMenu = FeatherMenu:RegisterMenu('feather-weapons:modifications', {
-    top = '3%',
-    left = '3%',
-    ['720width'] = '360px',
-    ['1080width'] = '420px',
-    ['2kwidth'] = '500px',
-    ['4kwidth'] = '650px',
-    draggable = true,
-    canclose = true
-}, {})
-
+local Menu = exports['feather-menu-v2']
+local ModificationMenu, RepairMenu
 local ModificationPages = {}
+local menuSequence = 0
 
-local Styles = {
-    header = { ['color'] = '#999' },
-    subheader = { ['font-size'] = '1.778vmin', ['color'] = '#CC9900' },
-    text = {
-        ['color'] = '#C0C0C0',
-        ['font-size'] = '1.481vmin',
-        ['font-variant'] = 'small-caps',
-        ['line-height'] = '1.8',
-        ['white-space'] = 'pre-line',
-    },
-    button = { ['color'] = '#E0E0E0' },
-    success = { ['color'] = '#66CC66' },
-    danger = { ['color'] = '#CC3333' },
-}
+local function MenuValue(result)
+    if type(result) ~= 'table' or result.ok ~= true then
+        error(('Weapon menu: %s'):format(type(result) == 'table' and result.message or 'invalid provider response'))
+    end
+    return result.value
+end
+
+local function CloseWeaponMenu(menuId)
+    menuSequence = menuSequence + 1
+    if menuId then MenuValue(Menu:CloseMenu(menuId)) end
+end
+
+local function CreateWeaponMenu(key)
+    return MenuValue(Menu:CreateMenu({
+        key = key,
+        draggable = true,
+        closable = true,
+        size = { width = '28rem', maxHeight = '85vh' },
+        theme = { preset = 'redemption', accent = '#CC9900' }
+    })).menuId
+end
+
+local function CreateWeaponPage(menuId, key)
+    return { menuId = menuId, id = MenuValue(Menu:CreatePage(menuId, { key = key })).pageId, count = 0 }
+end
+
+local function AddWeaponElement(page, kind, settings, callback)
+    page.count = page.count + 1
+    settings.key = ('%s-%d'):format(kind, page.count)
+    return MenuValue(Menu:AddElement(page.menuId, page.id, kind, settings, callback))
+end
+
+local function OpenWeaponPage(page)
+    MenuValue(Menu:OpenMenu(page.menuId, { pageId = page.id }))
+end
+
+-- Readiness waits run in a thread; closing or replacing a request cancels stale opens.
+local function WithWeaponMenuReady(build)
+    menuSequence = menuSequence + 1
+    local sequence = menuSequence
+    CreateThread(function()
+        local success, problem = pcall(function()
+            MenuValue(Menu:AwaitReady(5000))
+            if sequence ~= menuSequence then return end
+            build()
+        end)
+        if not success then
+            print(('[feather-weapons] %s'):format(tostring(problem)))
+            Notify('Unable to open the weapon menu. Check feather-menu-v2 readiness.')
+        end
+    end)
+end
+
+AddEventHandler('onClientResourceStop', function(resource)
+    if resource ~= 'feather-menu-v2' then return end
+    menuSequence = menuSequence + 1
+    ModificationMenu, RepairMenu = nil, nil
+    ModificationPages = {}
+end)
 
 local function ResetModificationPages()
-    ModificationMenu:Close()
-    for key, page in pairs(ModificationPages) do
-        page:UnRegister()
-        ModificationPages[key] = nil
-    end
-    ModificationMenu.activePage = nil
+    if ModificationMenu then MenuValue(Menu:DestroyMenu(ModificationMenu)) end
+    ModificationMenu = CreateWeaponMenu('modifications')
+    ModificationPages = {}
 end
 
 local function NearGunsmithStation()
@@ -1136,7 +1202,7 @@ end
 
 local BuildModificationPage
 
-local function OpenModificationMenu()
+local function BuildModificationMenu()
     if not equipped then
         Notify('Equip a weapon before modifying it.')
         return
@@ -1152,45 +1218,43 @@ local function OpenModificationMenu()
     if offhand then ModificationPages.offhand = BuildModificationPage('offhand') end
 
     if offhand then
-        local selector = ModificationMenu:RegisterPage('feather-weapons:select-weapon-slot')
+        local selector = CreateWeaponPage(ModificationMenu, 'feather-weapons:select-weapon-slot')
         ModificationPages.selector = selector
 
-        selector:RegisterElement('header', { value = 'Weapon Modifications', slot = 'header', style = Styles.header })
+        AddWeaponElement(selector, 'header', { value = 'Weapon Modifications', slot = 'header' })
 
-        selector:RegisterElement('subheader', { value = 'Choose a weapon', slot = 'header', style = Styles.subheader })
+        AddWeaponElement(selector, 'subheader', { value = 'Choose a weapon', slot = 'header' })
 
         for _, slot in ipairs({ 'primary', 'offhand' }) do
             local selected = slot == 'offhand' and offhand or equipped
-            selector:RegisterElement('button', {
+            AddWeaponElement(selector, 'button', {
                 label = ('%s: %s'):format(slot == 'primary' and 'Primary' or 'Offhand', selected.definitionId or 'Equipped weapon'),
-                slot = 'content',
-                style = Styles.button
+                slot = 'content'
             }, function()
-                ModificationPages[slot]:RouteTo()
+                MenuValue(Menu:NavigateToPage(ModificationMenu, ModificationPages[slot].id))
             end)
         end
 
-        ModificationMenu:Open({ startupPage = selector })
+        OpenWeaponPage(selector)
         return
     end
-    ModificationMenu:Open({ startupPage = ModificationPages.primary })
+    OpenWeaponPage(ModificationPages.primary)
 end
 
 BuildModificationPage = function(slot)
     local selected = slot == 'offhand' and offhand or equipped
     if not selected then return nil end
 
-    local page = ModificationMenu:RegisterPage(('feather-weapons:installed-attachments:%s'):format(slot))
+    local page = CreateWeaponPage(ModificationMenu, ('feather-weapons:installed-attachments:%s'):format(slot))
 
-    page:RegisterElement('header', { value = 'Weapon Modifications', slot = 'header', style = Styles.header })
+    AddWeaponElement(page, 'header', { value = 'Weapon Modifications', slot = 'header' })
 
-    page:RegisterElement('subheader', {
+    AddWeaponElement(page, 'subheader', {
         value = ('%s: %s'):format(slot == 'primary' and 'Primary' or 'Offhand', selected.definitionId or 'Equipped weapon'),
-        slot = 'header',
-        style = Styles.subheader
+        slot = 'header'
     })
 
-    page:RegisterElement('line', { slot = 'header' })
+    AddWeaponElement(page, 'line', { slot = 'header' })
 
     local installedIds = {}
     for _, installed in ipairs(selected.attachments or {}) do
@@ -1206,12 +1270,11 @@ BuildModificationPage = function(slot)
     for attachmentId in pairs(compatibleIds) do
         if not installedIds[attachmentId] then
             local definition = WeaponDefinitionCatalog.attachments[attachmentId]
-            page:RegisterElement('button', {
+            AddWeaponElement(page, 'button', {
                 label = ('Install %s'):format(definition and definition.label or attachmentId:gsub('_', ' ')),
-                slot = 'content',
-                style = Styles.button
+                slot = 'content'
             }, function()
-                ModificationMenu:Close()
+                CloseWeaponMenu(ModificationMenu)
                 RequestAttachmentMutation('feather-weapons:attachment:install', {
                     attachmentId = attachmentId,
                     slot = slot,
@@ -1223,16 +1286,15 @@ BuildModificationPage = function(slot)
     end
 
     if not selected.attachments or #selected.attachments == 0 then
-        page:RegisterElement('textdisplay', { value = 'No attachments are installed.', slot = 'content' })
+        AddWeaponElement(page, 'textdisplay', { value = 'No attachments are installed.', slot = 'content' })
     else
         for _, installed in ipairs(selected.attachments) do
             local attachmentId = installed.definitionId
-            page:RegisterElement('button', {
+            AddWeaponElement(page, 'button', {
                 label = ('Remove %s'):format(attachmentId:gsub('_', ' ')),
-                slot = 'content',
-                style = Styles.button
+                slot = 'content'
             }, function()
-                ModificationMenu:Close()
+                CloseWeaponMenu(ModificationMenu)
                 RequestAttachmentMutation('feather-weapons:attachment:remove', {
                     attachmentId = attachmentId,
                     slot = slot,
@@ -1241,6 +1303,12 @@ BuildModificationPage = function(slot)
                 })
             end)
         end
+    end
+    if offhand then
+        AddWeaponElement(page, 'button', { label = 'Back to weapons', slot = 'footer' }, function()
+            local selector = ModificationPages.selector
+            if selector then MenuValue(Menu:NavigateToPage(ModificationMenu, selector.id)) end
+        end)
     end
     return page
 end
@@ -1263,53 +1331,41 @@ end
 
 RegisterNetEvent('feather-weapons:client:inventoryRepairResult', HandleRepairResult)
 
-local RepairMenu = FeatherMenu:RegisterMenu('feather-weapons:repair-selection', {
-    top = '3%',
-    left = '3%',
-    ['720width'] = '360px',
-    ['1080width'] = '420px',
-    ['2kwidth'] = '500px',
-    ['4kwidth'] = '650px',
-    draggable = true,
-    canclose = true
-}, {})
-local RepairPage = nil
+local function OpenModificationMenu()
+    WithWeaponMenuReady(BuildModificationMenu)
+end
 
-RegisterNetEvent('feather-weapons:client:repairSlotRequested', function()
+local function BuildRepairMenu()
     if not equipped or not offhand then
         Notify('The equipped weapon pair changed before repair selection.')
         return
     end
 
-    if RepairPage then
-        RepairMenu:Close()
-        RepairPage:UnRegister()
-        RepairPage = nil
-        RepairMenu.activePage = nil
-    end
-
-    RepairPage = RepairMenu:RegisterPage('feather-weapons:repair-slot')
-
-    RepairPage:RegisterElement('header', { value = 'Repair Weapon', slot = 'header', style = Styles.header })
-
-    RepairPage:RegisterElement('subheader', { value = 'Choose a weapon', slot = 'header', style = Styles.subheader })
+    if RepairMenu then MenuValue(Menu:DestroyMenu(RepairMenu)) end
+    RepairMenu = CreateWeaponMenu('repair-selection')
+    local RepairPage = CreateWeaponPage(RepairMenu, 'repair-slot')
+    AddWeaponElement(RepairPage, 'header', { value = 'Repair Weapon', slot = 'header' })
+    AddWeaponElement(RepairPage, 'subheader', { value = 'Choose a weapon', slot = 'header' })
 
     for _, slot in ipairs({ 'primary', 'offhand' }) do
         local state = slot == 'offhand' and offhand or equipped
-        RepairPage:RegisterElement('button', {
+        AddWeaponElement(RepairPage, 'button', {
             label = ('%s: %s (%s%%)'):format(slot == 'primary' and 'Primary' or 'Offhand',
                 state.definitionId or 'Equipped weapon', tostring(state.condition)),
-            slot = 'content',
-            style = Styles.button
+            slot = 'content'
         }, function()
-            RepairMenu:Close()
+            CloseWeaponMenu(RepairMenu)
             FeatherCore.RPC.Call('feather-weapons:repair:select', { slot = slot }, function(result, rpcError)
                 HandleRepairResult(result or { ok = false, error = rpcError })
             end)
         end)
     end
 
-    RepairMenu:Open({ startupPage = RepairPage })
+    OpenWeaponPage(RepairPage)
+end
+
+RegisterNetEvent('feather-weapons:client:repairSlotRequested', function()
+    WithWeaponMenuReady(BuildRepairMenu)
 end)
 
 RegisterNetEvent('feather-weapons:client:clearAuthorization', function(token)
@@ -1319,6 +1375,13 @@ RegisterNetEvent('feather-weapons:client:clearAuthorization', function(token)
 end)
 
 RegisterNetEvent('feather-weapons:client:inventoryAmmoResult', function(result)
+    if result and result.reconcile then
+        ClearNativeWeapon()
+        FeatherWeaponsClient.Reconcile()
+        Notify(result.ok and ('Escrowed %s cartridges.'):format(tostring(result.value.moved))
+            or (result.error and result.error.message or 'Unable to escrow ammunition.'))
+        return
+    end
     if result and result.ok and equipped then
         local slot = result.value.slot == 'offhand' and 'offhand' or 'primary'
         local state = slot == 'offhand' and offhand or equipped
@@ -1569,6 +1632,8 @@ if Config.DevMode then
                         tostring(state and state.ammo), tostring(state and state.loaded),
                         tostring(state and state.reserve), tostring(state and state.condition)))
                 if state then
+                    print(('[feather-weapons] ammo type=%s native=%s'):format(
+                        tostring(state.ammunitionType), tostring(state.nativeAmmoName)))
                     local attachmentIds = {}
                     for _, attachment in ipairs(state.attachments or {}) do
                         attachmentIds[#attachmentIds + 1] = tostring(attachment.definitionId)
@@ -1586,6 +1651,8 @@ if Config.DevMode then
 
                 local secondary = result.value.slots and result.value.slots.offhand or nil
                 if secondary then
+                    print(('[feather-weapons] offhand ammo type=%s native=%s'):format(
+                        tostring(secondary.ammunitionType), tostring(secondary.nativeAmmoName)))
                     local clipOk, nativeLoaded = GetAmmoInClip(PlayerPedId(), joaat(secondary.nativeWeaponName))
                     print(('[feather-weapons] offhand item=%s generation=%s total=%s loaded=%s reserve=%s condition=%s attachments=%s nativeLoaded=%s clipOk=%s'):format(
                         tostring(secondary.itemInstanceId), tostring(secondary.generation),

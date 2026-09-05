@@ -4,4 +4,3 @@ FeatherCore.RPC = {
         return exports["feather-core"]:CallRPC(name, params, callback, source, timeoutMs)
     end
 }
-FeatherMenu = exports["feather-menu"].initiate()

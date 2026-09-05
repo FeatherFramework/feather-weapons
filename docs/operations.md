@@ -26,7 +26,7 @@ created its schema. Incompatible contracts and missing definitions always fail
 startup closed; there is no partial-start option.
 
 Weapons also validates every required Inventory definition at startup. The
-Cattleman must be a usable unique weapon; revolver ammunition and the repair kit
+Cattleman must be a usable unique weapon; revolver ammunition and gun oil
 must be usable stacks; the Long Barrel must be a non-usable stack because it is
 installed through the gunsmith menu. Missing names, duplicates, or mismatched
 types/modes abort startup instead of disabling only part of the system.

@@ -389,7 +389,7 @@ continued to work through event-led reconciliation.
 Clean-install catalog hardening passed after aligning the recipe and standalone
 SQL. Startup now validates missing/duplicate names, item types, unique/stack
 modes, and usable flags. The Long Barrel remained non-usable and installable
-only through the gunsmith menu, while ammunition and repair kits remained
+only through the gunsmith menu, while ammunition and gun oil remained
 usable and metadata inspection continued to pass.
 
 The final release contract smoke test passed `8/8`: exact definition counts,

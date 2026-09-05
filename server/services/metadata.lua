@@ -9,6 +9,7 @@ function WeaponMetadata.Build(definition, options)
         condition = tonumber(options.condition) or definition.condition.maximum,
         quality = tonumber(options.quality) or 100,
         ammo = {
+            type = options.ammunitionType or definition.ammunitionType,
             loaded = tonumber(options.loadedAmmo) or 0,
             reserve = tonumber(options.reserveAmmo) or 0,
             chambered = options.chambered == true

@@ -56,7 +56,7 @@ function EquipService.ValidateOwnedItem(context, itemInstanceId)
     return WeaponResult.Ok({ item = item, definition = definition }, context.correlationId)
 end
 
-local function ValidateSlotEligibility(source, slot, definition, correlationId)
+local function ValidateSlotEligibility(source, slot, definition, correlationId, metadata)
     slot = WeaponRuntime.NormalizeSlot(slot)
     if not slot then
         return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
@@ -90,7 +90,7 @@ local function ValidateSlotEligibility(source, slot, definition, correlationId)
     end
     local primaryDefinition = DefinitionRegistry.Get("weapon", primary.definitionId)
     if not primaryDefinition.ok
-        or primaryDefinition.value.ammunitionType ~= definition.ammunitionType then
+        or primary.ammunitionType ~= (metadata.ammo.type or definition.ammunitionType) then
         return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
             "Equipped weapon pairs must use the same ammunition type", nil, correlationId)
     end
@@ -147,7 +147,7 @@ function EquipService.Request(source, rpcContext, itemInstanceId, slot)
     local validationResult = EquipService.ValidateOwnedItem(context, itemInstanceId)
     if not validationResult.ok then return validationResult end
     local eligibility = ValidateSlotEligibility(
-        source, slot, validationResult.value.definition, context.correlationId)
+        source, slot, validationResult.value.definition, context.correlationId, validationResult.value.item.metadata)
     if not eligibility.ok then return eligibility end
     return WeaponRuntime.BeginEquip(source, context.sessionId, validationResult.value.item,
         validationResult.value.definition, context.correlationId, eligibility.value)
@@ -177,7 +177,7 @@ function EquipService.Restore(source, session, itemInstanceId, correlationId, sl
     local validationResult = EquipService.ValidateOwnedItem(context, itemInstanceId)
     if not validationResult.ok then return validationResult end
     local eligibility = ValidateSlotEligibility(
-        source, slot, validationResult.value.definition, correlationId)
+        source, slot, validationResult.value.definition, correlationId, validationResult.value.item.metadata)
     if not eligibility.ok then return eligibility end
     return WeaponRuntime.RestoreEquipped(source, session.sessionId, validationResult.value.item,
         validationResult.value.definition, correlationId, eligibility.value)
