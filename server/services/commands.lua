@@ -328,8 +328,8 @@ RegisterCommand("WeaponReleaseContractSmokeTest", function(source, args)
             {
                 name = "definitions ready",
                 passed = capabilities.ready == true
-                    and capabilities.definitions.weapon == 2
-                    and capabilities.definitions.ammunition == 1
+                    and capabilities.definitions.weapon == 24
+                    and capabilities.definitions.ammunition == 27
                     and capabilities.definitions.attachment == 1,
                 detail = ("weapon=%s ammunition=%s attachment=%s"):format(
                     tostring(capabilities.definitions.weapon),
@@ -340,6 +340,8 @@ RegisterCommand("WeaponReleaseContractSmokeTest", function(source, args)
             {
                 name = "native reload surface",
                 passed = capabilities.features.nativeReload == true
+                    and capabilities.features.ammunitionTypes == true
+                    and capabilities.features.ammunitionSelection == true
                     and capabilities.features.ammoEscrow == true
                     and capabilities.features.pairAmmoEscrow == true
                     and capabilities.features.pairUnload == true

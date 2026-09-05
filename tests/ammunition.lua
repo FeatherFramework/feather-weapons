@@ -1,0 +1,156 @@
+-- Run from the feather-weapons directory: lua tests/ammunition.lua
+-- Tests real server services with an in-memory transactional inventory.
+local function copy(value)
+    if type(value) ~= 'table' then return value end
+    local result = {}
+    for key, child in pairs(value) do result[key] = copy(child) end
+    return result
+end
+
+GetGameTimer = function() return 100 end
+vector3 = function(x, y, z) return { x = x, y = y, z = z } end
+SetTimeout = function() end
+AddEventHandler = function() end
+TriggerClientEvent = function() end
+FeatherCore = { RPC = { Register = function() end } }
+for _, file in ipairs({ 'config.lua', 'shared/constants.lua', 'shared/errors.lua',
+    'shared/definitions/ammunition.lua', 'shared/definitions/attachments.lua',
+    'shared/definitions/weapons.lua', 'shared/validation.lua',
+    'server/services/definition_registry.lua', 'server/services/metadata.lua',
+    'server/services/runtime.lua', 'server/services/equip.lua', 'server/services/ammo.lua' }) do
+    dofile(file)
+end
+Config.DevMode = false
+assert(DefinitionRegistry.Start().ok)
+local items, stock, rejectBatch, rejectTransaction
+local context = { characterId = 1, sessionId = 'test', correlationId = 'test' }
+InventoryAdapter = {}
+function InventoryAdapter.GetItemForCharacter(_, id)
+    return items[id] and WeaponResult.Ok(copy(items[id]))
+        or WeaponResult.Error('missing', 'Missing item')
+end
+function InventoryAdapter.MutateWeaponMetadataBatch(_, mutations)
+    if rejectBatch then return WeaponResult.Error('conflict', 'Injected conflict') end
+    for _, mutation in ipairs(mutations) do
+        if items[mutation.itemInstanceId].metadataRevision ~= mutation.expectedRevision then
+            return WeaponResult.Error('conflict', 'Stale revision')
+        end
+    end
+    for _, mutation in ipairs(mutations) do
+        local item = items[mutation.itemInstanceId]
+        item.metadata = copy(mutation.metadata)
+        item.metadataRevision = item.metadataRevision + 1
+    end
+    return WeaponResult.Ok(true)
+end
+function InventoryAdapter.Transaction(_, callback)
+    local staged, quantities = copy(items), copy(stock)
+    local tx = {}
+    function tx:GetItemForUpdate(id) return staged[id] end
+    function tx:GetQuantity(name) return quantities[name] or 0 end
+    function tx:RemoveQuantity(name, amount)
+        if self:GetQuantity(name) < amount then return false end
+        quantities[name] = self:GetQuantity(name) - amount
+        return true
+    end
+    function tx:AddQuantity(name, amount)
+        quantities[name] = self:GetQuantity(name) + amount
+        return true
+    end
+    function tx:SetMetadata(id, metadata, revision)
+        if staged[id].metadataRevision ~= revision then return false end
+        staged[id].metadata = copy(metadata)
+        staged[id].metadataRevision = revision + 1
+        return true
+    end
+    local result = callback(tx)
+    if result.ok == false then return result end
+    if rejectTransaction then return WeaponResult.Error('conflict', 'Injected conflict') end
+    items, stock = staged, quantities
+    return WeaponResult.Ok(result)
+end
+local function reset(weapon, second)
+    items, stock, rejectBatch, rejectTransaction = {}, {}, false, false
+    WeaponRuntime.Begin({ source = 1, characterId = 1, sessionId = 'test' })
+    for index, id in ipairs({ weapon, second }) do
+        local definition = DefinitionRegistry.Get('weapon', id).value
+        local metadata = WeaponMetadata.Build(definition, { serialNumber = 'TEST-' .. index })
+        assert(metadata.ok)
+        items[index] = { id = index, metadata = metadata.value, metadataRevision = 1 }
+        assert(WeaponRuntime.RestoreEquipped(1, 'test', items[index], definition,
+            'test', index == 1 and 'primary' or 'offhand').ok)
+    end
+end
+local passed = 0
+local function check(value, message)
+    assert(value, message)
+    passed = passed + 1
+end
+
+-- Every catalog combination loads, persists its native type and unloads the
+-- exact inventory item. Native rendering/firing still needs in-game testing.
+for _, definition in ipairs(DefinitionRegistry.List('weapon').value) do
+    for _, ammoId in ipairs(definition.ammunitionTypes) do
+        reset(definition.id)
+        local ammo = DefinitionRegistry.Get('ammunition', ammoId).value
+        stock[ammo.itemName] = 10
+        local result = AmmoService.Escrow(1, context, 10, ammoId)
+        check(result.ok, definition.id .. '/' .. ammoId .. ' load')
+        check(items[1].metadata.ammo.type == ammoId, 'Persist selected type')
+        check(WeaponRuntime.Get(1).equipped.nativeAmmoName == ammo.nativeAmmoName, 'Native type')
+        local restored = WeaponRuntime.RestoreEquipped(1, 'test', items[1], definition, 'test')
+        check(restored.ok and restored.value.ammunitionType == ammoId, 'Restore selected type')
+        check(AmmoService.Unload(1, context).ok and stock[ammo.itemName] == 10, 'Exact unload')
+    end
+end
+
+reset('revolver_cattleman')
+stock.ammo_revolver_express = 20
+check(AmmoService.Escrow(1, context, 10, 'ammo_revolver_express').ok, 'Express load')
+check(not AmmoService.Escrow(1, context, 10, 'ammo_revolver_regular').ok, 'Loaded switch rejected')
+check(not AmmoService.Escrow(1, context, 10, 'ammo_pistol_regular').ok, 'Wrong family rejected')
+check(stock.ammo_revolver_express == 10 and items[1].metadata.ammo.type == 'ammo_revolver_express',
+    'Rejected requests preserve stock and type')
+local lease = copy(WeaponRuntime.Get(1).equipped)
+check(AmmoService.SyncConsumption(1, context, {
+    itemInstanceId = lease.itemInstanceId, generation = lease.generation, total = 9, loaded = 5
+}).ok, 'Special ammo shot checkpoint')
+check(AmmoService.Unload(1, context).ok and stock.ammo_revolver_express == 19, 'Shot consumes one round')
+
+for _, second in ipairs({ 'revolver_schofield', 'revolver_cattleman' }) do
+    reset('revolver_cattleman', second)
+    local oldGeneration = WeaponRuntime.Get(1).equipped.generation
+    stock.ammo_revolver_express = 30
+    check(AmmoService.Escrow(1, context, 10, 'ammo_revolver_express').ok, 'Pair first load')
+    check(items[1].metadata.ammo.type == 'ammo_revolver_express'
+        and items[2].metadata.ammo.type == 'ammo_revolver_express', 'Atomic pair selection')
+    check(not WeaponRuntime.MatchesLease(1, 'test', 1, oldGeneration), 'Old lease invalidated')
+    check(AmmoService.Escrow(1, context, 10, 'ammo_revolver_express').ok, 'Pair second load')
+    local runtime = WeaponRuntime.Get(1)
+    check(AmmoService.SyncPair(1, context, { total = 18, slots = {
+        primary = { itemInstanceId = 1, generation = runtime.slots.primary.generation, loaded = 5, consumed = 1 },
+        offhand = { itemInstanceId = 2, generation = runtime.slots.offhand.generation, loaded = 5, consumed = 1 }
+    } }).ok, 'Special ammo pair firing checkpoint')
+    check(not AmmoService.Escrow(1, context, 10, 'ammo_revolver_explosive').ok, 'Loaded pair switch rejected')
+    check(AmmoService.Unload(1, context).ok and AmmoService.Unload(1, context).ok
+        and stock.ammo_revolver_express == 28, 'Pair unload conserves ammo after two shots')
+    stock.ammo_revolver_high_velocity = 10
+    check(AmmoService.Escrow(1, context, 10, 'ammo_revolver_high_velocity').ok, 'Empty pair switches')
+end
+
+reset('revolver_cattleman', 'revolver_schofield')
+rejectBatch = true
+stock.ammo_revolver_express = 10
+check(not AmmoService.Escrow(1, context, 10, 'ammo_revolver_express').ok, 'Failed batch rejected')
+check(items[1].metadata.ammo.type == 'ammo_revolver_regular'
+    and items[2].metadata.ammo.type == 'ammo_revolver_regular'
+    and stock.ammo_revolver_express == 10, 'Failed batch changes nothing')
+rejectBatch, rejectTransaction = false, true
+local failed = AmmoService.Escrow(1, context, 10, 'ammo_revolver_express')
+check(not failed.ok and failed.reconcile, 'Failed refill still refreshes committed selection')
+check(stock.ammo_revolver_express == 10 and items[1].metadata.ammo.loaded == 0, 'Failed refill preserves stock')
+local definition = DefinitionRegistry.Get('weapon', 'rifle_elephant').value
+check(not WeaponValidation.AcceptsAmmunition(definition, 'ammo_rifle_regular'), 'Elephant rejects regular rifle ammo')
+definition.ammunitionTypes = 'invalid'
+check(not WeaponValidation.Definition(definition, 'weapon'), 'Malformed allowlist returns validation failure')
+print(('Ammunition regression checks: %d passed'):format(passed))

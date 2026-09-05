@@ -29,8 +29,8 @@ Server operation, recovery, integration, and trust boundaries are documented in
 - Return ammunition from either equipped slot without unequipping the pair.
 - Persist loaded ammunition after firing.
 - Apply and persist condition loss per shot.
-- Select and repair either equipped weapon by using a repair kit in Inventory.
-- Atomically consume the repair kit and update weapon condition.
+- Select and repair either equipped weapon by using gun oil in Inventory.
+- Atomically consume the gun oil and update weapon condition.
 - Prevent equipped weapon instances from being moved or destroyed.
 - Reject stale, concurrent, invalid, or unauthorized mutations.
 - Validate attachment definitions, slots, conflicts, and per-weapon compatibility at startup.
@@ -52,7 +52,7 @@ example, `revolver_cattleman` and `revolver_schofield`.
 - Current `feather-inventory` Contract 4 with transactions, item instances,
   named equipment slots, atomic metadata, equipment promotion, guards, and
   canonical character-ID capabilities
-- `feather-menu` for the weapon modification screen
+- `feather-menu-v2` for weapon modification and repair selection screens
 
 Recommended start order:
 
@@ -61,7 +61,7 @@ ensure oxmysql
 ensure feather-core
 ensure feather-character
 ensure feather-inventory
-ensure feather-menu
+ensure feather-menu-v2
 ensure feather-weapons
 ```
 
@@ -76,11 +76,18 @@ character IDs are rejected and are not part of the release contract.
 2. For an existing alpha database, run
    [`sql/rename_weapon_ids.sql`](sql/rename_weapon_ids.sql) once.
 3. Run [`sql/install_items.sql`](sql/install_items.sql) after the Feather Inventory schema and migrations.
-4. Confirm `revolver_cattleman` exists as a unique, usable inventory definition.
+4. Confirm `weapon_revolver_cattleman` exists as a unique, usable inventory definition.
+
+Weapon catalog IDs remain `revolver_cattleman` and `revolver_schofield` for
+metadata and grant commands. Their Inventory item names are
+`weapon_revolver_cattleman` and `weapon_revolver_schofield`.
+For existing installations, stop Inventory and Weapons and run
+`sql/rename_weapon_item_names.sql` before `sql/install_items.sql`.
+The rename preserves numeric item IDs and owned instances; it rejects conflicting rows.
 5. Ensure the resources in the order shown above.
 6. Restart the server; do not use a resource refresh for database migrations.
 
-The installation SQL adds standard revolver ammunition, weapon repair kits, and the Cattleman Long Barrel; marks only the weapon, ammunition, and repair kit usable; and enforces unique/stack modes. It is idempotent and can be rerun. Startup fails closed if a required definition is missing, duplicated, or has incompatible usable, type, or instance-mode values.
+The installation SQL adds the ammunition catalog, gun oil, and the Cattleman Long Barrel; marks only the weapons, ammunition, and gun oil usable; and enforces unique/stack modes. It is idempotent and can be rerun. Startup fails closed if a required definition is missing, duplicated, or has incompatible usable, type, or instance-mode values.
 
 > [!NOTE]
 > Weapon instances are created through the inventory transaction service with unique serials and complete metadata. When `DevMode = true`, authorized staff can issue the configured Cattleman with `/grantweapon revolver_cattleman` in chat, or `grantweapon revolver_cattleman [targetServerId]` from the server console.
@@ -210,7 +217,7 @@ other slot as well.
 ### Condition and repair
 
 Accepted shots lower condition according to the weapon definition. Use a
-`weapon_repair_kit` from Inventory to restore up to 25 condition. When two
+`gun_oil` from Inventory to restore up to 25 condition. When two
 weapons are equipped, choose the primary or offhand weapon from the repair
 menu. Full-condition, stale-slot, and invalid repairs do not consume a kit.
 
@@ -228,7 +235,7 @@ Attachment installation and removal require proximity to a configured gunsmith b
 | Maximum condition | 100 |
 | Wear | 1 condition per shot |
 | Equip minimum | 1 condition |
-| Repair cost | 1 weapon repair kit |
+| Repair cost | 1 gun oil |
 | Repair amount | Up to 25 condition |
 
 ## Persistence

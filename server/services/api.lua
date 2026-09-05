@@ -23,6 +23,8 @@ function WeaponAPI.GetCapabilities()
             slotRecovery = InventoryAdapter.IsReady(),
             dualWield = true,
             ammunition = InventoryAdapter.IsReady(),
+            ammunitionTypes = true,
+            ammunitionSelection = InventoryAdapter.IsReady(),
             ammoEscrow = InventoryAdapter.IsReady(),
             pairAmmoEscrow = InventoryAdapter.IsReady(),
             nativeReload = true,
