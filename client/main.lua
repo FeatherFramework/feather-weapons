@@ -2200,6 +2200,15 @@ CreateThread(function()
 end)
 
 CreateThread(function()
+    local interval = math.max(1000, math.floor(tonumber(
+        Config.Runtime and Config.Runtime.maintenanceCheckpointMs) or 5000))
+    while true do
+        Wait(interval)
+        CheckpointMaintenance(function() end)
+    end
+end)
+
+CreateThread(function()
     local runtimeConfig = Config.Runtime or {}
     local observationInterval = math.max(25, math.floor(tonumber(runtimeConfig.observationIntervalMs) or 50))
     local checkpointDebounce = math.max(0, math.floor(tonumber(runtimeConfig.checkpointDebounceMs) or 250))
