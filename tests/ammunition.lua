@@ -142,6 +142,17 @@ local managedUnload = AmmoService.Unload(1, context, 10, 'offhand', {
 check(managedUnload.ok and items[2].metadata.ammo.loaded == 6
     and items[2].metadata.ammo.reserve == 34 and stock.ammo_revolver_regular == 10,
     'Managed unload returns ammunition from only the requested slot')
+local switchLease = WeaponRuntime.Get(1).slots.offhand
+local managedSwitch = AmmoService.SwitchSlot(1, context, {
+    slot = 'offhand', ammunitionType = 'ammo_revolver_express', amount = 50,
+    itemInstanceId = switchLease.itemInstanceId, generation = switchLease.generation
+})
+check(managedSwitch.ok and managedSwitch.reconcile == true
+    and managedSwitch.value.moved == 7 and managedSwitch.value.returned == 40
+    and items[2].metadata.ammo.type == 'ammo_revolver_express'
+    and items[2].metadata.ammo.loaded == 6 and items[2].metadata.ammo.reserve == 1
+    and stock.ammo_revolver_regular == 50 and stock.ammo_revolver_express == 0,
+    'Managed ammunition switch is atomic and slot scoped')
 
 for _, second in ipairs({ 'revolver_schofield', 'revolver_cattleman' }) do
     reset('revolver_cattleman', second)

@@ -1850,7 +1850,14 @@ local function OpenModificationMenu()
     WithWeaponMenuReady(BuildModificationMenu)
 end
 
-local function RequestManagedAmmunition(route, request, unload)
+local OpenAmmunitionMenu
+
+local function AmmunitionVariantLabel(definition, ammunitionId)
+    local label = definition and definition.label or ammunitionId or 'Unknown'
+    return label:match('%s%-%s(.+)$') or label
+end
+
+local function RequestManagedAmmunition(route, request, action)
     FeatherWeaponsClient.Checkpoint(function(checkpoint)
         if not checkpoint or not checkpoint.ok then
             local failure = checkpoint and checkpoint.error or nil
@@ -1865,17 +1872,49 @@ local function RequestManagedAmmunition(route, request, unload)
                 Notify(failure and failure.message or 'Unable to change weapon ammunition.')
                 return
             end
-            if unload then
-                Notify(('Unloaded %s cartridge%s from %s.'):format(
-                    tostring(result.value.moved), result.value.moved == 1 and '' or 's',
-                    SlotLabel(result.value.slot)))
-                ClearNativeWeapon()
-                FeatherWeaponsClient.Reconcile()
+            local moved = tonumber(result.value and result.value.moved) or 0
+            local weaponLabel = action and action.weaponLabel or SlotLabel(request.slot)
+            local ammunitionLabel = action and action.ammunitionLabel or 'cartridges'
+            if action and action.kind == 'unload' then
+                Notify(('Unloaded %d %s cartridge%s from %s.'):format(
+                    moved, ammunitionLabel, moved == 1 and '' or 's', weaponLabel))
+            elseif action and action.kind == 'switch' then
+                Notify(('Switched %s to %s; loaded %d cartridge%s.'):format(
+                    weaponLabel, ammunitionLabel, moved, moved == 1 and '' or 's'))
             else
-                TriggerEvent('feather-weapons:client:inventoryAmmoResult', result)
+                Notify(('Loaded %d %s cartridge%s into %s.'):format(
+                    moved, ammunitionLabel, moved == 1 and '' or 's', weaponLabel))
             end
+            ClearNativeWeapon()
+            FeatherWeaponsClient.Reconcile(function(reconciled)
+                if reconciled and reconciled.ok then OpenAmmunitionMenu(request.slot) end
+            end)
         end)
     end)
+end
+
+local function LoadedContainerLabel(weapon)
+    if weapon.family == 'revolver' then return 'Cylinder' end
+    if weapon.family == 'shotgun' then return 'Chamber/tube' end
+    return 'Magazine'
+end
+
+local function AmmunitionCapacityRemaining(slot, selected, ammunitionId, definition)
+    local maximum = math.max(tonumber(selected.capacity) or 1,
+        math.floor(tonumber(Config.Escrow and Config.Escrow.maxTotal)
+            or tonumber(selected.capacity) or 1))
+    if definition and tonumber(definition.maxTotal) then
+        maximum = math.min(maximum, math.floor(tonumber(definition.maxTotal)))
+    end
+    local occupied = selected.ammunitionType == ammunitionId
+        and (tonumber(selected.ammo) or 0) or 0
+    for _, candidate in ipairs(WeaponConstants.LoadoutSlots) do
+        local other = candidate ~= slot and SlotState(candidate) or nil
+        if other and definition and other.nativeAmmoName == definition.nativeAmmoName then
+            occupied = occupied + (tonumber(other.ammo) or 0)
+        end
+    end
+    return math.max(0, maximum - occupied)
 end
 
 local function BuildAmmunitionPage(slot)
@@ -1896,7 +1935,8 @@ local function BuildAmmunitionPage(slot)
         slot = 'content'
     })
     AddWeaponElement(page, 'textdisplay', {
-        value = ('Chamber/cylinder: %d  |  Reserve: %d  |  Total: %d'):format(
+        value = ('%s: %d  |  Reserve: %d  |  Total: %d'):format(
+            LoadedContainerLabel(weapon),
             tonumber(selected.loaded) or 0, tonumber(selected.reserve) or 0,
             tonumber(selected.ammo) or 0),
         slot = 'content'
@@ -1904,16 +1944,21 @@ local function BuildAmmunitionPage(slot)
     AddWeaponElement(page, 'line', { slot = 'content' })
 
     if (tonumber(selected.ammo) or 0) > 0 then
+        local unloadAmount = math.min(10, tonumber(selected.ammo) or 0)
         AddWeaponElement(page, 'button', {
-            label = 'Unload 10 cartridges', slot = 'content'
+            label = ('Unload %d cartridge%s'):format(
+                unloadAmount, unloadAmount == 1 and '' or 's'), slot = 'content'
         }, function()
             CloseWeaponMenu(AmmunitionMenu)
             RequestManagedAmmunition('feather-weapons:ammo:unload', {
                 slot = slot,
-                amount = 10,
+                amount = unloadAmount,
                 itemInstanceId = selected.itemInstanceId,
                 generation = selected.generation
-            }, true)
+            }, {
+                kind = 'unload', weaponLabel = weapon.label or selected.definitionId,
+                ammunitionLabel = AmmunitionVariantLabel(current, selected.ammunitionType)
+            })
         end)
         AddWeaponElement(page, 'button', {
             label = 'Unload all cartridges', slot = 'content'
@@ -1923,7 +1968,10 @@ local function BuildAmmunitionPage(slot)
                 slot = slot,
                 itemInstanceId = selected.itemInstanceId,
                 generation = selected.generation
-            }, true)
+            }, {
+                kind = 'unload', weaponLabel = weapon.label or selected.definitionId,
+                ammunitionLabel = AmmunitionVariantLabel(current, selected.ammunitionType)
+            })
         end)
     end
 
@@ -1933,39 +1981,50 @@ local function BuildAmmunitionPage(slot)
         local definition = WeaponDefinitionCatalog.ammunition[ammunitionId]
         local available = math.max(0,
             math.floor(tonumber(ammunitionInventory[ammunitionId]) or 0))
-        if definition and available > 0 and (selected.ammunitionType == ammunitionId
-            or (tonumber(selected.ammo) or 0) == 0) then
+        if definition and available > 0 then
             local loadLimit = tonumber(Config.Escrow and Config.Escrow.refillAmount) or 50
-            local loadAmount = math.min(loadLimit, available)
-            availableChoices = availableChoices + 1
-            AddWeaponElement(page, 'button', {
-                label = ('Load up to %d: %s (owned: %d)'):format(
-                    loadAmount, definition.label or ammunitionId, available),
-                slot = 'content'
-            }, function()
-                CloseWeaponMenu(AmmunitionMenu)
-                RequestManagedAmmunition('feather-weapons:ammo:loadSlot', {
-                    slot = slot,
-                    amount = loadAmount,
-                    ammunitionType = ammunitionId,
-                    itemInstanceId = selected.itemInstanceId,
-                    generation = selected.generation
-                }, false)
-            end)
+            local remaining = AmmunitionCapacityRemaining(slot, selected, ammunitionId, definition)
+            local loadAmount = math.min(loadLimit, available, remaining)
+            if loadAmount > 0 then
+                local switching = (tonumber(selected.ammo) or 0) > 0
+                    and selected.ammunitionType ~= ammunitionId
+                availableChoices = availableChoices + 1
+                AddWeaponElement(page, 'button', {
+                    label = switching
+                        and ('Switch to %s (owned: %d; load: %d)'):format(
+                            definition.label or ammunitionId, available, loadAmount)
+                        or ('Load up to %d: %s (owned: %d)'):format(
+                            loadAmount, definition.label or ammunitionId, available),
+                    slot = 'content'
+                }, function()
+                    CloseWeaponMenu(AmmunitionMenu)
+                    RequestManagedAmmunition(switching
+                        and 'feather-weapons:ammo:switchSlot'
+                        or 'feather-weapons:ammo:loadSlot', {
+                        slot = slot,
+                        amount = loadAmount,
+                        ammunitionType = ammunitionId,
+                        itemInstanceId = selected.itemInstanceId,
+                        generation = selected.generation
+                    }, {
+                        kind = switching and 'switch' or 'load',
+                        weaponLabel = weapon.label or selected.definitionId,
+                        ammunitionLabel = AmmunitionVariantLabel(definition, ammunitionId)
+                    })
+                end)
+            end
         end
     end
     if availableChoices == 0 then
         AddWeaponElement(page, 'textdisplay', {
-            value = (tonumber(selected.ammo) or 0) > 0
-                and 'No additional cartridges of the loaded type are in Inventory.'
-                or 'No compatible ammunition is available in Inventory.',
+            value = 'No compatible ammunition can currently be loaded from Inventory.',
             slot = 'content'
         })
     end
     return page
 end
 
-local function BuildAmmunitionMenu()
+local function BuildAmmunitionMenu(initialSlot)
     local occupied = {}
     for _, slot in ipairs(WeaponConstants.LoadoutSlots) do
         if SlotState(slot) then occupied[#occupied + 1] = slot end
@@ -2003,10 +2062,11 @@ local function BuildAmmunitionMenu()
             MenuValue(Menu:NavigateToPage(AmmunitionMenu, selector.id))
         end)
     end
-    OpenWeaponPage(selector)
+    local initialPage = initialSlot and pages[initialSlot] or nil
+    OpenWeaponPage(initialPage or selector)
 end
 
-local function OpenAmmunitionMenu()
+OpenAmmunitionMenu = function(initialSlot)
     FeatherWeaponsClient.Checkpoint(function(result)
         if not result or not result.ok then
             local failure = result and result.error or nil
@@ -2021,7 +2081,7 @@ local function OpenAmmunitionMenu()
                 return
             end
             ammunitionInventory = availability.value.quantities or {}
-            WithWeaponMenuReady(BuildAmmunitionMenu)
+            WithWeaponMenuReady(function() BuildAmmunitionMenu(initialSlot) end)
         end)
     end)
 end
@@ -2185,19 +2245,10 @@ end
 
 if Config.Controls and Config.Controls.ammunition and Config.Controls.ammunition.enabled then
     local ammunitionControl = Config.Controls.ammunition
-    RegisterCommand(ammunitionControl.command, OpenAmmunitionMenu, false)
+    RegisterCommand(ammunitionControl.command, function() OpenAmmunitionMenu() end, false)
     RegisterKeyMapping(ammunitionControl.command, 'Manage equipped weapon ammunition',
         'keyboard', ammunitionControl.defaultKey or 'F7')
 end
-
-CreateThread(function()
-    local interval = math.max(1000, math.floor(tonumber(
-        Config.Runtime and Config.Runtime.maintenanceCheckpointMs) or 5000))
-    while true do
-        Wait(interval)
-        CheckpointMaintenance(function() end)
-    end
-end)
 
 CreateThread(function()
     local interval = math.max(1000, math.floor(tonumber(
