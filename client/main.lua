@@ -1617,6 +1617,9 @@ RegisterNetEvent('feather-weapons:client:attachmentResult', HandleAttachmentResu
 
 local Menu = exports['feather-menu-v2']
 local ModificationMenu, RepairMenu, AmmunitionMenu
+local AmmunitionActivityPage, ammunitionActivityInFlight = nil, false
+local ammunitionActivityReturnPage = nil
+local ammunitionActivitySequence = 0
 local ModificationPages = {}
 local ammunitionInventory = {}
 local menuSequence = 0
@@ -1678,6 +1681,9 @@ AddEventHandler('onClientResourceStop', function(resource)
     if resource ~= 'feather-menu-v2' then return end
     menuSequence = menuSequence + 1
     ModificationMenu, RepairMenu, AmmunitionMenu = nil, nil, nil
+    AmmunitionActivityPage, ammunitionActivityInFlight = nil, false
+    ammunitionActivityReturnPage = nil
+    ammunitionActivitySequence = ammunitionActivitySequence + 1
     ModificationPages = {}
 end)
 
@@ -1852,6 +1858,42 @@ end
 
 local OpenAmmunitionMenu
 
+local function StopAmmunitionActivity(returnPage)
+    returnPage = returnPage or ammunitionActivityReturnPage
+    ammunitionActivityInFlight = false
+    ammunitionActivityReturnPage = nil
+    ammunitionActivitySequence = ammunitionActivitySequence + 1
+    if returnPage and AmmunitionMenu then
+        MenuValue(Menu:NavigateToPage(AmmunitionMenu, returnPage.id))
+    end
+end
+
+local function StartAmmunitionActivity(returnPage, operation)
+    if ammunitionActivityInFlight or not AmmunitionActivityPage then return false end
+    ammunitionActivityInFlight = true
+    ammunitionActivityReturnPage = returnPage
+    ammunitionActivitySequence = ammunitionActivitySequence + 1
+    local sequence = ammunitionActivitySequence
+    MenuValue(Menu:SetElementValue(AmmunitionMenu, AmmunitionActivityPage.id,
+        AmmunitionActivityPage.statusElementId, operation .. '...'))
+    MenuValue(Menu:NavigateToPage(AmmunitionMenu, AmmunitionActivityPage.id))
+    CreateThread(function()
+        local step = 0
+        while ammunitionActivityInFlight and sequence == ammunitionActivitySequence do
+            Wait(350)
+            if not ammunitionActivityInFlight or sequence ~= ammunitionActivitySequence then return end
+            step = (step % 3) + 1
+            local result = Menu:SetElementValue(AmmunitionMenu, AmmunitionActivityPage.id,
+                AmmunitionActivityPage.statusElementId, operation .. string.rep('.', step))
+            if type(result) ~= 'table' or result.ok ~= true then
+                StopAmmunitionActivity(returnPage)
+                return
+            end
+        end
+    end)
+    return true
+end
+
 local function AmmunitionVariantLabel(definition, ammunitionId)
     local label = definition and definition.label or ammunitionId or 'Unknown'
     return label:match('%s%-%s(.+)$') or label
@@ -1863,6 +1905,7 @@ local function RequestManagedAmmunition(route, request, action)
             local failure = checkpoint and checkpoint.error or nil
             Notify(failure and failure.message
                 or 'Unable to save the weapon before changing ammunition.')
+            StopAmmunitionActivity(action and action.returnPage)
             return
         end
         FeatherCore.RPC.Call(route, request, function(result, rpcError)
@@ -1870,6 +1913,7 @@ local function RequestManagedAmmunition(route, request, action)
             if not result.ok then
                 local failure = result.error or rpcError
                 Notify(failure and failure.message or 'Unable to change weapon ammunition.')
+                StopAmmunitionActivity(action and action.returnPage)
                 return
             end
             local moved = tonumber(result.value and result.value.moved) or 0
@@ -1887,7 +1931,11 @@ local function RequestManagedAmmunition(route, request, action)
             end
             ClearNativeWeapon()
             FeatherWeaponsClient.Reconcile(function(reconciled)
-                if reconciled and reconciled.ok then OpenAmmunitionMenu(request.slot) end
+                if reconciled and reconciled.ok then
+                    OpenAmmunitionMenu(request.slot)
+                else
+                    StopAmmunitionActivity(action and action.returnPage)
+                end
             end)
         end)
     end)
@@ -1949,7 +1997,7 @@ local function BuildAmmunitionPage(slot)
             label = ('Unload %d cartridge%s'):format(
                 unloadAmount, unloadAmount == 1 and '' or 's'), slot = 'content'
         }, function()
-            CloseWeaponMenu(AmmunitionMenu)
+            if not StartAmmunitionActivity(page, 'Unloading ammunition') then return end
             RequestManagedAmmunition('feather-weapons:ammo:unload', {
                 slot = slot,
                 amount = unloadAmount,
@@ -1957,20 +2005,22 @@ local function BuildAmmunitionPage(slot)
                 generation = selected.generation
             }, {
                 kind = 'unload', weaponLabel = weapon.label or selected.definitionId,
-                ammunitionLabel = AmmunitionVariantLabel(current, selected.ammunitionType)
+                ammunitionLabel = AmmunitionVariantLabel(current, selected.ammunitionType),
+                returnPage = page
             })
         end)
         AddWeaponElement(page, 'button', {
             label = 'Unload all cartridges', slot = 'content'
         }, function()
-            CloseWeaponMenu(AmmunitionMenu)
+            if not StartAmmunitionActivity(page, 'Unloading ammunition') then return end
             RequestManagedAmmunition('feather-weapons:ammo:unload', {
                 slot = slot,
                 itemInstanceId = selected.itemInstanceId,
                 generation = selected.generation
             }, {
                 kind = 'unload', weaponLabel = weapon.label or selected.definitionId,
-                ammunitionLabel = AmmunitionVariantLabel(current, selected.ammunitionType)
+                ammunitionLabel = AmmunitionVariantLabel(current, selected.ammunitionType),
+                returnPage = page
             })
         end)
     end
@@ -1997,7 +2047,8 @@ local function BuildAmmunitionPage(slot)
                             loadAmount, definition.label or ammunitionId, available),
                     slot = 'content'
                 }, function()
-                    CloseWeaponMenu(AmmunitionMenu)
+                    if not StartAmmunitionActivity(page,
+                        switching and 'Switching ammunition' or 'Loading ammunition') then return end
                     RequestManagedAmmunition(switching
                         and 'feather-weapons:ammo:switchSlot'
                         or 'feather-weapons:ammo:loadSlot', {
@@ -2009,7 +2060,8 @@ local function BuildAmmunitionPage(slot)
                     }, {
                         kind = switching and 'switch' or 'load',
                         weaponLabel = weapon.label or selected.definitionId,
-                        ammunitionLabel = AmmunitionVariantLabel(definition, ammunitionId)
+                        ammunitionLabel = AmmunitionVariantLabel(definition, ammunitionId),
+                        returnPage = page
                     })
                 end)
             end
@@ -2034,8 +2086,27 @@ local function BuildAmmunitionMenu(initialSlot)
         return
     end
 
+    ammunitionActivityInFlight = false
+    ammunitionActivityReturnPage = nil
+    ammunitionActivitySequence = ammunitionActivitySequence + 1
     if AmmunitionMenu then MenuValue(Menu:DestroyMenu(AmmunitionMenu)) end
     AmmunitionMenu = CreateWeaponMenu('ammunition-management')
+    AmmunitionActivityPage = CreateWeaponPage(AmmunitionMenu,
+        'feather-weapons:ammunition-activity')
+    AddWeaponElement(AmmunitionActivityPage, 'header', {
+        value = 'Ammunition Management', slot = 'header'
+    })
+    AddWeaponElement(AmmunitionActivityPage, 'subheader', {
+        value = 'Updating weapon', slot = 'header'
+    })
+    AmmunitionActivityPage.statusElementId = AddWeaponElement(
+        AmmunitionActivityPage, 'textdisplay', {
+            value = 'Working...', slot = 'content'
+        }).elementId
+    AddWeaponElement(AmmunitionActivityPage, 'textdisplay', {
+        value = 'Please wait. Inventory and weapon state are being synchronized.',
+        slot = 'content'
+    })
     local pages = {}
     for _, slot in ipairs(occupied) do pages[slot] = BuildAmmunitionPage(slot) end
     if #occupied == 1 then OpenWeaponPage(pages[occupied[1]]); return end
@@ -2072,12 +2143,14 @@ OpenAmmunitionMenu = function(initialSlot)
             local failure = result and result.error or nil
             Notify(failure and failure.message
                 or 'Unable to save weapon ammunition before opening the menu.')
+            StopAmmunitionActivity()
             return
         end
         FeatherCore.RPC.Call('feather-weapons:ammo:availability', {}, function(availability, rpcError)
             if not availability or not availability.ok then
                 local failure = availability and availability.error or rpcError
                 Notify(failure and failure.message or 'Unable to read Inventory ammunition.')
+                StopAmmunitionActivity()
                 return
             end
             ammunitionInventory = availability.value.quantities or {}

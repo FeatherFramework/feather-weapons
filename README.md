@@ -241,6 +241,8 @@ shows its ammunition type and exact loaded, reserve, and total ownership. Load
 up to one 50-cartridge Inventory stack into that slot, unload up to 10
 cartridges, or unload the slot completely. Every action shows the exact amount
 that can move and the menu refreshes on the selected weapon after it completes.
+An in-menu activity indicator remains visible while Inventory and native weapon
+state are synchronized, preventing duplicate ammunition requests.
 Load choices are limited to compatible ammunition the character currently
 owns. Selecting a different owned type atomically returns the current load and
 loads the chosen cartridges. Shared native ammo pools do not change per-weapon
