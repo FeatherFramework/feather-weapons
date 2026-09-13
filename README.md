@@ -295,7 +295,8 @@ Development grants and native probes remain disabled.
 
 ## Known limitations
 
-- The first Long Barrel attachment is available; additional attachment definitions remain unfinished.
+- The Cattleman Long Barrel and Wide Sight are live-validated functional
+  attachment slices. Broader model compatibility remains unfinished.
 - Alternate ammunition, expanded provenance, evidence, licenses, shops, and crafting remain planned.
 
 ## Validation status

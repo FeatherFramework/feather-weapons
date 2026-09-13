@@ -77,11 +77,13 @@ local function BuildDefinitionIndex()
 
     MissingDefinitions = {}
     local required = {
-        gun_oil = true,
-        cattleman_long_barrel = true
+        gun_oil = true
     }
     for itemName in pairs(WeaponDefinitionCatalog.ammunition or {}) do
         required[itemName] = true
+    end
+    for _, attachment in pairs(WeaponDefinitionCatalog.attachments or {}) do
+        required[attachment.itemName] = true
     end
     for _, definition in pairs(WeaponDefinitionCatalog.weapons or {}) do
         required[definition.itemName] = true
@@ -103,11 +105,13 @@ local function BuildDefinitionIndex()
     end
 
     local expected = {
-        gun_oil = { instanceMode = "stack", usable = true, type = "item_item" },
-        cattleman_long_barrel = { instanceMode = "stack", usable = false, type = "item_item" }
+        gun_oil = { instanceMode = "stack", usable = true, type = "item_item" }
     }
     for itemName in pairs(WeaponDefinitionCatalog.ammunition or {}) do
         expected[itemName] = { instanceMode = "stack", usable = true, type = "item_ammo" }
+    end
+    for _, attachment in pairs(WeaponDefinitionCatalog.attachments or {}) do
+        expected[attachment.itemName] = { instanceMode = "stack", usable = false, type = "item_item" }
     end
     for _, definition in pairs(WeaponDefinitionCatalog.weapons or {}) do
         expected[definition.itemName] = { instanceMode = "unique", usable = true, type = "item_weapon" }

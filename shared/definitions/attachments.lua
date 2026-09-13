@@ -13,5 +13,16 @@ WeaponDefinitionCatalog.attachments = {
         conflicts = {},
         removable = true,
         tags = { "functional", "cattleman" }
+    },
+    cattleman_wide_sight = {
+        id = "cattleman_wide_sight",
+        kind = "attachment",
+        itemName = "cattleman_wide_sight",
+        label = "Cattleman Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_REVOLVER_CATTLEMAN_SIGHT_WIDE",
+        conflicts = {},
+        removable = true,
+        tags = { "functional", "cattleman" }
     }
 }

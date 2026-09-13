@@ -218,7 +218,9 @@ and cleanup gate is closed.
 
 ### Work
 
-- Expand attachment definitions beyond the Cattleman Long Barrel.
+- [x] Add the Cattleman Wide Sight as the first definition beyond the validated
+  Cattleman Long Barrel, backed by a compatibility worksheet and verified native
+  component mapping. Its live lifecycle remains pending.
 - Model component slots, compatibility, conflicts, prerequisites, and defaults.
 - Preserve independent modifications on every supported equipped weapon instance.
 - Apply components by approved item identity and reconcile failed native
@@ -839,7 +841,29 @@ A phase is complete only when:
   passed `8/8`, `17/17`, and `5/5` with both long-gun slots active. A full client
   quit/reconnect restored Springfield shoulder and Bolt Action back with exact
   empty balances, condition `99`, readable zero clips, and correct visuals.
-  Shared-ammunition conservation, slot isolation, and persistence pass.
+  A subsequent full server restart produced the same exact shoulder/back state
+  and logged a zero-authority shared pool. Shared-ammunition conservation, slot
+  isolation, and persistence pass.
+- Two-player isolation passed on separate PCs and game accounts. Player 1 used
+  a shared-`AMMO_RIFLE` Springfield/Bolt Action shoulder/back pair while Player
+  2 used distinct regular-revolver/high-velocity-pistol sidearms. Individual
+  and approximately simultaneous shots changed only the firing item; simultaneous
+  reloads conserved each total and changed only the selected clip/reserve.
+  Player 2 logout/re-entry left Player 1 exact, and the reciprocal Player 1
+  logout/re-entry left Player 2 exact. All four leases, ammunition types,
+  balances, conditions, and slot positions remained isolated.
+- The Cattleman Wide Sight is the first attachment definition beyond the Long
+  Barrel. Its verified model-specific component applied visibly and consumed one
+  item while preserving weapon identity, lease, `50/6/44` ammunition, and
+  condition `100`. Wide Sight and Long Barrel coexisted as separate sight/barrel
+  slots through resource restart, logout/re-entry, full server restart, and a
+  primary-to-offhand role change. Removal returned one item while retaining the
+  Long Barrel; offhand reinstallation consumed it again. Duplicate installation
+  was unavailable without consuming an extra item, and the incompatible Mauser
+  exposed no install action. The compatibility worksheet records the mapping
+  and completed lifecycle. Post-change regression passed release `8/8`,
+  dual-slot `17/17`, and runtime lease `5/5` with the modified Cattleman in the
+  offhand slot.
 
 ### Next steps
 
@@ -854,12 +878,11 @@ A phase is complete only when:
 5. Verify clip capacity, holster placement, wheel behavior, and special-ammo
    effects for each firearm family, with focused checks for LeMat, Sawed-Off,
    Varmint, Elephant Rifle, and long guns.
-6. Repeat representative family checks with two simultaneous players and
+6. [x] Repeat representative family checks with two simultaneous players and
    supported different-hash sidearm pairs, covering both shared and distinct
    native ammunition types.
-7. Complete shared-ammunition shoulder/back client-quit and full-server-restart
-   validation. Pair restoration, independent firing/reload, escrow conservation,
-   wheel/holster presentation, resource restart, and logout already pass.
-8. After the catalog is accepted, build the attachment compatibility worksheet
-   and add one fully tested component vertical slice beyond the Cattleman Long
-   Barrel.
+7. [x] Complete shared-ammunition shoulder/back restoration, independent firing
+   and reload, escrow conservation, wheel/holster presentation, logout, client
+   quit, resource restart, and full-server-restart validation.
+8. [x] Build the attachment compatibility worksheet and add one fully tested
+   component vertical slice beyond the Cattleman Long Barrel.
