@@ -7,6 +7,7 @@ WeaponDefinitionCatalog.ammunition = {
         itemName = "ammo_rifle_elephant",
         label = "Rifle Cartridges - Nitro Express",
         nativeAmmoName = "AMMO_RIFLE_ELEPHANT",
+        maxTotal = 20,
         stackable = true,
         tags = { "rifle", "elephant", "purchase" }
     },

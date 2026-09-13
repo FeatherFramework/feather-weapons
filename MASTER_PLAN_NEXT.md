@@ -132,9 +132,15 @@ was retired because RedM cannot preserve it reliably across every wheel,
 holster, and restoration boundary. Feather
 tracks and removes only native entitlement items it created. Entitlement loss
 fails closed and restores the approved pair. The native probe remains gated and
-the release configuration keeps development mode disabled. The tested character
-path passed; a fresh female-character entitlement pass remains required before
-closing the complete model matrix.
+the release configuration keeps development mode disabled. The fresh female
+character equip check passed: two distinct empty sidearms occupied the correct
+primary/offhand holsters, dual draw worked, and entitlement provisioning caused
+no unexpected visible clothing change. Removing the female character's Mauser
+offhand also passed: Cattleman remained as the sole primary weapon and native
+entitlement cleanup caused no visible wardrobe change. Removing the final
+Cattleman also passed with no visual wardrobe change; `weaponstate` reported
+no equipped primary or offhand state. The fresh female-character entitlement
+and cleanup gate is closed.
 
 ## 6. Phase 2 — Standard firearm catalog — VALIDATION
 
@@ -644,17 +650,205 @@ A phase is complete only when:
   dual-slot `17/17` with Volcanic primary/Mauser offhand, and runtime lease
   `5/5`. The distinct-ammunition revolver and representative pistol regression
   slices are closed.
+- Post-LeMat contract gates also remained fully passing after the single-clip
+  readiness and mode-transition fixes: release `8/8`, dual-slot `17/17`, and
+  runtime lease `5/5`.
+- Sawed-Off per-model validation began successfully: an empty
+  `shotgun_sawedoff` occupied the primary sidearm holster, appeared under its
+  correct native wheel name at zero ammunition, and reached native readiness.
+- Loading Sawed-Off with regular shells passed: the ammunition activity closed,
+  menu state was `2/48/50`, the wheel showed `50`, and native readiness matched
+  the configured two-shell capacity.
+- One Sawed-Off shot checkpointed exactly one shell: authoritative/native state
+  became `49/1/48`, and condition decreased from `100` to `99`.
+- Native Sawed-Off reload conserved total and restored the chamber to
+  `49/2/47`; condition remained `99` and native state matched authority.
+- Gun-oil repair at Sawed-Off condition `99` consumed exactly one kit, returned
+  condition to `100`, and preserved ammunition at `49/2/47`.
+- Switching Sawed-Off to slugs passed at `50/2/48`: the menu displayed the Slug
+  type, native readiness was exact, and the wheel showed total `50`. As with
+  other single sidearms, the native wheel omitted the ammo-type label.
+- One Sawed-Off slug shot checkpointed one round; stable state became
+  `49/1/48`, the slug type remained selected, native total/clip matched, and
+  condition settled at `99`.
+- Sawed-Off slug resource restart and logout/reselection both passed. Logout
+  checkpointed `49/1`; reselection restored the primary holster, native total
+  `49`, and one-shell clip exactly.
+- Sawed-Off unload-all completed without a menu hang and settled the selected
+  slug state at `0/0/0` across menu, wheel, native state, and authority. Its
+  focused equip/capacity/fire/reload/repair/type/restart/logout/unload matrix is
+  complete.
+- Varmint per-model validation began successfully: the empty rifle occupied the
+  shoulder longarm slot and appeared correctly on the wheel. Loading regular
+  Varmint ammunition closed normally and produced exact `14/36/50` menu/native
+  state with wheel total `50`. No tranquilizer option was offered because none
+  was owned; the single-weapon wheel omitted the ammunition-type label.
+- The first Varmint shot reduced the native clip from `14` to `13`, but no
+  checkpoint ran and client authority still reported total `50`. The long-gun
+  observer had required sampling both `IsPedShooting` and the selected hash.
+  For a shoulder/back weapon whose ammo type is not shared by the other slot,
+  it now also derives missed consumption from a lower native ammo-type total.
+  Shared-ammo long-gun pairs retain their existing selected-shot attribution.
+  Live retry passed after restart: although extra-slot sync does not emit the
+  sidearm-style checkpoint line, authoritative `weaponstate` became
+  `49/13/36` with native clip `13`, proving exactly one round was persisted.
+- Native Varmint reload conserved total at `49` and restored the magazine and
+  reserve to `14/35`, with an exact native clip and shoulder attachment.
+- Switching Varmint to tranquilizer ammunition passed: the activity closed,
+  menu state was `14/36/50` with the correct Tranquilizer label, native grant
+  was `50/14`, and the wheel showed total `50` without a type label.
+- One tranquilizer shot persisted exactly as `49/13/36`; the wheel showed `49`,
+  native type remained `AMMO_22_TRANQUILIZER`, the clip matched at `13`, and
+  shoulder attachment remained correct. The animal tranquilizer effect has not
+  yet been observed live.
+- Native effect validation passed against white-tailed deer. Five tranquilizer
+  hits incapacitated the animal and produced a revive prompt; five regular
+  Varmint hits on a second deer caused lethal bleeding, no revive prompt, and a
+  corpse pickup prompt after death. Final tranquilizer state remained internally
+  exact at wheel/total `36`, loaded `9`, reserve `27`, condition `94`, with the
+  correct shoulder attachment.
+- Varmint resource restart passed with total `36` and tranquilizer type intact.
+  RedM had auto-reloaded the holstered rifle to its full fourteen-round magazine,
+  so the stable conserved state was `36/14/22` rather than the earlier partial
+  `36/9/27`; native and authoritative state matched. Gun-oil repair at condition
+  `94` consumed one kit, restored condition `100`, preserved `36/14/22`, and
+  retained the shoulder position.
+- Varmint logout/reselection passed: the rifle returned on the shoulder with
+  tranquilizer total `36` and loaded `14`. The logout diagnostic printed
+  `total=nil loaded=nil` because that legacy summary reports only the primary
+  sidearm; the checkpoint itself passed and long-gun restoration was exact.
+- Varmint unload-all completed without a menu hang and settled the retained
+  tranquilizer selection at `0/0/0` with correct shoulder attachment. Its
+  focused regular/tranquilizer effects, firing, reload, repair, restart,
+  logout, and unload matrix is complete.
+- Elephant Rifle validation began successfully: an empty `rifle_elephant`
+  occupied the shoulder slot, appeared under the correct wheel name, and showed
+  zero ammunition.
+- Initial Elephant loading exposed RedM's Nitro Express native ceiling: Feather
+  accepted `50/2/48`, while the native wheel/pool held only `20`. The isolated
+  long-gun observer then treated the missing 30 as consumption before the cap
+  fix, so the test inventory was manually restored by 30 rounds. Nitro Express
+  now defines `maxTotal = 20`; live retry loaded exactly `20/2/18`, left 30 of
+  50 rounds in Inventory, showed wheel `20`, and closed the activity normally.
+- One Elephant Rifle shot persisted exactly as `19/1/18`, with matching native
+  clip and correct shoulder attachment.
+- After logout/reselection restored `19/2/17`, a second Elephant shot persisted
+  `18/1/17` and lowered condition to `99`, enabling the live repair check.
+- Elephant gun-oil repair consumed exactly one kit, restored condition `100`,
+  and preserved `18/1/17` in the shoulder slot. Unload-all then closed normally,
+  returned all 18 remaining rounds (Inventory `30 -> 48`), and settled the
+  weapon/menu/wheel at `0/0/0`. The focused Elephant matrix is complete.
+- The post-Elephant release smoke test exposed a test-only assumption: active
+  metadata required `slots.primary`, so a valid shoulder-only loadout failed.
+  The assertion now accepts a consistent empty state or any nonempty combination
+  of primary/offhand/shoulder/back slots, requiring `runtimeMatches=true` for
+  every active slot. Live retry passed at release `8/8` with one shoulder slot.
+- The runtime lease smoke test likewise used only the legacy primary alias, so
+  a shoulder-only Elephant loadout produced `0/5` with no generation. It now
+  selects the first active named slot and passes that slot into every lease
+  acceptance/rejection check. Live retry passed `5/5` with
+  `slot=shoulder generation=1`; dual-slot remained `17/17` with the Elephant
+  recorded only in the shoulder slot.
+- Elephant resource restart passed on the shoulder at exact `19/2/17`.
+- Native Elephant reload conserved total and restored `19/2/17`, with the
+  two-round native clip and shoulder attachment exact.
+- Initial Nitro Express loading exposed RedM's native `20`-round ceiling:
+  Feather accepted and displayed `50/2/48`, while the wheel and native pool
+  contained only `20`. The ammunition definition now declares `maxTotal = 20`,
+  using the existing escrow-maximum validation so future loads, metadata, menu
+  limits, and native state share the same cap. Live recovery/reload is pending.
+- A subsequent tranquilizer hit on a fox produced no immediate visible effect.
+  Ammo accounting remained correct at total `48`; RedM auto-fed the magazine
+  back to `13` and reserve became `35`, while condition decreased to `99`.
+  A controlled whitetail-deer comparison then confirmed the native special-
+  ammo effect: five tranquilizer hits incapacitated the deer and exposed a
+  revive prompt, while five regular Varmint hits caused bleeding, rapid death,
+  no revive prompt, and then a corpse pickup prompt. Tranquilizer-effect
+  validation is closed.
+- Sawed-Off resource restart restored the slug state in the primary holster
+  with native total `49` and loaded clip `1`, matching persisted `49/1/48`.
+- Fresh female-character entitlement validation passed: two different empty
+  sidearms equipped in the correct primary/offhand holsters and dual-drew
+  without visible wardrobe changes. Removing offhand retained the primary;
+  removing primary left authoritative `equipped=false`, with no persistent
+  clothing or holster change.
+- LeMat per-model validation began successfully: an empty `revolver_lemat`
+  equipped in the primary sidearm holster, appeared correctly on the native
+  wheel at zero rounds, and reached native single-weapon readiness.
+- Loading LeMat with regular revolver ammunition passed: the activity returned,
+  the menu showed cylinder/reserve/total `9/41/50`, the native wheel showed
+  `50`, and single-weapon readiness reported the expected nine-round cylinder.
+- One LeMat revolver shot checkpointed exactly one round: persisted and native
+  state became `49/8/41`, the wheel showed `49`, and condition remained `100`.
+- LeMat's native reload occurred while holstered and conserved ownership:
+  checkpoint and `weaponstate` both showed `49/9/40`, with native total `49`
+  and an exact readable nine-round cylinder.
+- Switching LeMat from regular to high velocity exposed a transient single-clip
+  readiness bug. The menu and wheel initially showed `9/41/50`, but the native
+  clip immediately reported zero and the observer persisted `50/0/50`. Single
+  restore readiness previously accepted any readable clip; it now requires the
+  exact approved loaded count and reasserts that count during bounded retries
+  before enabling observation. Live retry passed after resetting the item:
+  high velocity remained stable at `50/9/41`, with exact native total and clip
+  after observation began.
+- One high-velocity LeMat shot and native reload passed: the shot moved the item
+  to `49/8/41`, and reload conserved total while restoring `49/9/40`; the high-
+  velocity type, native total, and nine-round clip remained exact.
+- LeMat resource restart and logout/reselection both restored high velocity at
+  `49/9/40` in the correct primary holster. A full-condition gun-oil attempt was
+  rejected without consuming the kit or changing weapon state.
+- LeMat visually switched between revolver and shotgun-barrel modes while the
+  wheel remained at total `49`. RedM exposed the mode animation as transient
+  cylinder reads `9 -> 0 -> 1 ... -> 9`, causing redundant loaded-count
+  checkpoints even though no ammunition was consumed. The single observer now
+  ignores lower LeMat clip reads while its ammo-type total is unchanged; real
+  shots still lower total and native reloads may still increase the cylinder.
+  Live mode-switch retry passed after restart: no transient checkpoints were
+  emitted and the final state remained high velocity `49/9/40`. Single-sidearm
+  wheel presentation also continued to omit the ammo-type label; paired
+  sidearms display it.
+- LeMat resource restart and logout/reselection both passed at high velocity
+  `49/9/40`. Logout checkpointed `49/9`, and reselection restored native total
+  `49`, loaded `9`, and the correct holstered presentation. Two unrelated
+  `feather-menu` network errors appeared during character selection but did not
+  interrupt Weapons restoration.
+- One revolver-mode LeMat high-velocity shot checkpointed exactly one round:
+  authoritative and native state became `49/8/41`, with the selected special
+  ammunition type unchanged.
+- Shared-ammunition shoulder/back validation began with an empty Springfield in
+  the shoulder slot and an attempted empty Bolt Action in back. The server still
+  rejected matching native ammo types despite the existing client coordinator,
+  atomic pair sync, and explicit validation milestone. That stale equip guard
+  was removed. Live validation then equipped Springfield shoulder and Bolt
+  Action back with correct names, holsters, and independent empty records.
+- Loading both shared-pool rifles produced independent authoritative balances of
+  `50/1/49` and `50/5/45`. RedM's wheel displayed `50` beside both weapons
+  because they share `AMMO_RIFLE`, but `weaponstate` and server leases retained
+  distinct ownership. The shared-pool observer was extended to attribute a
+  firing transition even when RedM refilled a single-shot clip before it could
+  be sampled, and to treat a selected shared weapon's clip decrease as shot
+  evidence when the firing pulse is missed.
+- Independent shared-pool firing passed after those observer fixes. Springfield
+  consumed one and auto-reloaded to `49/1/48` without changing Bolt Action;
+  Bolt Action consumed one to `49/3/46` in the retest without changing
+  Springfield. Native controlled reload restored Bolt Action to `49/5/44`.
+  Resource restart and logout/reselection preserved both exact records and
+  holster positions. Unloading each weapon independently returned all remaining
+  ammunition, ending at `0/0/0` for both and exactly `98` regular rifle rounds
+  in Inventory. Release, dual-slot, and runtime-lease smoke tests subsequently
+  passed `8/8`, `17/17`, and `5/5` with both long-gun slots active. A full client
+  quit/reconnect restored Springfield shoulder and Bolt Action back with exact
+  empty balances, condition `99`, readable zero clips, and correct visuals.
+  Shared-ammunition conservation, slot isolation, and persistence pass.
 
 ### Next steps
 
 1. Keep `WeaponReleaseContractSmokeTest` at `8/8` and
    `WeaponDualSlotContractSmokeTest` at `17/17` on the target server build.
-2. Extend distinct-ammunition dual-sidearm validation beyond the completed
-   Cattleman-high-velocity/Schofield-regular case: reverse the equip/type order,
-   exercise partial and empty clips, and repeat with representative pistol and
-   revolver combinations. Per-item GUID readiness, adjusted native-pool seeding,
-   and the repeatable checklist in `docs/ammunition-types.md` are available.
-3. Complete the fresh female-character offhand entitlement and cleanup check.
+2. [x] Complete distinct-ammunition dual-sidearm validation in both equip
+   orders with representative revolver and pistol pairs, including partial and
+   empty clips, fallback/re-pair, firing, reload, logout, and resource restart.
+3. [x] Complete the fresh female-character offhand entitlement and cleanup check.
 4. Complete the per-model live matrix: Admin grant, equip, fire, native reload,
    unload, gun-oil repair, logout/reselection, and resource restart.
 5. Verify clip capacity, holster placement, wheel behavior, and special-ammo
@@ -663,9 +857,9 @@ A phase is complete only when:
 6. Repeat representative family checks with two simultaneous players and
    supported different-hash sidearm pairs, covering both shared and distinct
    native ammunition types.
-7. Complete shared-ammunition shoulder/back restoration, independent firing and
-   reload, escrow conservation, wheel/holster presentation, logout, client
-   quit, and full-restart validation.
+7. Complete shared-ammunition shoulder/back client-quit and full-server-restart
+   validation. Pair restoration, independent firing/reload, escrow conservation,
+   wheel/holster presentation, resource restart, and logout already pass.
 8. After the catalog is accepted, build the attachment compatibility worksheet
    and add one fully tested component vertical slice beyond the Cattleman Long
    Barrel.

@@ -847,15 +847,20 @@ local function AwaitSingleNativeRestore(state)
                 return
             end
 
-            local clipOk = GetAmmoInClip(ped, weaponHash)
+            local clipOk, clipAmount = GetAmmoInClip(ped, weaponHash)
+            local observedLoaded = math.max(0, math.floor(tonumber(clipAmount) or 0))
             local nativeTotal = math.max(0, math.floor(tonumber(GetPedAmmoByType(ped, ammoHash)) or 0))
-            if NativeTrue(clipOk) and nativeTotal == state.ammo then
+            if NativeTrue(clipOk) and observedLoaded == state.loaded
+                and nativeTotal == state.ammo then
                 singleNativeReady = true
                 if Config.DevMode then
                     print(('[feather-weapons] native single weapon ready item=%s total=%s')
                         :format(tostring(state.itemInstanceId), tostring(nativeTotal)))
                 end
                 return
+            end
+            if nativeTotal == state.ammo and observedLoaded ~= state.loaded then
+                SetAmmoInClip(ped, weaponHash, state.loaded)
             end
             Wait(50)
         end
@@ -2777,17 +2782,24 @@ CreateThread(function()
             local ammoHash = equipped.nativeAmmoName and joaat(equipped.nativeAmmoName) or nil
             if ammoHash then
                 local clipOk, clipAmount = GetAmmoInClip(ped, joaat(equipped.nativeWeaponName))
+                local observed = math.max(0,
+                    math.floor(tonumber(GetPedAmmoByType(ped, ammoHash)) or 0))
                 local clipChanged = false
                 local previousLoaded = desiredLoaded
                 local observedLoaded = previousLoaded or 0
                 if clipOk == true or clipOk == 1 then
                     observedLoaded = math.max(0, math.floor(tonumber(clipAmount) or 0))
-                    clipChanged = desiredLoaded ~= nil and observedLoaded ~= desiredLoaded
-                    desiredLoaded = observedLoaded
+                    local lematModeTransition = equipped.definitionId == 'revolver_lemat'
+                        and previousLoaded ~= nil and observedLoaded < previousLoaded
+                        and observed >= desiredAmmo
+                    if lematModeTransition then
+                        observedLoaded = previousLoaded
+                    else
+                        clipChanged = desiredLoaded ~= nil and observedLoaded ~= desiredLoaded
+                        desiredLoaded = observedLoaded
+                    end
                 end
 
-                local observed = math.max(0,
-                    math.floor(tonumber(GetPedAmmoByType(ped, ammoHash)) or 0))
                 local firing = GetGameTimer() <= fireWindowUntil
                 local clipConsumed = firing and previousLoaded ~= nil
                     and math.max(0, previousLoaded - observedLoaded) or 0
@@ -2925,12 +2937,24 @@ CreateThread(function()
     local observationInterval = math.max(25, math.floor(tonumber(runtimeConfig.observationIntervalMs) or 50))
     local checkpointDebounce = math.max(0, math.floor(tonumber(runtimeConfig.checkpointDebounceMs) or 250))
     local fireWindowUntil = 0
+    local wasShooting = false
+    local shotSequence = 0
+    local attributedShotSequence = 0
+    local shotWeapon
     while true do
         local active = false
         local ped = PlayerPedId()
-        if NativeTrue(IsPedShooting(ped)) then fireWindowUntil = GetGameTimer() + 250 end
-
         local selectedOk, selectedWeapon = GetCurrentPedWeapon(ped, true, 0, false)
+        local shooting = NativeTrue(IsPedShooting(ped))
+        if shooting then
+            fireWindowUntil = GetGameTimer() + 250
+            if not wasShooting then
+                shotSequence = shotSequence + 1
+                shotWeapon = NativeTrue(selectedOk) and selectedWeapon or nil
+            end
+        end
+        wasShooting = shooting
+
         for _, slot in ipairs({ 'shoulder', 'back' }) do
             local state = extraSlots[slot]
             local observed = extraObserved[slot]
@@ -2940,13 +2964,34 @@ CreateThread(function()
                 local clipOk, clipAmount = GetAmmoInClip(ped, weaponHash)
                 if NativeTrue(clipOk) then
                     local loaded = math.max(0, math.floor(tonumber(clipAmount) or 0))
-                    if loaded < observed.loaded and GetGameTimer() <= fireWindowUntil
-                        and NativeTrue(selectedOk)
-                        and selectedWeapon == weaponHash then
-                        observed.consumed = observed.consumed + (observed.loaded - loaded)
+                    local clipDecrease = math.max(0, observed.loaded - loaded)
+                    local otherSlot = slot == 'shoulder' and 'back' or 'shoulder'
+                    local other = extraSlots[otherSlot]
+                    local isolatedAmmoPool = not other
+                        or other.nativeAmmoName ~= state.nativeAmmoName
+                    local poolDecrease = 0
+                    if isolatedAmmoPool and state.nativeAmmoName then
+                        local authorized = math.max(0,
+                            (tonumber(state.ammo) or 0) - observed.consumed)
+                        local nativeTotal = math.max(0, math.floor(tonumber(
+                            GetPedAmmoByType(ped, joaat(state.nativeAmmoName))) or 0))
+                        poolDecrease = math.max(0, authorized - nativeTotal)
+                    end
+                    local selectedShot = clipDecrease > 0
+                        and GetGameTimer() <= fireWindowUntil
+                        and NativeTrue(selectedOk) and selectedWeapon == weaponHash
+                    local sharedShot = not isolatedAmmoPool
+                        and NativeTrue(selectedOk) and selectedWeapon == weaponHash
+                        and (clipDecrease > 0
+                            or (shotSequence > attributedShotSequence and shotWeapon == weaponHash))
+                    if poolDecrease > 0 or selectedShot or sharedShot then
+                        observed.consumed = observed.consumed
+                            + math.max(poolDecrease, selectedShot and clipDecrease or 0,
+                                sharedShot and math.max(1, clipDecrease) or 0)
+                        if sharedShot then attributedShotSequence = shotSequence end
                     end
 
-                    local changed = loaded ~= observed.loaded
+                    local changed = loaded ~= observed.loaded or poolDecrease > 0 or sharedShot
                     observed.loaded = loaded
                     if changed then
                         local itemInstanceId, generation = state.itemInstanceId, state.generation
