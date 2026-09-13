@@ -98,24 +98,6 @@ local function ValidateSlotEligibility(source, slot, definition, correlationId, 
                 }, correlationId)
         end
     end
-    if expectedCategory == "longgun" then
-        local ammunitionType = metadata.ammo.type or definition.ammunitionType
-        local ammunition = DefinitionRegistry.Get("ammunition", ammunitionType)
-        if not ammunition.ok then return ammunition end
-        for _, otherSlot in ipairs(Config.Loadout.longgunSlots or {}) do
-            local other = runtime and runtime.slots and runtime.slots[otherSlot] or nil
-            if other and otherSlot ~= slot
-                and other.nativeAmmoName == ammunition.value.nativeAmmoName then
-                return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
-                    "Shoulder and back weapons must use different ammunition types", {
-                        slot = slot,
-                        otherSlot = otherSlot,
-                        ammunitionType = ammunitionType,
-                        nativeAmmoName = ammunition.value.nativeAmmoName
-                    }, correlationId)
-            end
-        end
-    end
     if slot ~= "offhand" then return WeaponResult.Ok(slot, correlationId) end
 
     local settings = Config.Offhand or {}

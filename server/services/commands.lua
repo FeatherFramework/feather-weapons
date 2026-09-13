@@ -69,29 +69,38 @@ RegisterCommand("WeaponRuntimeLeaseSmokeTest", function(source, args)
             targetSource = players[1] and tonumber(players[1]) or nil
         end
         local runtime = targetSource and WeaponRuntime.Get(targetSource) or nil
-        local equipped = runtime and runtime.equipped or nil
+        local activeSlot, equipped = nil, nil
+        for _, slot in ipairs({ "primary", "offhand", "shoulder", "back" }) do
+            local candidate = runtime and runtime.slots and runtime.slots[slot] or nil
+            if candidate then
+                activeSlot, equipped = slot, candidate
+                break
+            end
+        end
         local sessionId = runtime and runtime.sessionId or nil
         local tests = {
             { name = "active equipped lease", passed = equipped ~= nil },
             {
                 name = "current lease accepted",
                 passed = equipped ~= nil and WeaponRuntime.MatchesLease(
-                    targetSource, sessionId, equipped.itemInstanceId, equipped.generation)
+                    targetSource, sessionId, equipped.itemInstanceId, equipped.generation, activeSlot)
             },
             {
                 name = "stale generation rejected",
                 passed = equipped ~= nil and not WeaponRuntime.MatchesLease(
-                    targetSource, sessionId, equipped.itemInstanceId, (equipped.generation or 0) - 1)
+                    targetSource, sessionId, equipped.itemInstanceId,
+                    (equipped.generation or 0) - 1, activeSlot)
             },
             {
                 name = "foreign item rejected",
                 passed = equipped ~= nil and not WeaponRuntime.MatchesLease(
-                    targetSource, sessionId, "foreign-item", equipped.generation)
+                    targetSource, sessionId, "foreign-item", equipped.generation, activeSlot)
             },
             {
                 name = "foreign session rejected",
                 passed = equipped ~= nil and not WeaponRuntime.MatchesLease(
-                    targetSource, "foreign-session", equipped.itemInstanceId, equipped.generation)
+                    targetSource, "foreign-session", equipped.itemInstanceId,
+                    equipped.generation, activeSlot)
             }
         }
         local passed = 0
@@ -100,8 +109,9 @@ RegisterCommand("WeaponRuntimeLeaseSmokeTest", function(source, args)
             print(("[WeaponRuntimeLeaseSmokeTest] %-27s %s"):format(
                 test.name, test.passed and "PASS" or "FAIL"))
         end
-        print(("[WeaponRuntimeLeaseSmokeTest] done %d/%d passed source=%s generation=%s"):format(
-            passed, #tests, tostring(targetSource), tostring(equipped and equipped.generation)))
+        print(("[WeaponRuntimeLeaseSmokeTest] done %d/%d passed source=%s slot=%s generation=%s"):format(
+            passed, #tests, tostring(targetSource), tostring(activeSlot),
+            tostring(equipped and equipped.generation)))
     end, true)
 
 RegisterCommand("WeaponDualSlotContractSmokeTest", function(source, args)
@@ -350,6 +360,21 @@ RegisterCommand("WeaponReleaseContractSmokeTest", function(source, args)
             for _, route in ipairs(routesResult.value or {}) do routes[route.route] = true end
         end
         local metadata = targetSource and ReconciliationService.InspectMetadata(targetSource) or nil
+        local activeMetadataValid = type(metadata) == "table" and metadata.ok == true
+            and type(metadata.value) == "table" and type(metadata.value.slots) == "table"
+        local activeSlotCount = 0
+        if activeMetadataValid then
+            for _, slot in ipairs({ "primary", "offhand", "shoulder", "back" }) do
+                local entry = metadata.value.slots[slot]
+                if entry ~= nil then
+                    activeSlotCount = activeSlotCount + 1
+                    if entry.runtimeMatches ~= true then activeMetadataValid = false end
+                end
+            end
+            activeMetadataValid = activeMetadataValid
+                and ((metadata.value.equipped == true and activeSlotCount > 0)
+                    or (metadata.value.equipped == false and activeSlotCount == 0))
+        end
         local tests = {
             {
                 name = "definitions ready",
@@ -399,14 +424,9 @@ RegisterCommand("WeaponReleaseContractSmokeTest", function(source, args)
             },
             {
                 name = "active metadata valid",
-                passed = type(metadata) == "table"
-                    and metadata.ok == true and metadata.value.equipped == true
-                    and type(metadata.value.slots) == "table"
-                    and metadata.value.slots.primary ~= nil
-                    and metadata.value.slots.primary.runtimeMatches == true
-                    and (metadata.value.slots.offhand == nil
-                        or metadata.value.slots.offhand.runtimeMatches == true),
-                detail = targetSource and ("source=" .. tostring(targetSource)) or "no player"
+                passed = activeMetadataValid,
+                detail = targetSource and ("source=" .. tostring(targetSource)
+                    .. " activeSlots=" .. tostring(activeSlotCount)) or "no player"
             }
         }
         local passed = 0
