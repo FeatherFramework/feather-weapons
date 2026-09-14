@@ -12,7 +12,7 @@ WEAPON_REPEATER_HENRY. Scoped rifles use the WEAPON_SNIPERRIFLE natives.
 All new entries inherit the existing condition policy: 100 maximum condition,
 one condition per shot, and one gun_oil restoring 25 condition. New inventory
 rows use the existing weapon defaults (weight 2, maximum quantity 20).
-Only the existing Cattleman has a configured attachment slot.
+Only the existing Cattleman currently has configured attachment slots.
 
 The Varmint Rifle uses ammo_varmint. The Elephant Rifle uses
 ammo_rifle_elephant (AMMO_RIFLE_ELEPHANT), bringing ammunition definitions to 27.
@@ -34,7 +34,7 @@ Existing installations using the old inventory names must first run
 sql/rename_weapon_item_names.sql as described in the README.
 
 Run WeaponReleaseContractSmokeTest 1; expected counts are
-weapon=24 ammunition=27 attachment=1.
+weapon=24 ammunition=27 attachment=2.
 
 Live-test each new model: grant, equip, refill, fire, reload, unload, repair,
 logout/rejoin, and verify native clip capacity against the configured capacity.

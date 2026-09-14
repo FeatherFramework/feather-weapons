@@ -155,7 +155,7 @@ and cleanup gate is closed.
   weapons are safe.
 - [x] Add startup cross-reference validation, installation SQL, recipe seeds,
   alpha item-name migration, Inventory artwork, and catalog documentation.
-- [ ] Validate Admin grant, single equip, switching, holster restoration,
+- [x] Validate Admin grant, single equip, switching, holster restoration,
   firing, reload, unload, repair, logout/reselection, and restart for every
   shipped model.
 - [ ] Test representative shared native ammo pools and two-player isolation in
@@ -218,7 +218,9 @@ and cleanup gate is closed.
 
 ### Work
 
-- Expand attachment definitions beyond the Cattleman Long Barrel.
+- [x] Add the Cattleman Wide Sight as the first definition beyond the validated
+  Cattleman Long Barrel, backed by a compatibility worksheet and verified native
+  component mapping. Its live lifecycle remains pending.
 - Model component slots, compatibility, conflicts, prerequisites, and defaults.
 - Preserve independent modifications on every supported equipped weapon instance.
 - Apply components by approved item identity and reconcile failed native
@@ -839,7 +841,172 @@ A phase is complete only when:
   passed `8/8`, `17/17`, and `5/5` with both long-gun slots active. A full client
   quit/reconnect restored Springfield shoulder and Bolt Action back with exact
   empty balances, condition `99`, readable zero clips, and correct visuals.
-  Shared-ammunition conservation, slot isolation, and persistence pass.
+  A subsequent full server restart produced the same exact shoulder/back state
+  and logged a zero-authority shared pool. Shared-ammunition conservation, slot
+  isolation, and persistence pass.
+- Two-player isolation passed on separate PCs and game accounts. Player 1 used
+  a shared-`AMMO_RIFLE` Springfield/Bolt Action shoulder/back pair while Player
+  2 used distinct regular-revolver/high-velocity-pistol sidearms. Individual
+  and approximately simultaneous shots changed only the firing item; simultaneous
+  reloads conserved each total and changed only the selected clip/reserve.
+  Player 2 logout/re-entry left Player 1 exact, and the reciprocal Player 1
+  logout/re-entry left Player 2 exact. All four leases, ammunition types,
+  balances, conditions, and slot positions remained isolated.
+- The Cattleman Wide Sight is the first attachment definition beyond the Long
+  Barrel. Its verified model-specific component applied visibly and consumed one
+  item while preserving weapon identity, lease, `50/6/44` ammunition, and
+  condition `100`. Wide Sight and Long Barrel coexisted as separate sight/barrel
+  slots through resource restart, logout/re-entry, full server restart, and a
+  primary-to-offhand role change. Removal returned one item while retaining the
+  Long Barrel; offhand reinstallation consumed it again. Duplicate installation
+  was unavailable without consuming an extra item, and the incompatible Mauser
+  exposed no install action. The compatibility worksheet records the mapping
+  and completed lifecycle. Post-change regression passed release `8/8`,
+  dual-slot `17/17`, and runtime lease `5/5` with the modified Cattleman in the
+  offhand slot.
+- Carbine Repeater focused validation passed in the shoulder slot. Empty equip
+  showed the correct name and `0/0/0`; regular ammunition loaded to `50/7/43`,
+  fired to `49/6/43`, and reloaded to `49/7/42`. Switching to high velocity
+  produced `50/7/43`; firing and reload conserved it at `49/7/42`. Resource
+  observation, logout/re-entry, and native clips remained exact. Five further
+  shots produced `44/2/42` and condition `99`; one gun oil was consumed,
+  restored condition `100`, and RedM auto-reloaded to conserved `44/7/37`.
+  Unload-all returned all 44 high-velocity rounds and settled at `0/0/0` while
+  retaining the selected ammunition type. The Carbine matrix is complete.
+- Lancaster Repeater focused validation passed in the shoulder slot. Empty equip
+  was correct; regular ammunition loaded to `49/14/35`. High velocity loaded to
+  `43/14/29` after firing and reload, with exact total and clip behavior. The
+  first logout exposed a transient native zero clip that was persisted as an
+  empty magazine. Long-gun observation now rejects unexplained isolated-pool
+  clip decreases when neither firing nor native-total reduction occurred, and
+  the final holster settle reasserts approved long-gun clips. Live retry restored
+  authoritative and native state exactly at `43/14/29` without a draw reload.
+  Unload-all returned all 43 rounds and settled at `0/0/0`. The Lancaster matrix
+  is complete.
+- Litchfield Repeater focused validation passed in the shoulder slot. Empty equip
+  and wheel presentation were correct. Regular ammunition loaded to `48/16/35`,
+  fired to `47/15/32`, and high velocity later conserved through fire/reload at
+  `42/16/26`. Resource restart restored the exact clip. Five additional shots
+  produced `37/11/26` and condition `99`; one gun oil restored condition
+  `100` without changing ammunition. Logout/re-entry restored authoritative and
+  native state exactly at `37/11/26`. Unload-all returned all 37 rounds and
+  settled at `0/0/0`. The Litchfield matrix is complete.
+- Evans Repeater focused validation passed in the shoulder slot. Regular
+  ammunition loaded to `47/15/32` after one shot and reloaded to `46/26/20`.
+  High velocity loaded to `37/26/11`; five shots produced `32/21/11` and
+  condition `99`. One gun oil restored condition `100` without changing ammo.
+  Resource restart and logout restored `32/21/11` exactly. Unload-all returned
+  all 32 rounds and settled at `0/0/0`. The Evans matrix is complete.
+- Double-Barreled Shotgun focused validation passed in the shoulder slot,
+  including its logout/reselection lifecycle. The final slug unload-all began
+  at `48/2/46`, returned all 48 remaining slugs to Inventory, retained the slug
+  selection, and settled the menu, authoritative state, and readable native
+  clip at `0/0/0` with the correct shoulder attachment. The Double-Barreled
+  Shotgun matrix is complete.
+- Pump-Action Shotgun focused validation passed in the shoulder slot. Regular
+  ammunition loaded to `48/5/43`, fired to `47/4/43`, and reloaded to
+  `47/5/42`; gun oil restored condition from `99` to `100` without changing
+  ammunition. Switching to slugs produced `48/5/43`, and slug firing/reload
+  conserved the item at `47/5/42` with condition `99`. Resource restart and
+  logout/reselection restored the exact authoritative and native total, clip,
+  ammo type, and shoulder placement. The wheel briefly displayed only the
+  five-shell clip after restore, then converged to the full native total `47`
+  without intervention. Unload-all returned all 47 slugs and settled menu,
+  authority, native total, clip, and wheel at `0/0/0`. The Pump-Action matrix
+  is complete.
+- Semi-Auto Shotgun focused validation passed in the shoulder slot. Regular
+  ammunition loaded to `47/5/42`, fired to `46/4/42`, and reloaded to
+  `46/5/41`; gun oil restored condition from `99` to `100` without changing
+  ammunition. Slugs loaded to `47/5/42`, then firing and reload conserved the
+  item at `46/5/41` with condition `99`. Resource restart restored every field
+  exactly. Initial logout/reselection retained the authoritative and native
+  total `46` and clip `5`, but RedM's wheel exposed only the clip until a
+  resource restart recreated the weapon. Isolated long guns are now recreated
+  during the delayed character-restore settle; live logout retry restored the
+  wheel directly at `46` with exact authority, native pool, clip, ammo type,
+  and shoulder placement. Unload-all returned all 46 slugs and settled at
+  `0/0/0`. The Semi-Auto matrix is complete.
+- Repeating Shotgun focused validation passed in the shoulder slot. Regular
+  ammunition loaded to `46/6/40`, fired to `45/5/40`, and auto-reloaded while
+  holstered to `45/6/39`; gun oil restored condition from `99` to `100`
+  without changing ammunition. Slugs loaded to `46/6/40`, fired to
+  `45/5/40`, and auto-reloaded to `45/6/39` with condition `99`. Resource
+  restart and logout/reselection restored the exact authoritative and native
+  total, six-shell clip, ammo type, wheel quantity, and shoulder placement.
+  Unload-all returned all 45 slugs and settled at `0/0/0`. The Repeating
+  Shotgun matrix is complete, and all five shipped shotgun models have now
+  completed focused validation.
+- M1899 Pistol focused validation passed in the primary slot. Regular
+  ammunition loaded to `50/8/42`, fired to `49/7/42`, and reloaded to
+  `49/8/41`; four further shots reached `45/4/41` and condition `98`, then one
+  gun oil restored condition `100` without changing ammunition. Switching to
+  high velocity produced `50/8/42`, and firing/reload conserved it at
+  `49/8/41`. Resource restart and logout/reselection restored the exact ammo
+  type, total, clip, condition, and primary holster. Unload-all returned all
+  49 high-velocity rounds and settled at `0/0/0`. The M1899 matrix is complete.
+- Semi-Automatic Pistol focused validation passed in the primary slot. Regular
+  ammunition loaded to `45/8/37`, fired to `44/7/37`, and reloaded to
+  `44/8/36`; four further shots reached `40/4/36` and condition `98`, then one
+  gun oil restored condition `100` without changing ammunition. High velocity
+  loaded to `49/8/41`, fired to `48/7/41`, and reloaded to `48/8/40`.
+  Resource restart and logout/reselection restored the exact ammo type, total,
+  clip, condition, and primary holster. Unload-all returned all 48
+  high-velocity rounds and settled at `0/0/0`. The Semi-Automatic Pistol matrix
+  is complete.
+- Double-Action Revolver focused validation passed in the primary slot. Regular
+  ammunition loaded to `50/6/44`, fired to `49/5/44`, and reloaded to
+  `49/6/43`; four further shots reached `45/2/43` and condition `98`, then one
+  gun oil restored condition `100` without changing ammunition. High velocity
+  loaded to `50/6/44`, fired to `49/5/44`, and reloaded to `49/6/43`.
+  Resource restart restored exactly. Initial logout/reselection retained the
+  authoritative and native total but exposed only the six-round clip on the
+  wheel. The delayed character-restore recreation was extended from isolated
+  long guns to single sidearms; live retry restored wheel `49` directly with
+  exact ammo, clip, condition, type, and holster placement. Unload-all returned
+  all 49 high-velocity rounds and settled at `0/0/0`. The Double-Action matrix
+  is complete.
+- Navy Revolver focused validation passed in the primary slot. Regular
+  ammunition loaded to `45/6/39`, fired to `44/5/39`, and reloaded to
+  `44/6/38`; four further shots reached `40/2/38` and condition `98`, then gun
+  oil restored condition `100` without changing ammunition. High velocity
+  loaded to `49/6/43`, fired to `48/5/43`, and reloaded to `48/6/42`.
+  Resource restart and logout/reselection restored the exact ammo type, total,
+  clip, condition, wheel quantity, and primary holster. Unload-all returned all
+  48 high-velocity rounds and settled at `0/0/0`. The Navy matrix is complete.
+- Rolling Block Rifle focused validation passed in the shoulder slot. Regular
+  ammunition loaded to `50/1/49`; five fired rounds auto-reloaded correctly to
+  `45/1/44` and reduced condition to `98`, then gun oil restored condition
+  `100` without changing ammunition. High velocity loaded to `50/1/49`, fired,
+  and auto-reloaded to `49/1/48`. Resource restart and logout/reselection
+  restored the exact ammo type, total, single-round chamber, condition, wheel
+  quantity, and shoulder placement. Unload-all returned all 49 high-velocity
+  rounds and settled at `0/0/0`. The Rolling Block matrix is complete.
+- Carcano Rifle focused validation passed in the shoulder slot. Regular
+  ammunition loaded to `50/6/44`, fired to `49/5/44`, and reloaded to
+  `49/6/43`; four further shots reached `45/2/43` and condition `98`, then gun
+  oil restored condition `100` without changing ammunition. High velocity
+  loaded to `49/6/43`, fired to `48/5/43`, and reloaded to `48/6/42`.
+  Resource restart and logout/reselection restored exact authority, native
+  total, clip, ammo type, condition, wheel quantity, and shoulder placement.
+  Unload-all returned all 48 high-velocity rounds and settled at `0/0/0`. The
+  Carcano matrix is complete.
+- Post-catalog and post-wheel-cache-fix regression gates passed on the target
+  server with an empty Carcano active in the shoulder slot: release `8/8`,
+  dual-slot `17/17`, and runtime lease `5/5`. The lease gate selected
+  `slot=shoulder generation=1`; every stale-generation, foreign-item, and
+  foreign-session attempt failed closed.
+- The remaining per-model repair gaps passed. Gun oil restored Volcanic
+  `96 -> 100` while preserving `32/8/24`, Mauser `97 -> 100` at `25/10/15`,
+  modified Cattleman `98 -> 100` at `34/6/28` while retaining both Long Barrel
+  and Wide Sight, Schofield `98 -> 100` at `28/6/22`, and Springfield
+  `96 -> 100` at `46/1/45` with its shoulder placement intact. Bolt Action
+  repair restored `99 -> 100` while conserving its empty `0/0/0` state and
+  shoulder placement. Each repair consumed exactly one gun oil. Successful
+  repair coverage is now complete across the shipped firearm catalog.
+- Final post-fix regression passed with the repaired empty Bolt Action active
+  in the shoulder slot: release `8/8`, dual-slot `17/17`, and runtime lease
+  `5/5` at `slot=shoulder generation=8`. This run includes both delayed
+  character-restore recreation paths: isolated long guns and single sidearms.
 
 ### Next steps
 
@@ -849,17 +1016,16 @@ A phase is complete only when:
    orders with representative revolver and pistol pairs, including partial and
    empty clips, fallback/re-pair, firing, reload, logout, and resource restart.
 3. [x] Complete the fresh female-character offhand entitlement and cleanup check.
-4. Complete the per-model live matrix: Admin grant, equip, fire, native reload,
+4. [x] Complete the per-model live matrix: Admin grant, equip, fire, native reload,
    unload, gun-oil repair, logout/reselection, and resource restart.
-5. Verify clip capacity, holster placement, wheel behavior, and special-ammo
+5. [x] Verify clip capacity, holster placement, wheel behavior, and special-ammo
    effects for each firearm family, with focused checks for LeMat, Sawed-Off,
    Varmint, Elephant Rifle, and long guns.
-6. Repeat representative family checks with two simultaneous players and
+6. [x] Repeat representative family checks with two simultaneous players and
    supported different-hash sidearm pairs, covering both shared and distinct
    native ammunition types.
-7. Complete shared-ammunition shoulder/back client-quit and full-server-restart
-   validation. Pair restoration, independent firing/reload, escrow conservation,
-   wheel/holster presentation, resource restart, and logout already pass.
-8. After the catalog is accepted, build the attachment compatibility worksheet
-   and add one fully tested component vertical slice beyond the Cattleman Long
-   Barrel.
+7. [x] Complete shared-ammunition shoulder/back restoration, independent firing
+   and reload, escrow conservation, wheel/holster presentation, logout, client
+   quit, resource restart, and full-server-restart validation.
+8. [x] Build the attachment compatibility worksheet and add one fully tested
+   component vertical slice beyond the Cattleman Long Barrel.

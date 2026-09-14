@@ -32,6 +32,7 @@ local holsterSequence = 0
 local maintenanceSyncInFlight = {}
 local maintenanceBatchInFlight = false
 local inventoryMutationCooldownUntil = 0
+local logoutCheckpointInFlight = false
 
 local function NativeTrue(value)
     return value == true or value == 1
@@ -730,6 +731,7 @@ local function ClearNativeWeapon()
     pairFallbackPending = nil
     unloadInFlight, unloadQueued = false, false
     observerCorrectionPending = false
+    logoutCheckpointInFlight = false
     ResolveCheckpointWaiters({ ok = false, code = 'session_cleared', message = 'Weapon session was cleared.' })
     attachmentReconcileUntil = 0
 end
@@ -1457,7 +1459,7 @@ local function ScheduleRestoredWeaponsHolster()
         } or false
     end
 
-    for _, delay in ipairs({ 0, 250, 750, 1500 }) do
+    for _, delay in ipairs({ 0, 250, 750, 1500, 3000 }) do
         SetTimeout(delay, function()
             if sequence ~= holsterSequence then return end
             for _, slot in ipairs(WeaponConstants.LoadoutSlots) do
@@ -1475,7 +1477,7 @@ local function ScheduleRestoredWeaponsHolster()
                 if not primaryOk or not offhandOk
                     or (math.max(0, tonumber(primaryLoaded) or 0)
                         + math.max(0, tonumber(offhandLoaded) or 0)) == 0 then
-                    if Config.DevMode and delay == 1500 then
+                    if Config.DevMode and delay == 3000 then
                         print('[feather-weapons] restored weapons holster deferred: native clips are not ready')
                     end
                     return
@@ -1488,10 +1490,15 @@ local function ScheduleRestoredWeaponsHolster()
             HolsterPedWeapons(ped, true, true, true, true)
             SetCurrentPedWeapon(ped, joaat('WEAPON_UNARMED'), true, 0, false, false)
 
-            if delay == 1500 then
+            if delay == 3000 then
                 if equipped and not offhand then
-                    SetNativeAmmo(equipped.nativeAmmoName, equipped.ammo,
-                        equipped.nativeWeaponName, equipped.loaded)
+                    -- Character selection can also leave a single sidearm's
+                    -- wheel cache showing only its clip while the ammo-type
+                    -- pool remains exact. Recreate it after the character
+                    -- settles for the same reason as an isolated long gun.
+                    GiveApprovedNativeWeapon(equipped.nativeWeaponName,
+                        equipped.nativeAmmoName, equipped.ammo, equipped.loaded,
+                        equipped.attachments)
                     AwaitSingleNativeRestore(equipped)
                 elseif equipped and offhand then
                     local primaryOk, primaryLoaded, offhandOk, offhandLoaded =
@@ -1502,10 +1509,27 @@ local function ScheduleRestoredWeaponsHolster()
                         total = PairNativeTotal(equipped, offhand)
                     }
                 end
+                for _, slot in ipairs({ 'shoulder', 'back' }) do
+                    local state = extraSlots[slot]
+                    local other = extraSlots[slot == 'shoulder' and 'back' or 'shoulder']
+                    if state and (not other
+                        or other.nativeAmmoName ~= state.nativeAmmoName) then
+                        -- Character selection can rebuild RedM's per-weapon
+                        -- wheel cache after the first grant. The ammo-type pool
+                        -- remains exact, but the wheel then exposes only the
+                        -- loaded clip until the weapon instance is recreated.
+                        -- Recreate isolated long guns after the character has
+                        -- settled so wheel, pool, and persisted total agree.
+                        GiveApprovedNativeWeapon(state.nativeWeaponName,
+                            state.nativeAmmoName, state.ammo, state.loaded,
+                            state.attachments)
+                    end
+                end
+                RefreshSharedLonggunPools()
                 presentationRestoreInFlight = false
             end
 
-            if Config.DevMode and delay == 1500 then
+            if Config.DevMode and delay == 3000 then
                 print(('[feather-weapons] restored weapons holstered=%s'):format(
                     tostring(NativeTrue(Citizen.InvokeNative(0xBDD9C235D8D1052E, ped))))) -- IsPedCurrentWeaponHolstered
             end
@@ -2958,7 +2982,7 @@ CreateThread(function()
         for _, slot in ipairs({ 'shoulder', 'back' }) do
             local state = extraSlots[slot]
             local observed = extraObserved[slot]
-            if state and observed then
+            if state and observed and not logoutCheckpointInFlight then
                 active = true
                 local weaponHash = joaat(state.nativeWeaponName)
                 local clipOk, clipAmount = GetAmmoInClip(ped, weaponHash)
@@ -2980,6 +3004,15 @@ CreateThread(function()
                     local selectedShot = clipDecrease > 0
                         and GetGameTimer() <= fireWindowUntil
                         and NativeTrue(selectedOk) and selectedWeapon == weaponHash
+                    if isolatedAmmoPool and clipDecrease > 0
+                        and poolDecrease == 0 and not selectedShot then
+                        -- Character teardown and some holster transitions expose
+                        -- a transient zero clip while the owned ammo-type total
+                        -- remains unchanged. Do not persist that presentation
+                        -- artifact as an empty magazine.
+                        loaded = observed.loaded
+                        clipDecrease = 0
+                    end
                     local sharedShot = not isolatedAmmoPool
                         and NativeTrue(selectedOk) and selectedWeapon == weaponHash
                         and (clipDecrease > 0
@@ -3190,6 +3223,11 @@ RegisterCharacterLogoutCheckpoint = function()
 end
 
 exports('CheckpointBeforeLogout', function()
+    logoutCheckpointInFlight = true
+    SetTimeout(5000, function()
+        logoutCheckpointInFlight = false
+    end)
+
     local deadline = GetGameTimer() + 2000
     while (longgunReloadInFlight or syncInFlight or pairSyncInFlight
             or extraSyncInFlight.shoulder or extraSyncInFlight.back
@@ -3205,7 +3243,10 @@ exports('CheckpointBeforeLogout', function()
     end)
 
     local maintenance = Citizen.Await(maintenancePending)
-    if not maintenance or maintenance.ok ~= true then return maintenance end
+    if not maintenance or maintenance.ok ~= true then
+        logoutCheckpointInFlight = false
+        return maintenance
+    end
 
     local pending = promise.new()
     FeatherWeaponsClient.Checkpoint(function(checkpoint)
@@ -3213,6 +3254,9 @@ exports('CheckpointBeforeLogout', function()
     end)
 
     local checkpoint = Citizen.Await(pending)
+    if not checkpoint or checkpoint.ok ~= true then
+        logoutCheckpointInFlight = false
+    end
     if Config.DevMode then
         print(('[feather-weapons] logout checkpoint %s total=%s loaded=%s'):format(
             checkpoint and checkpoint.ok and 'PASS' or 'FAIL',
@@ -3417,17 +3461,19 @@ if Config.DevMode then
                     if longgun then
                         local clipOk, nativeLoaded = GetAmmoInClip(
                             PlayerPedId(), joaat(longgun.nativeWeaponName))
+                        local nativeTotal = GetPedAmmoByType(
+                            PlayerPedId(), joaat(longgun.nativeAmmoName))
                         local attachPoint = slot == 'shoulder'
                             and Config.Loadout.shoulderAttachPoint or Config.Loadout.backAttachPoint
                         local attachOk, attachedWeapon = GetCurrentPedWeapon(
                             PlayerPedId(), true, attachPoint, true)
-                        print(('[feather-weapons] %s item=%s definition=%s generation=%s total=%s loaded=%s reserve=%s condition=%s ammoType=%s nativeAmmo=%s nativeLoaded=%s clipOk=%s attachPoint=%s attached=%s/%s')
+                        print(('[feather-weapons] %s item=%s definition=%s generation=%s total=%s loaded=%s reserve=%s condition=%s ammoType=%s nativeAmmo=%s nativeTotal=%s nativeLoaded=%s clipOk=%s attachPoint=%s attached=%s/%s')
                             :format(slot, tostring(longgun.itemInstanceId),
                                 tostring(longgun.definitionId), tostring(longgun.generation),
                                 tostring(longgun.ammo), tostring(longgun.loaded),
                                 tostring(longgun.reserve), tostring(longgun.condition),
                                 tostring(longgun.ammunitionType), tostring(longgun.nativeAmmoName),
-                                tostring(nativeLoaded), tostring(clipOk), tostring(attachPoint),
+                                tostring(nativeTotal), tostring(nativeLoaded), tostring(clipOk), tostring(attachPoint),
                                 tostring(attachOk), tostring(attachedWeapon)))
                     end
                 end

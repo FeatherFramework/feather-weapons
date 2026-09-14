@@ -150,7 +150,8 @@ WeaponDefinitionCatalog.weapons = {
         },
         -- Slot keys point to attachment definition IDs accepted by this weapon.
         attachmentSlots = {
-            barrel = { "cattleman_long_barrel" }
+            barrel = { "cattleman_long_barrel" },
+            sight = { "cattleman_wide_sight" }
         },
         policies = {
             transferable = true,
