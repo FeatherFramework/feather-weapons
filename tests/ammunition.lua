@@ -325,4 +325,33 @@ local definition = DefinitionRegistry.Get('weapon', 'rifle_elephant').value
 check(not WeaponValidation.AcceptsAmmunition(definition, 'ammo_rifle_regular'), 'Elephant rejects regular rifle ammo')
 definition.ammunitionTypes = 'invalid'
 check(not WeaponValidation.Definition(definition, 'weapon'), 'Malformed allowlist returns validation failure')
+
+local cattlemanDefinition = DefinitionRegistry.Get('weapon', 'revolver_cattleman').value
+check(WeaponValidation.Definition(cattlemanDefinition, 'weapon'),
+    'Declared attachment defaults accepted')
+cattlemanDefinition.attachmentDefaults.invalid = 'Invalid slot'
+check(not WeaponValidation.Definition(cattlemanDefinition, 'weapon'),
+    'Attachment default rejects undeclared slot')
+
+local originalAttachments = copy(WeaponDefinitionCatalog.attachments)
+WeaponDefinitionCatalog.attachments.cattleman_wide_sight.prerequisites = { 'cattleman_long_barrel' }
+check(DefinitionRegistry.Start().ok, 'Valid attachment prerequisite catalog accepted')
+local prerequisiteMissing = DefinitionRegistry.ValidateAttachmentSet('revolver_cattleman', {
+    { definitionId = 'cattleman_wide_sight', slot = 'sight' }
+})
+check(not prerequisiteMissing.ok
+    and prerequisiteMissing.error.details.prerequisiteId == 'cattleman_long_barrel',
+    'Attachment set rejects missing prerequisite')
+check(DefinitionRegistry.ValidateAttachmentSet('revolver_cattleman', {
+    { definitionId = 'cattleman_long_barrel', slot = 'barrel' },
+    { definitionId = 'cattleman_wide_sight', slot = 'sight' }
+}).ok, 'Attachment set accepts installed prerequisite')
+
+WeaponDefinitionCatalog.attachments.cattleman_long_barrel.prerequisites = { 'cattleman_wide_sight' }
+check(not DefinitionRegistry.Start().ok, 'Attachment prerequisite cycle rejected at startup')
+WeaponDefinitionCatalog.attachments = copy(originalAttachments)
+WeaponDefinitionCatalog.attachments.cattleman_wide_sight.prerequisites = { 'missing_attachment' }
+check(not DefinitionRegistry.Start().ok, 'Unknown attachment prerequisite rejected at startup')
+WeaponDefinitionCatalog.attachments = originalAttachments
+assert(DefinitionRegistry.Start().ok)
 print(('Ammunition regression checks: %d passed'):format(passed))

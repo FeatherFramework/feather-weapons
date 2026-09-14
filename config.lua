@@ -80,6 +80,10 @@ Config = {
         requireStation = true,
         interactionDistance = 2.0,
         serverTolerance = 3.0,
+        authorization = {
+            enabled = false,
+            action = "weapons.attachments.modify"
+        },
         stations = {
             valentine = {
                 label = "Valentine Gunsmith Bench",

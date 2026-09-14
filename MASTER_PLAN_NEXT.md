@@ -234,6 +234,34 @@ This is the next implementation phase after the Phase 2/3 live acceptance
 matrix. Only the Cattleman Long Barrel is currently shipped; do not bulk-add
 component definitions without verified native mappings and lifecycle tests.
 
+Attachment prerequisites are now definition-driven. Startup rejects invalid,
+cyclic, conflicting, same-slot, and weapon-incompatible prerequisite graphs;
+installation and removal validate the complete resulting set inside the same
+Inventory transaction. The two shipped Cattleman components remain independent.
+Optional gunsmith job restrictions now use Feather Core's policy-provider
+boundary. They remain disabled by default; when enabled, both installation and
+removal fail closed unless the configured action authorizes the character for
+the specific operation, station, weapon definition, and attachment.
+Live validation passed both policy modes. With authorization disabled, existing
+Cattleman installation and removal remained available and release smoke passed
+`8/8`. With authorization enabled, the active policy denied the character;
+the menu could open, but installation/removal failed with an authorization
+notice and changed neither weapon metadata nor Inventory. The shipped default
+was restored to disabled after the test.
+Native component defaults are now explicit presentation metadata on weapon
+definitions. The Cattleman labels its unmodified barrel and sight without
+turning either baseline into an Inventory item; installed upgrades hide the
+corresponding default, and removal reveals it again. Startup rejects defaults
+for undeclared slots or empty labels.
+The modification menu now remains open after successful mutations, rebuilds
+the active weapon page, uses catalog weapon/component labels, and groups slots
+in a stable order. Live temporary prerequisite validation passed end to end:
+Wide Sight named Long Barrel as its missing requirement, installing Long Barrel
+unlocked the sight, installing the sight marked the barrel as required and
+withheld its removal action, then removing sight before barrel returned both
+items and restored both standard defaults. The temporary dependency was removed
+after testing; the shipped Cattleman components remain independent.
+
 ### Exit gate
 
 - Install and removal are atomic for equipped, holstered, stored, primary, and

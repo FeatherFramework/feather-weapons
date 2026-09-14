@@ -22,6 +22,24 @@ Native mappings are cross-checked against the model-specific component table in
 `femga/rdr3_discoveries/weapons/weapon_components.lua` and must still pass visual
 verification in the target RedM build.
 
+## Definition rules
+
+Attachment definitions declare explicit `conflicts` and `prerequisites` arrays.
+Startup rejects unknown or self-referential prerequisites, prerequisite cycles,
+conflicting prerequisite pairs, same-slot prerequisites, and prerequisites that
+the weapon cannot install. Installation validates the complete resulting set
+before consuming the component item. Removal likewise validates the remaining
+set, so a prerequisite cannot be removed while an installed component depends
+on it. Current shipped Cattleman components are independent and therefore use
+empty prerequisite lists.
+
+Weapons may also label the native baseline for each supported slot through
+`attachmentDefaults`. Defaults are presentation metadata, not installed item
+instances: they consume nothing, are not written to weapon metadata, and cannot
+be removed into Inventory. The Cattleman exposes `Standard Barrel` and
+`Standard Sight`; installing an upgrade replaces that slot's displayed default,
+and removing the upgrade reveals the native default again.
+
 ## Wide Sight live result
 
 The Wide Sight consumed and returned exactly one Inventory item, applied and

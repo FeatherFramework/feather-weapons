@@ -1,7 +1,7 @@
 WeaponDefinitionCatalog = WeaponDefinitionCatalog or {}
 
 -- Each attachment defines: id, itemName, label, slot,
--- nativeComponentName, conflicts, removable, and optional tags.
+-- nativeComponentName, conflicts, prerequisites, removable, and optional tags.
 WeaponDefinitionCatalog.attachments = {
     cattleman_long_barrel = {
         id = "cattleman_long_barrel",
@@ -11,6 +11,7 @@ WeaponDefinitionCatalog.attachments = {
         slot = "barrel",
         nativeComponentName = "COMPONENT_REVOLVER_CATTLEMAN_BARREL_LONG",
         conflicts = {},
+        prerequisites = {},
         removable = true,
         tags = { "functional", "cattleman" }
     },
@@ -22,6 +23,7 @@ WeaponDefinitionCatalog.attachments = {
         slot = "sight",
         nativeComponentName = "COMPONENT_REVOLVER_CATTLEMAN_SIGHT_WIDE",
         conflicts = {},
+        prerequisites = {},
         removable = true,
         tags = { "functional", "cattleman" }
     }

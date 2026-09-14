@@ -36,7 +36,7 @@ Server operation, recovery, integration, and trust boundaries are documented in
 - Atomically consume the gun oil and update weapon condition.
 - Prevent equipped weapon instances from being moved or destroyed.
 - Reject stale, concurrent, invalid, or unauthorized mutations.
-- Validate attachment definitions, slots, conflicts, and per-weapon compatibility at startup.
+- Validate attachment definitions, slots, conflicts, prerequisites, and per-weapon compatibility at startup.
 - Resolve active characters through Feather Core Contract 1 sessions.
 - Preserve canonical UUID character IDs through issuance, equipment, and Inventory calls.
 
@@ -259,6 +259,17 @@ menu. Full-condition, stale-slot, and invalid repairs do not consume a kit.
 ### Weapon modifications
 
 Attachment installation and removal require proximity to a configured gunsmith bench. Equip the weapon at the Valentine bench, then press `F6` or use `/weaponmods` to install an owned compatible attachment or remove an installed one. The Long Barrel is not a usable item; the server verifies distance and ownership before starting the Inventory transaction.
+
+`Attachments.authorization.enabled` can route every install and removal through
+Feather Core's policy provider using the configured action (default
+`weapons.attachments.modify`). The policy receives the operation, station,
+weapon definition, and attachment ID, allowing Feather Roles or another jobs
+resource to enforce gunsmith access. Authorization is unrestricted by default
+and fails closed when enabled without an available policy decision.
+
+Modification menus label definition-driven native defaults for empty component
+slots. These labels describe the weapon's built-in baseline and never create or
+return Inventory items.
 
 ## Current revolver settings
 

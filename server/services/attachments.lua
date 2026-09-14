@@ -71,6 +71,43 @@ local function ClientAttachments(metadata)
     return result
 end
 
+local function AuthorizeModification(source, rpcContext, station, operation, equipped, attachment)
+    local authorization = (Config.Attachments or {}).authorization or {}
+    if authorization.enabled ~= true then return WeaponResult.Ok(true, rpcContext.correlationId) end
+
+    local action = authorization.action
+    if type(action) ~= "string" or action == "" then
+        return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID,
+            "Gunsmith authorization is not configured", nil, rpcContext.correlationId)
+    end
+
+    local called, decision = pcall(function()
+        return exports["feather-core"]:Authorize(action, {
+            source = source,
+            correlationId = rpcContext.correlationId,
+            subject = {
+                operation = operation,
+                stationId = type(station.value) == "table" and station.value.stationId or nil,
+                weaponDefinitionId = equipped.definitionId,
+                attachmentId = attachment.id
+            }
+        })
+    end)
+    if not called or type(decision) ~= "table" or decision.ok ~= true
+        or type(decision.value) ~= "table" or type(decision.value.allowed) ~= "boolean" then
+        return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID,
+            "Gunsmith authorization is unavailable", nil, rpcContext.correlationId)
+    end
+    if decision.value.allowed ~= true then
+        return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID,
+            "This character is not authorized to modify weapons", {
+                action = action,
+                code = decision.value.code
+            }, rpcContext.correlationId)
+    end
+    return WeaponResult.Ok(true, rpcContext.correlationId)
+end
+
 function AttachmentService.Install(source, rpcContext, request)
     request = type(request) == "table" and request or {}
     local equipped, failure, slot = Equipped(source, rpcContext, request)
@@ -86,6 +123,9 @@ function AttachmentService.Install(source, rpcContext, request)
             weaponId = equipped.definitionId, attachmentId = attachment.id
         }, rpcContext.correlationId)
     end
+    local authorization = AuthorizeModification(source, rpcContext, station,
+        "install", equipped, attachment)
+    if not authorization.ok then return authorization end
 
     local context = Context(source, rpcContext, "attachment_install")
     local transaction = InventoryAdapter.Transaction(context, function(tx)
@@ -154,6 +194,9 @@ function AttachmentService.Remove(source, rpcContext, request)
         return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Attachment cannot be removed", nil,
             rpcContext.correlationId)
     end
+    local authorization = AuthorizeModification(source, rpcContext, station,
+        "remove", equipped, attachment)
+    if not authorization.ok then return authorization end
 
     local context = Context(source, rpcContext, "attachment_remove")
     local transaction = InventoryAdapter.Transaction(context, function(tx)
@@ -175,6 +218,8 @@ function AttachmentService.Remove(source, rpcContext, request)
             return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Attachment is not installed", nil,
                 context.correlationId)
         end
+        local attachmentSet = DefinitionRegistry.ValidateAttachmentSet(equipped.definitionId, remaining)
+        if not attachmentSet.ok then return attachmentSet end
         if not tx:AddQuantity(attachment.itemName, 1) then
             return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, "Inventory cannot accept the removed attachment",
                 {

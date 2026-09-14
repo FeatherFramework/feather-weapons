@@ -153,6 +153,10 @@ WeaponDefinitionCatalog.weapons = {
             barrel = { "cattleman_long_barrel" },
             sight = { "cattleman_wide_sight" }
         },
+        attachmentDefaults = {
+            barrel = "Standard Barrel",
+            sight = "Standard Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
