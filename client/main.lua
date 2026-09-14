@@ -812,6 +812,7 @@ local function ApprovedState(approved)
     return {
         slot = approved.slot or 'primary',
         itemInstanceId = approved.itemInstanceId,
+        serialNumber = approved.serialNumber,
         definitionId = approved.definitionId,
         nativeWeaponName = approved.nativeWeaponName,
         ammunitionType = approved.ammunitionType,
@@ -2193,6 +2194,11 @@ BuildModificationPage = function(slot)
 
     AddWeaponElement(page, 'line', { slot = 'header' })
 
+    AddWeaponElement(page, 'textdisplay', {
+        value = ('Serial: %s'):format(selected.serialNumber or 'Unknown'),
+        slot = 'content'
+    })
+
     local installedBySlot, installedIds = {}, {}
     for _, installed in ipairs(selected.attachments or {}) do
         installedBySlot[installed.slot] = installed
@@ -2486,6 +2492,11 @@ local function BuildAmmunitionPage(slot)
     AddWeaponElement(page, 'subheader', {
         value = ('%s: %s'):format(SlotLabel(slot), weapon.label or selected.definitionId),
         slot = 'header'
+    })
+
+    AddWeaponElement(page, 'textdisplay', {
+        value = ('Serial: %s'):format(selected.serialNumber or 'Unknown'),
+        slot = 'content'
     })
 
     AddWeaponElement(page, 'textdisplay', {
@@ -3497,10 +3508,11 @@ if Config.DevMode then
                 local state = result.value.equipped
                 local slots = result.value.slots or {}
                 local secondary = slots.offhand
-                print(('[feather-weapons] state equipped=%s primaryEquipped=%s item=%s generation=%s total=%s loaded=%s reserve=%s condition=%s')
+                print(('[feather-weapons] state equipped=%s primaryEquipped=%s item=%s serial=%s generation=%s total=%s loaded=%s reserve=%s condition=%s')
                     :format(
                         tostring(next(slots) ~= nil), tostring(state ~= nil),
                         tostring(state and state.itemInstanceId),
+                        tostring(state and state.serialNumber),
                         tostring(state and state.generation),
                         tostring(state and state.ammo), tostring(state and state.loaded),
                         tostring(state and state.reserve), tostring(state and state.condition)))
@@ -3531,9 +3543,10 @@ if Config.DevMode then
                     print(('[feather-weapons] offhand ammo type=%s native=%s'):format(
                         tostring(secondary.ammunitionType), tostring(secondary.nativeAmmoName)))
                     local _, _, clipOk, nativeLoaded = PairNativeClips(state, secondary)
-                    print(('[feather-weapons] offhand item=%s generation=%s total=%s loaded=%s reserve=%s condition=%s attachments=%s nativeLoaded=%s clipOk=%s')
+                    print(('[feather-weapons] offhand item=%s serial=%s generation=%s total=%s loaded=%s reserve=%s condition=%s attachments=%s nativeLoaded=%s clipOk=%s')
                     :format(
-                        tostring(secondary.itemInstanceId), tostring(secondary.generation),
+                        tostring(secondary.itemInstanceId), tostring(secondary.serialNumber),
+                        tostring(secondary.generation),
                         tostring(secondary.ammo), tostring(secondary.loaded),
                         tostring(secondary.reserve), tostring(secondary.condition),
                         tostring(#(secondary.attachments or {})),
@@ -3557,9 +3570,10 @@ if Config.DevMode then
                             and Config.Loadout.shoulderAttachPoint or Config.Loadout.backAttachPoint
                         local attachOk, attachedWeapon = GetCurrentPedWeapon(
                             PlayerPedId(), true, attachPoint, true)
-                        print(('[feather-weapons] %s item=%s definition=%s generation=%s total=%s loaded=%s reserve=%s condition=%s ammoType=%s nativeAmmo=%s nativeTotal=%s nativeLoaded=%s clipOk=%s attachPoint=%s attached=%s/%s')
+                        print(('[feather-weapons] %s item=%s serial=%s definition=%s generation=%s total=%s loaded=%s reserve=%s condition=%s ammoType=%s nativeAmmo=%s nativeTotal=%s nativeLoaded=%s clipOk=%s attachPoint=%s attached=%s/%s')
                             :format(slot, tostring(longgun.itemInstanceId),
-                                tostring(longgun.definitionId), tostring(longgun.generation),
+                                tostring(longgun.serialNumber), tostring(longgun.definitionId),
+                                tostring(longgun.generation),
                                 tostring(longgun.ammo), tostring(longgun.loaded),
                                 tostring(longgun.reserve), tostring(longgun.condition),
                                 tostring(longgun.ammunitionType), tostring(longgun.nativeAmmoName),

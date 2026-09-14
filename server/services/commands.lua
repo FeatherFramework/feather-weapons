@@ -219,6 +219,56 @@ RegisterCommand("WeaponAttachmentContractSmokeTest", function(source, args)
             :format(passed, #tests, tostring(targetSource), activeSlots, attachmentCount))
     end, true)
 
+RegisterCommand("WeaponOwnershipTransitionSmokeTest", function(source, args)
+        if source ~= 0 then return end
+        local expectedItem = tonumber(args and args[1])
+        local diagnostics = WeaponOwnershipService.GetDiagnostics()
+        local last = diagnostics.last
+        local tests = {
+            {
+                name = "observer available",
+                passed = type(WeaponOwnershipService.HandleCommittedMove) == "function"
+            },
+            {
+                name = "transition observed",
+                passed = diagnostics.observed > 0,
+                detail = "count=" .. tostring(diagnostics.observed)
+            },
+            {
+                name = "weapon identity present",
+                passed = last ~= nil and last.itemInstanceId ~= nil
+                    and type(last.definitionId) == "string"
+                    and type(last.serialNumber) == "string" and last.serialNumber ~= ""
+            },
+            {
+                name = "committed inventory move",
+                passed = last ~= nil and last.outcome == "committed"
+                    and last.fromInventoryId ~= nil and last.toInventoryId ~= nil
+                    and last.fromInventoryId ~= last.toInventoryId
+            },
+            {
+                name = "expected item observed",
+                passed = not expectedItem or (last ~= nil
+                    and tonumber(last.itemInstanceId) == expectedItem),
+                detail = expectedItem and ("item=" .. tostring(expectedItem)) or "not specified"
+            },
+            {
+                name = "observations healthy",
+                passed = diagnostics.failed == 0 and diagnostics.leaseViolations == 0,
+                detail = ("failed=%s leaseViolations=%s"):format(
+                    tostring(diagnostics.failed), tostring(diagnostics.leaseViolations))
+            }
+        }
+        local passed = 0
+        for _, test in ipairs(tests) do
+            if test.passed then passed = passed + 1 end
+            print(("[WeaponOwnershipTransitionSmokeTest] %-27s %s%s"):format(
+                test.name, test.passed and "PASS" or "FAIL",
+                test.detail and ("  -- " .. test.detail) or ""))
+        end
+        print(("[WeaponOwnershipTransitionSmokeTest] done %d/%d passed"):format(passed, #tests))
+    end, true)
+
 RegisterCommand("WeaponDualSlotContractSmokeTest", function(source, args)
         if source ~= 0 then return end
         local targetSource = tonumber(args and args[1])

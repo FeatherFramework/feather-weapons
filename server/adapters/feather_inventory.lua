@@ -4,6 +4,7 @@ local FeatherInventoryProvider = {}
 ---@type table
 local Inventory = {}
 local DefinitionIds = {}
+local WeaponDefinitionsByInventoryId = {}
 local MissingDefinitions = {}
 local DuplicateDefinitions = {}
 
@@ -43,6 +44,7 @@ end
 -- to report when the real answer is "inventory did not answer".
 local function BuildDefinitionIndex()
     DefinitionIds = {}
+    WeaponDefinitionsByInventoryId = {}
     DuplicateDefinitions = {}
     local definitionsByName = {}
 
@@ -135,6 +137,13 @@ local function BuildDefinitionIndex()
         })
     end
 
+    for definitionId, definition in pairs(WeaponDefinitionCatalog.weapons or {}) do
+        local inventoryDefinitionId = DefinitionIds[definition.itemName]
+        if inventoryDefinitionId then
+            WeaponDefinitionsByInventoryId[inventoryDefinitionId] = definitionId
+        end
+    end
+
     return WeaponResult.Ok(true)
 end
 
@@ -167,6 +176,16 @@ function FeatherInventoryProvider.GetItemForCharacter(context, itemInstanceId)
     local result = Inventory.GetItemForCharacter(context.characterId, itemInstanceId)
     if not result.ok then return result end
     return WeaponResult.Ok(NormalizeItem(result.value), context.correlationId)
+end
+
+function FeatherInventoryProvider.GetInstance(context, itemInstanceId)
+    local result = Inventory.Instances.GetInstance(itemInstanceId)
+    if not result.ok then return result end
+    return WeaponResult.Ok(NormalizeItem(result.value), context and context.correlationId)
+end
+
+function FeatherInventoryProvider.ResolveWeaponDefinitionId(inventoryDefinitionId)
+    return WeaponDefinitionsByInventoryId[tonumber(inventoryDefinitionId)]
 end
 
 function FeatherInventoryProvider.GetEquippedForCharacter(context)

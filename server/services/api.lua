@@ -43,7 +43,8 @@ function WeaponAPI.GetCapabilities()
             issuance = InventoryAdapter.IsReady(),
             attachmentDefinitions = true,
             attachmentTransactions = InventoryAdapter.IsReady(),
-            slotAttachments = InventoryAdapter.IsReady()
+            slotAttachments = InventoryAdapter.IsReady(),
+            ownershipTransitionEvents = InventoryAdapter.IsReady()
         }
     }
 end

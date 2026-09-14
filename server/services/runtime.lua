@@ -72,6 +72,18 @@ function WeaponRuntime.Get(source)
     return sessions[source]
 end
 
+function WeaponRuntime.FindLeaseByItem(itemInstanceId)
+    for source, runtime in pairs(sessions) do
+        for _, slot in ipairs({ "primary", "offhand", "shoulder", "back" }) do
+            local equipped = runtime.slots and runtime.slots[slot] or nil
+            if equipped and tostring(equipped.itemInstanceId) == tostring(itemInstanceId) then
+                return source, slot, equipped, runtime
+            end
+        end
+    end
+    return nil
+end
+
 local function AmmoSnapshot(metadata, definition)
     local loaded = math.max(0, math.min(definition.capacity,
         math.floor(tonumber(metadata.ammo and metadata.ammo.loaded) or 0)))
@@ -127,6 +139,7 @@ function WeaponRuntime.RestoreEquipped(source, sessionId, item, definition, corr
     runtime.slots[slot] = {
         slot = slot,
         itemInstanceId = item.id,
+        serialNumber = item.metadata.serialNumber,
         definitionId = definition.id,
         nativeWeaponName = definition.nativeWeaponName,
         ammunitionType = item.metadata.ammo.type or definition.ammunitionType,
@@ -176,6 +189,7 @@ function WeaponRuntime.BeginEquip(source, sessionId, item, definition, correlati
         slot = slot,
         token = token,
         itemInstanceId = item.id,
+        serialNumber = item.metadata.serialNumber,
         definitionId = definition.id,
         nativeWeaponName = definition.nativeWeaponName,
         ammunitionType = item.metadata.ammo.type or definition.ammunitionType,
@@ -204,6 +218,7 @@ function WeaponRuntime.BeginEquip(source, sessionId, item, definition, correlati
         token = token,
         slot = slot,
         itemInstanceId = item.id,
+        serialNumber = item.metadata.serialNumber,
         definitionId = definition.id,
         nativeWeaponName = definition.nativeWeaponName,
         ammunitionType = item.metadata.ammo.type or definition.ammunitionType,
@@ -237,6 +252,7 @@ function WeaponRuntime.CompleteEquip(source, sessionId, token, correlationId)
     runtime.slots[slot] = {
         slot = slot,
         itemInstanceId = pending.itemInstanceId,
+        serialNumber = pending.serialNumber,
         definitionId = pending.definitionId,
         nativeWeaponName = pending.nativeWeaponName,
         ammunitionType = pending.ammunitionType,

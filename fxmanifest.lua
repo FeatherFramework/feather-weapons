@@ -31,6 +31,7 @@ server_scripts {
     '/server/services/maintenance.lua',
     '/server/services/repair.lua',
     '/server/services/attachments.lua',
+    '/server/services/ownership.lua',
     '/server/services/issuance.lua',
     '/server/services/commands.lua',
     '/server/services/reconciliation.lua',

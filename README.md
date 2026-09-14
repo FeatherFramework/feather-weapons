@@ -299,12 +299,21 @@ return Inventory items.
 
 When `DevMode = true`, `/weaponstate` prints the authoritative equipped item ID, loaded ammunition, and condition to F8. Normal equip, reload, unload, and repair testing uses gameplay interactions rather than test commands.
 
-The read-only `WeaponRuntimeLeaseSmokeTest`,
-`WeaponDualSlotContractSmokeTest`, `WeaponAttachmentContractSmokeTest`, and
+The read-only `WeaponRuntimeLeaseSmokeTest`, `WeaponDualSlotContractSmokeTest`,
+`WeaponAttachmentContractSmokeTest`, `WeaponOwnershipTransitionSmokeTest`, and
 `WeaponReleaseContractSmokeTest` commands remain available from the server
 console with `DevMode` disabled. The attachment check validates active component
 sets, native mappings, item/slot identity, runtime lease scope, and optional
 authorization configuration without mutating weapons or Inventory.
+
+`WeaponOwnershipTransitionSmokeTest [itemInstanceId]` validates the most recent
+cross-container weapon move observed from Inventory's committed event. It checks
+weapon definition and serial identity, origin/destination inventories, and that
+no equipped lease bypassed the registered movement guard.
+
+The ammunition and modification menus display each equipped firearm's persisted
+serial number. The same serial is included in `weaponstate` diagnostics for
+primary, offhand, shoulder, and back slots.
 Development grants and native probes remain disabled.
 
 ## Known limitations

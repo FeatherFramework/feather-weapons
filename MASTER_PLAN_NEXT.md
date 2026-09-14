@@ -312,6 +312,26 @@ is complete for the shipped Cattleman components.
 - Prevent transfers of equipped, stale, invalid, or administratively held
   weapons.
 
+The first Phase 5 slice consumes Inventory's existing committed `ItemMoved`
+event rather than introducing a duplicate movement API. Cross-container weapon
+moves are normalized into `Feather:Weapons:OwnershipTransitionCommitted` facts
+containing item, definition, serial, revision, inventories, actor, reason, and
+correlation identity. Same-inventory slot rearrangements are ignored. Any move
+that somehow retains an active Weapons lease is treated as a critical guard
+violation and forces reconciliation.
+Live ground-transition validation passed: unequipped Cattleman item `4889`
+produced two healthy committed observations across drop and pickup, preserving
+the same item and weapon identity with zero failed observations or active-lease
+violations. The ownership smoke test passed `6/6` and release smoke remained
+`8/8`.
+Weapon serials now travel with approved runtime state and appear in ammunition
+and modification menus plus `weaponstate`, giving players and testers a stable
+firearm identity before and after an ownership transition.
+The player-visible identity round trip passed for item `4889`: serial
+`FW-REVO-6AA86F32-E89E28-0002` was identical before drop and after pickup and
+re-equip. The observer again reported exactly two committed transitions and
+passed `6/6` with zero failures or active-lease violations.
+
 ### Exit gate
 
 - Every ownership transition is atomic, idempotent, and auditable.
