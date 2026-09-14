@@ -300,8 +300,11 @@ return Inventory items.
 When `DevMode = true`, `/weaponstate` prints the authoritative equipped item ID, loaded ammunition, and condition to F8. Normal equip, reload, unload, and repair testing uses gameplay interactions rather than test commands.
 
 The read-only `WeaponRuntimeLeaseSmokeTest`,
-`WeaponDualSlotContractSmokeTest`, and `WeaponReleaseContractSmokeTest`
-commands remain available from the server console with `DevMode` disabled.
+`WeaponDualSlotContractSmokeTest`, `WeaponAttachmentContractSmokeTest`, and
+`WeaponReleaseContractSmokeTest` commands remain available from the server
+console with `DevMode` disabled. The attachment check validates active component
+sets, native mappings, item/slot identity, runtime lease scope, and optional
+authorization configuration without mutating weapons or Inventory.
 Development grants and native probes remain disabled.
 
 ## Known limitations

@@ -114,6 +114,111 @@ RegisterCommand("WeaponRuntimeLeaseSmokeTest", function(source, args)
             tostring(equipped and equipped.generation)))
     end, true)
 
+RegisterCommand("WeaponAttachmentContractSmokeTest", function(source, args)
+        if source ~= 0 then return end
+        local targetSource = tonumber(args and args[1])
+        if not targetSource then
+            local players = GetPlayers()
+            targetSource = players[1] and tonumber(players[1]) or nil
+        end
+
+        local runtime = targetSource and WeaponRuntime.Get(targetSource) or nil
+        local sessionId = runtime and runtime.sessionId or nil
+        local activeSlots, attachmentCount = 0, 0
+        local catalogValid, setsValid, identitiesValid, leasesValid = true, true, true, true
+
+        local attachmentCatalog = DefinitionRegistry.List("attachment")
+        if not attachmentCatalog.ok or #attachmentCatalog.value == 0 then
+            catalogValid = false
+        else
+            for _, definition in ipairs(attachmentCatalog.value) do
+                if type(definition.nativeComponentName) ~= "string"
+                    or definition.nativeComponentName == ""
+                    or type(definition.slot) ~= "string" or definition.slot == "" then
+                    catalogValid = false
+                end
+            end
+        end
+
+        for _, slot in ipairs({ "primary", "offhand", "shoulder", "back" }) do
+            local equipped = runtime and runtime.slots and runtime.slots[slot] or nil
+            if equipped then
+                activeSlots = activeSlots + 1
+                local seenIds, seenSlots = {}, {}
+                local installed = equipped.attachments or {}
+                local setResult = DefinitionRegistry.ValidateAttachmentSet(equipped.definitionId, installed)
+                if not setResult.ok then setsValid = false end
+
+                for _, entry in ipairs(installed) do
+                    attachmentCount = attachmentCount + 1
+                    local attachmentId = entry.definitionId
+                    local definitionResult = DefinitionRegistry.Get("attachment", attachmentId)
+                    local definition = definitionResult.ok and definitionResult.value or nil
+                    if not definition or type(definition.nativeComponentName) ~= "string"
+                        or definition.nativeComponentName == "" then
+                        catalogValid = false
+                    end
+                    if not attachmentId or seenIds[attachmentId]
+                        or not entry.slot or seenSlots[entry.slot]
+                        or (definition and entry.slot ~= definition.slot) then
+                        identitiesValid = false
+                    end
+                    if attachmentId then seenIds[attachmentId] = true end
+                    if entry.slot then seenSlots[entry.slot] = true end
+                end
+
+                if not targetSource or not sessionId or not WeaponRuntime.MatchesLease(
+                    targetSource, sessionId, equipped.itemInstanceId, equipped.generation, slot) then
+                    leasesValid = false
+                end
+            end
+        end
+
+        local authorization = (Config.Attachments or {}).authorization or {}
+        local tests = {
+            {
+                name = "attachment catalog ready",
+                passed = attachmentCatalog.ok == true
+                    and #attachmentCatalog.value == DefinitionRegistry.Counts().attachment
+                    and #attachmentCatalog.value > 0
+            },
+            {
+                name = "runtime initialized",
+                passed = runtime ~= nil and type(runtime.slots) == "table"
+            },
+            {
+                name = "active sets valid",
+                passed = setsValid
+            },
+            {
+                name = "component mappings valid",
+                passed = catalogValid
+            },
+            {
+                name = "attachment identities valid",
+                passed = identitiesValid
+            },
+            {
+                name = "attachment leases scoped",
+                passed = leasesValid
+            },
+            {
+                name = "authorization configured",
+                passed = authorization.enabled ~= true
+                    or (type(authorization.action) == "string" and authorization.action ~= "")
+            }
+        }
+
+        local passed = 0
+        for _, test in ipairs(tests) do
+            if test.passed then passed = passed + 1 end
+            print(("[WeaponAttachmentContractSmokeTest] %-29s %s"):format(
+                test.name, test.passed and "PASS" or "FAIL"))
+        end
+        print(("[WeaponAttachmentContractSmokeTest] done %d/%d passed source=%s activeSlots=%d attachments=%d")
+            :format(passed, #tests, tostring(targetSource), activeSlots, attachmentCount))
+    end, true)
+
 RegisterCommand("WeaponDualSlotContractSmokeTest", function(source, args)
         if source ~= 0 then return end
         local targetSource = tonumber(args and args[1])

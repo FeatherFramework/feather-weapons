@@ -261,6 +261,35 @@ unlocked the sight, installing the sight marked the barrel as required and
 withheld its removal action, then removing sight before barrel returned both
 items and restored both standard defaults. The temporary dependency was removed
 after testing; the shipped Cattleman components remain independent.
+`WeaponAttachmentContractSmokeTest` now provides a read-only live gate for the
+active four-slot loadout. It validates each complete attachment set, component
+mapping, attachment and slot identity, runtime lease scope, and authorization
+configuration without changing weapon or Inventory state.
+The first live run passed `7/7` with one active weapon carrying both shipped
+Cattleman components (`activeSlots=1 attachments=2`).
+The corresponding unmodified run passed `7/7` with the same active-slot shape
+and zero attachment metadata (`activeSlots=1 attachments=0`), confirming that
+presentation defaults remain distinct from installed component instances.
+The modified Cattleman also passed `7/7` while holstered. Client state remained
+idle with primary/offhand natives cleared, while item `4875` retained both
+component identities under its current primary lease.
+Offhand isolation passed `7/7` with two active sidearm slots. Primary item
+`4888` retained zero attachments while offhand Cattleman item `4875` retained
+both components under generation `3`; the shared revolver ammo coordinator
+remained conserved at an empty authorized pool.
+A second Cattleman instance, item `4889`, then passed `7/7` alone with zero
+attachments, demonstrating that item `4875`'s two-component state did not bleed
+across matching weapon definitions.
+Reselecting original item `4875` completed the identity round trip at generation
+`5`: its two component IDs returned and the attachment contract again passed
+`7/7`, while item `4889` remained independently unmodified.
+After character logout and restoration, item `4875` returned at generation `1`
+with both components, valid active-set metadata, and a current runtime lease;
+the attachment contract passed `7/7`.
+Restarting `feather-weapons` reproduced the same generation `1` state for item
+`4875`; both component identities and the current lease remained valid and the
+attachment contract passed `7/7`. The Phase 4 live attachment lifecycle matrix
+is complete for the shipped Cattleman components.
 
 ### Exit gate
 
@@ -1057,3 +1086,5 @@ A phase is complete only when:
    quit, resource restart, and full-server-restart validation.
 8. [x] Build the attachment compatibility worksheet and add one fully tested
    component vertical slice beyond the Cattleman Long Barrel.
+9. [x] Run `WeaponAttachmentContractSmokeTest` against unmodified, modified,
+   holstered, offhand, distinct-instance, logout, and resource-restart states.
