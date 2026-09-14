@@ -224,6 +224,15 @@ RegisterCommand("WeaponOwnershipTransitionSmokeTest", function(source, args)
         local expectedItem = tonumber(args and args[1])
         local diagnostics = WeaponOwnershipService.GetDiagnostics()
         local last = diagnostics.last
+        local ordinaryAllowed = WeaponOwnershipService.EvaluateAdministrativeHold({
+            flags = { evidence = false, disabled = false }
+        })
+        local evidenceAllowed = WeaponOwnershipService.EvaluateAdministrativeHold({
+            flags = { evidence = true, disabled = false }
+        })
+        local disabledAllowed = WeaponOwnershipService.EvaluateAdministrativeHold({
+            flags = { evidence = false, disabled = true }
+        })
         local tests = {
             {
                 name = "observer available",
@@ -257,6 +266,18 @@ RegisterCommand("WeaponOwnershipTransitionSmokeTest", function(source, args)
                 passed = diagnostics.failed == 0 and diagnostics.leaseViolations == 0,
                 detail = ("failed=%s leaseViolations=%s"):format(
                     tostring(diagnostics.failed), tostring(diagnostics.leaseViolations))
+            },
+            {
+                name = "ordinary movement allowed",
+                passed = ordinaryAllowed == true
+            },
+            {
+                name = "evidence movement blocked",
+                passed = evidenceAllowed == false
+            },
+            {
+                name = "disabled movement blocked",
+                passed = disabledAllowed == false
             }
         }
         local passed = 0

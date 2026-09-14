@@ -331,6 +331,14 @@ The player-visible identity round trip passed for item `4889`: serial
 `FW-REVO-6AA86F32-E89E28-0002` was identical before drop and after pickup and
 re-equip. The observer again reported exactly two committed transitions and
 passed `6/6` with zero failures or active-lease violations.
+Inventory move and destroy guards now fail closed for weapon metadata marked as
+evidence or administratively disabled, matching the existing equip rejection.
+Ordinary weapons remain movable once unequipped; future confiscation/return
+operations must explicitly manage holds rather than bypassing the generic guard.
+Live validation passed `9/9` after an unequipped drop/pickup round trip for item
+`4889`: ordinary movement remained allowed, evidence and disabled policy cases
+were rejected, and observation health remained at zero failures and zero lease
+violations. Release smoke remained `8/8` with no active slots.
 
 ### Exit gate
 

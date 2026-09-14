@@ -534,7 +534,7 @@ local function RegisterGuards()
     -- the envelope itself would veto every move on a database error -- and
     -- treating an unanswerable question as "not equipped" would let an
     -- equipped weapon leave the inventory while the game still holds it.
-    local function EquippedGuard(instance)
+    local function WeaponGuard(instance)
         local equipped = Inventory.Equipment.IsInstanceEquipped(instance.id)
         if not equipped.ok then
             return false, "Unable to verify equipped state."
@@ -542,16 +542,20 @@ local function RegisterGuards()
         if equipped.value then
             return false, "Unequip this item before moving or removing it."
         end
+        local definition = instance.definition or {}
+        if WeaponDefinitionsByInventoryId[tonumber(definition.id)] then
+            return WeaponOwnershipService.EvaluateAdministrativeHold(instance.metadata)
+        end
         return true
     end
 
-    local move = Inventory.Guards.RegisterMoveGuard("feather-weapons", EquippedGuard)
+    local move = Inventory.Guards.RegisterMoveGuard("feather-weapons", WeaponGuard)
     if type(move) ~= "table" or move.ok ~= true then
         return Failure(nil, "Move guard registration failed",
             { reason = type(move) == "table" and move.error and move.error.message or nil })
     end
 
-    local destroy = Inventory.Guards.RegisterDestroyGuard("feather-weapons", EquippedGuard)
+    local destroy = Inventory.Guards.RegisterDestroyGuard("feather-weapons", WeaponGuard)
     if type(destroy) ~= "table" or destroy.ok ~= true then
         return Failure(nil, "Destroy guard registration failed",
             { reason = type(destroy) == "table" and destroy.error and destroy.error.message or nil })

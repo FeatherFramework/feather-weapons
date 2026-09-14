@@ -44,7 +44,8 @@ function WeaponAPI.GetCapabilities()
             attachmentDefinitions = true,
             attachmentTransactions = InventoryAdapter.IsReady(),
             slotAttachments = InventoryAdapter.IsReady(),
-            ownershipTransitionEvents = InventoryAdapter.IsReady()
+            ownershipTransitionEvents = InventoryAdapter.IsReady(),
+            administrativeHoldGuards = InventoryAdapter.IsReady()
         }
     }
 end

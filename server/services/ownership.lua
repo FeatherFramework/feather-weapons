@@ -8,6 +8,19 @@ local function CleanText(value, maximum)
     return value:sub(1, maximum)
 end
 
+function WeaponOwnershipService.EvaluateAdministrativeHold(metadata)
+    if type(metadata) ~= "table" or type(metadata.flags) ~= "table" then
+        return false, "Weapon administrative state could not be verified."
+    end
+    if metadata.flags.evidence == true then
+        return false, "This weapon is held as evidence and cannot be moved or removed."
+    end
+    if metadata.flags.disabled == true then
+        return false, "This weapon is administratively disabled and cannot be moved or removed."
+    end
+    return true
+end
+
 function WeaponOwnershipService.HandleCommittedMove(payload)
     if type(payload) ~= "table" then return nil end
     if tostring(payload.fromInventoryId) == tostring(payload.toInventoryId) then return nil end

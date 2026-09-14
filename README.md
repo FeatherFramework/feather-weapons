@@ -310,6 +310,8 @@ authorization configuration without mutating weapons or Inventory.
 cross-container weapon move observed from Inventory's committed event. It checks
 weapon definition and serial identity, origin/destination inventories, and that
 no equipped lease bypassed the registered movement guard.
+It also verifies that ordinary weapon metadata remains movable while evidence
+and administratively disabled states are rejected by Weapons policy.
 
 The ammunition and modification menus display each equipped firearm's persisted
 serial number. The same serial is included in `weaponstate` diagnostics for
