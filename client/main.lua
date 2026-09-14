@@ -32,6 +32,7 @@ local holsterSequence = 0
 local maintenanceSyncInFlight = {}
 local maintenanceBatchInFlight = false
 local inventoryMutationCooldownUntil = 0
+local logoutCheckpointInFlight = false
 
 local function NativeTrue(value)
     return value == true or value == 1
@@ -730,6 +731,7 @@ local function ClearNativeWeapon()
     pairFallbackPending = nil
     unloadInFlight, unloadQueued = false, false
     observerCorrectionPending = false
+    logoutCheckpointInFlight = false
     ResolveCheckpointWaiters({ ok = false, code = 'session_cleared', message = 'Weapon session was cleared.' })
     attachmentReconcileUntil = 0
 end
@@ -1502,6 +1504,16 @@ local function ScheduleRestoredWeaponsHolster()
                         total = PairNativeTotal(equipped, offhand)
                     }
                 end
+                for _, slot in ipairs({ 'shoulder', 'back' }) do
+                    local state = extraSlots[slot]
+                    local other = extraSlots[slot == 'shoulder' and 'back' or 'shoulder']
+                    if state and (not other
+                        or other.nativeAmmoName ~= state.nativeAmmoName) then
+                        SetNativeAmmo(state.nativeAmmoName, state.ammo,
+                            state.nativeWeaponName, state.loaded)
+                    end
+                end
+                RefreshSharedLonggunPools()
                 presentationRestoreInFlight = false
             end
 
@@ -2958,7 +2970,7 @@ CreateThread(function()
         for _, slot in ipairs({ 'shoulder', 'back' }) do
             local state = extraSlots[slot]
             local observed = extraObserved[slot]
-            if state and observed then
+            if state and observed and not logoutCheckpointInFlight then
                 active = true
                 local weaponHash = joaat(state.nativeWeaponName)
                 local clipOk, clipAmount = GetAmmoInClip(ped, weaponHash)
@@ -2980,6 +2992,15 @@ CreateThread(function()
                     local selectedShot = clipDecrease > 0
                         and GetGameTimer() <= fireWindowUntil
                         and NativeTrue(selectedOk) and selectedWeapon == weaponHash
+                    if isolatedAmmoPool and clipDecrease > 0
+                        and poolDecrease == 0 and not selectedShot then
+                        -- Character teardown and some holster transitions expose
+                        -- a transient zero clip while the owned ammo-type total
+                        -- remains unchanged. Do not persist that presentation
+                        -- artifact as an empty magazine.
+                        loaded = observed.loaded
+                        clipDecrease = 0
+                    end
                     local sharedShot = not isolatedAmmoPool
                         and NativeTrue(selectedOk) and selectedWeapon == weaponHash
                         and (clipDecrease > 0
@@ -3190,6 +3211,11 @@ RegisterCharacterLogoutCheckpoint = function()
 end
 
 exports('CheckpointBeforeLogout', function()
+    logoutCheckpointInFlight = true
+    SetTimeout(5000, function()
+        logoutCheckpointInFlight = false
+    end)
+
     local deadline = GetGameTimer() + 2000
     while (longgunReloadInFlight or syncInFlight or pairSyncInFlight
             or extraSyncInFlight.shoulder or extraSyncInFlight.back
@@ -3205,7 +3231,10 @@ exports('CheckpointBeforeLogout', function()
     end)
 
     local maintenance = Citizen.Await(maintenancePending)
-    if not maintenance or maintenance.ok ~= true then return maintenance end
+    if not maintenance or maintenance.ok ~= true then
+        logoutCheckpointInFlight = false
+        return maintenance
+    end
 
     local pending = promise.new()
     FeatherWeaponsClient.Checkpoint(function(checkpoint)
@@ -3213,6 +3242,9 @@ exports('CheckpointBeforeLogout', function()
     end)
 
     local checkpoint = Citizen.Await(pending)
+    if not checkpoint or checkpoint.ok ~= true then
+        logoutCheckpointInFlight = false
+    end
     if Config.DevMode then
         print(('[feather-weapons] logout checkpoint %s total=%s loaded=%s'):format(
             checkpoint and checkpoint.ok and 'PASS' or 'FAIL',

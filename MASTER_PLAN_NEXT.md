@@ -864,6 +864,39 @@ A phase is complete only when:
   and completed lifecycle. Post-change regression passed release `8/8`,
   dual-slot `17/17`, and runtime lease `5/5` with the modified Cattleman in the
   offhand slot.
+- Carbine Repeater focused validation passed in the shoulder slot. Empty equip
+  showed the correct name and `0/0/0`; regular ammunition loaded to `50/7/43`,
+  fired to `49/6/43`, and reloaded to `49/7/42`. Switching to high velocity
+  produced `50/7/43`; firing and reload conserved it at `49/7/42`. Resource
+  observation, logout/re-entry, and native clips remained exact. Five further
+  shots produced `44/2/42` and condition `99`; one gun oil was consumed,
+  restored condition `100`, and RedM auto-reloaded to conserved `44/7/37`.
+  Unload-all returned all 44 high-velocity rounds and settled at `0/0/0` while
+  retaining the selected ammunition type. The Carbine matrix is complete.
+- Lancaster Repeater focused validation passed in the shoulder slot. Empty equip
+  was correct; regular ammunition loaded to `49/14/35`. High velocity loaded to
+  `43/14/29` after firing and reload, with exact total and clip behavior. The
+  first logout exposed a transient native zero clip that was persisted as an
+  empty magazine. Long-gun observation now rejects unexplained isolated-pool
+  clip decreases when neither firing nor native-total reduction occurred, and
+  the final holster settle reasserts approved long-gun clips. Live retry restored
+  authoritative and native state exactly at `43/14/29` without a draw reload.
+  Unload-all returned all 43 rounds and settled at `0/0/0`. The Lancaster matrix
+  is complete.
+- Litchfield Repeater focused validation passed in the shoulder slot. Empty equip
+  and wheel presentation were correct. Regular ammunition loaded to `48/16/35`,
+  fired to `47/15/32`, and high velocity later conserved through fire/reload at
+  `42/16/26`. Resource restart restored the exact clip. Five additional shots
+  produced `37/11/26` and condition `99`; one gun oil restored condition
+  `100` without changing ammunition. Logout/re-entry restored authoritative and
+  native state exactly at `37/11/26`. Unload-all returned all 37 rounds and
+  settled at `0/0/0`. The Litchfield matrix is complete.
+- Evans Repeater focused validation passed in the shoulder slot. Regular
+  ammunition loaded to `47/15/32` after one shot and reloaded to `46/26/20`.
+  High velocity loaded to `37/26/11`; five shots produced `32/21/11` and
+  condition `99`. One gun oil restored condition `100` without changing ammo.
+  Resource restart and logout restored `32/21/11` exactly. Unload-all returned
+  all 32 rounds and settled at `0/0/0`. The Evans matrix is complete.
 
 ### Next steps
 
