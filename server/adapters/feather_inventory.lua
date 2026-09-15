@@ -190,6 +190,16 @@ function FeatherInventoryProvider.GetCharacterInventory(context, characterId)
     return WeaponResult.Ok(result.value, context and context.correlationId)
 end
 
+function FeatherInventoryProvider.DestroyInstance(context, item)
+    local result = Inventory.DestroyInstances(context, {
+        inventoryId = item.inventoryId,
+        expectedLocation = "character",
+        instanceIds = { item.id }
+    })
+    if not result.ok then return result end
+    return WeaponResult.Ok(result.value, context and context.correlationId)
+end
+
 function FeatherInventoryProvider.ResolveWeaponDefinitionId(inventoryDefinitionId)
     return WeaponDefinitionsByInventoryId[tonumber(inventoryDefinitionId)]
 end
@@ -582,7 +592,7 @@ function InstallFeatherInventoryProvider()
 
     local required = { "Items", "Instances", "Equipment", "Guards", "Transaction", "MutateItem", "MutateItems", "CreateInstance",
         "PromoteEquippedSlot",
-        "GetCapabilities",
+        "GetCapabilities", "DestroyInstances",
         "GetItemForCharacter", "GetEquippedForCharacter", "SetEquippedForCharacter",
         "GetCharacterInventory" }
     for _, name in ipairs(required) do
@@ -591,8 +601,9 @@ function InstallFeatherInventoryProvider()
         end
     end
     if type(api.Inventory) ~= "table" or not IsCallable(api.Inventory.GetInventoryItems)
-        or not IsCallable(api.GetCharacterInventory) then
-        return Failure(nil, "feather-inventory is missing weapon listing APIs")
+        or not IsCallable(api.GetCharacterInventory)
+        or not IsCallable(api.DestroyInstances) then
+        return Failure(nil, "feather-inventory is missing weapon listing or destruction APIs")
     end
 
     Inventory = api

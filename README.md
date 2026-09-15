@@ -321,6 +321,23 @@ give flow for an unequipped firearm. It requires both active character owners
 to resolve, preserves the weapon serial, and rejects any transfer observation
 that coincided with an active lease violation.
 
+`WeaponDestructionContractSmokeTest` checks the trusted destruction surface,
+authorization configuration, rejection behavior, and provider capability
+without deleting an item.
+
+In development mode, the server-console-only
+`WeaponDestroyTest <source> <itemInstanceId> <serialNumber> DESTROY` command
+permanently removes one exact, unequipped test weapon. The mandatory serial and
+confirmation token make the destructive target explicit.
+`WeaponDestructionAuditSmokeTest <itemInstanceId> <serialNumber>` then validates
+the captured terminal ownership fact without performing another mutation.
+
+Trusted server resources may permanently destroy an exact unequipped weapon
+through `DestroyWeapon(request, context)`. The request must include the owning
+character UUID, item instance ID, and expected serial. Calls fail closed for an
+untrusted resource, stale serial, equipped weapon, evidence hold, disabled
+weapon, invalid metadata, or denied optional Core authorization.
+
 The ammunition and modification menus display each equipped firearm's persisted
 serial number. The same serial is included in `weaponstate` diagnostics for
 primary, offhand, shoulder, and back slots.

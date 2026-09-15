@@ -45,7 +45,8 @@ function WeaponAPI.GetCapabilities()
             attachmentTransactions = InventoryAdapter.IsReady(),
             slotAttachments = InventoryAdapter.IsReady(),
             ownershipTransitionEvents = InventoryAdapter.IsReady(),
-            administrativeHoldGuards = InventoryAdapter.IsReady()
+            administrativeHoldGuards = InventoryAdapter.IsReady(),
+            destruction = InventoryAdapter.IsReady()
         }
     }
 end
@@ -80,6 +81,10 @@ function WeaponAPI.IssueWeapon(request, context)
     return IssuanceService.Issue(context, request)
 end
 
+function WeaponAPI.DestroyWeapon(request, context, invokingResource)
+    return WeaponOwnershipService.Destroy(context, request, invokingResource)
+end
+
 exports("initiate", function()
     return {
         GetCapabilities = WeaponAPI.GetCapabilities,
@@ -91,6 +96,12 @@ exports("initiate", function()
             Reconcile = WeaponAPI.ReconcileEquippedWeapons
         },
         Issuance = { Issue = WeaponAPI.IssueWeapon },
+        Ownership = {
+            Destroy = function(request, context)
+                local invokingResource = GetInvokingResource()
+                return WeaponAPI.DestroyWeapon(request, context, invokingResource)
+            end
+        },
         Inventory = {
             InstallProvider = InventoryAdapter.InstallProvider,
             GetCapabilities = InventoryAdapter.GetCapabilities
@@ -103,6 +114,11 @@ end)
 -- table boundary.
 exports("IssueWeapon", function(request, context)
     return WeaponAPI.IssueWeapon(request, context)
+end)
+
+exports("DestroyWeapon", function(request, context)
+    local invokingResource = GetInvokingResource()
+    return WeaponAPI.DestroyWeapon(request, context, invokingResource)
 end)
 
 exports("InspectEquippedWeapons", function(source)

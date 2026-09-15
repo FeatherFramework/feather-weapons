@@ -360,6 +360,18 @@ and condition `100`.
 After restarting `feather-weapons`, the returned item restored to the original
 owner at generation `1` with the same serial and high-velocity ammunition type.
 Release smoke passed `8/8` and the restored primary lease passed `5/5`.
+The first explicit terminal transition is now a trusted server-only destruction
+operation. It requires exact character ownership, instance ID, expected serial,
+valid weapon metadata, no active lease, no administrative hold, an allowlisted
+calling resource, and optional Core authorization before Inventory atomically
+deletes the instance and emits its committed audit facts.
+Live validation uses a development-only, server-console command requiring the
+player source, exact instance ID, exact serial, and a literal `DESTROY` token.
+Its companion audit smoke test is read-only.
+Live destruction validation passed for disposable item `4938`, serial
+`FW-REVO-6AA8A2CA-4EF025-0001`. The exact instance was removed, the terminal
+audit retained its serial and former character owner, destruction audit smoke
+passed `6/6`, and release smoke remained `8/8` with one active slot.
 Live validation passed `9/9` after an unequipped drop/pickup round trip for item
 `4889`: ordinary movement remained allowed, evidence and disabled policy cases
 were rejected, and observation health remained at zero failures and zero lease

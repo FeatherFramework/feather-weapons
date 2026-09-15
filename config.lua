@@ -91,6 +91,16 @@ Config = {
             }
         }
     },
+    Ownership = {
+        trustedResources = {
+            ["feather-admin"] = true,
+            ["feather-weapons"] = true
+        },
+        authorization = {
+            enabled = false,
+            destroyAction = "weapons.ownership.destroy"
+        }
+    },
     Controls = {
         unload = {
             enabled = true,

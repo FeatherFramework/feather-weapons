@@ -358,6 +358,121 @@ RegisterCommand("WeaponPlayerTransferSmokeTest", function(source, args)
         print(("[WeaponPlayerTransferSmokeTest] done %d/%d passed"):format(passed, #tests))
     end, true)
 
+RegisterCommand("WeaponDestructionContractSmokeTest", function(source)
+        if source ~= 0 then return end
+        local contract = WeaponOwnershipService.CheckDestructionContract()
+        local capabilities = WeaponAPI.GetCapabilities()
+        local tests = {
+            { name = "destruction service available", passed = contract.serviceAvailable == true },
+            { name = "trusted caller configured", passed = contract.trustedCallerConfigured == true },
+            { name = "authorization configured", passed = contract.authorizationConfigured == true },
+            { name = "untrusted caller rejected", passed = contract.untrustedRejected == true },
+            { name = "incomplete request rejected", passed = contract.incompleteRejected == true },
+            {
+                name = "destruction capability ready",
+                passed = capabilities.features.destruction == true
+            }
+        }
+        local passed = 0
+        for _, test in ipairs(tests) do
+            if test.passed then passed = passed + 1 end
+            print(("[WeaponDestructionContractSmokeTest] %-29s %s"):format(
+                test.name, test.passed and "PASS" or "FAIL"))
+        end
+        print(("[WeaponDestructionContractSmokeTest] done %d/%d passed (read-only)")
+            :format(passed, #tests))
+    end, true)
+
+RegisterCommand("WeaponDestroyTest", function(source, args)
+        if source ~= 0 or Config.DevMode ~= true then return end
+        local targetSource = tonumber(args and args[1])
+        local itemInstanceId = tonumber(args and args[2])
+        local serialNumber = args and args[3]
+        local confirmation = args and args[4]
+        if not targetSource or not itemInstanceId or type(serialNumber) ~= "string"
+            or serialNumber == "" or confirmation ~= "DESTROY" then
+            print("[WeaponDestroyTest] usage: WeaponDestroyTest <source> <itemInstanceId> <serialNumber> DESTROY")
+            return
+        end
+
+        local session = CoreAdapter.ResolveSession(targetSource)
+        if not session.ok then
+            print(("[WeaponDestroyTest] FAIL source=%s code=%s message=%s"):format(
+                tostring(targetSource), tostring(session.error and session.error.code),
+                tostring(session.error and session.error.message)))
+            return
+        end
+
+        local result = WeaponOwnershipService.Destroy({
+            actorSource = targetSource,
+            actorCharacterId = session.value.characterId,
+            characterId = session.value.characterId,
+            correlationId = ("destroy-smoke:%s:%s:%s"):format(
+                tostring(targetSource), tostring(itemInstanceId), tostring(GetGameTimer())),
+            reason = "live_destruction_smoke_test"
+        }, {
+            characterId = session.value.characterId,
+            itemInstanceId = itemInstanceId,
+            serialNumber = serialNumber
+        }, "feather-weapons")
+        if not result.ok then
+            print(("[WeaponDestroyTest] FAIL item=%s serial=%s code=%s message=%s"):format(
+                tostring(itemInstanceId), tostring(serialNumber),
+                tostring(result.error and result.error.code),
+                tostring(result.error and result.error.message)))
+            return
+        end
+        print(("[WeaponDestroyTest] PASS destroyed item=%s serial=%s character=%s"):format(
+            tostring(result.value.itemInstanceId), tostring(result.value.serialNumber),
+            tostring(result.value.fromCharacterId)))
+    end, true)
+
+RegisterCommand("WeaponDestructionAuditSmokeTest", function(source, args)
+        if source ~= 0 then return end
+        local expectedItem = tonumber(args and args[1])
+        local expectedSerial = args and args[2]
+        local diagnostics = WeaponOwnershipService.GetDiagnostics()
+        local last = diagnostics.last
+        local tests = {
+            {
+                name = "destruction observed",
+                passed = last ~= nil and last.transitionType == "destruction"
+                    and (diagnostics.byType.destruction or 0) > 0
+            },
+            {
+                name = "expected item destroyed",
+                passed = expectedItem ~= nil and last ~= nil
+                    and tonumber(last.itemInstanceId) == expectedItem
+            },
+            {
+                name = "serial identity preserved",
+                passed = type(expectedSerial) == "string" and expectedSerial ~= ""
+                    and last ~= nil and last.serialNumber == expectedSerial
+            },
+            {
+                name = "owner character recorded",
+                passed = last ~= nil and last.fromCharacterId ~= nil
+            },
+            {
+                name = "terminal transition committed",
+                passed = last ~= nil and last.operation == "destroy"
+                    and last.outcome == "committed" and last.toInventoryId == nil
+            },
+            {
+                name = "observations healthy",
+                passed = diagnostics.failed == 0 and diagnostics.leaseViolations == 0
+            }
+        }
+        local passed = 0
+        for _, test in ipairs(tests) do
+            if test.passed then passed = passed + 1 end
+            print(("[WeaponDestructionAuditSmokeTest] %-29s %s"):format(
+                test.name, test.passed and "PASS" or "FAIL"))
+        end
+        print(("[WeaponDestructionAuditSmokeTest] done %d/%d passed item=%s serial=%s (read-only)")
+            :format(passed, #tests, tostring(expectedItem), tostring(expectedSerial)))
+    end, true)
+
 RegisterCommand("WeaponDualSlotContractSmokeTest", function(source, args)
         if source ~= 0 then return end
         local targetSource = tonumber(args and args[1])

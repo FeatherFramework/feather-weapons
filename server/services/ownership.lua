@@ -62,6 +62,13 @@ local function ClassifyTransition(payload, actorInventoryId)
     return "inventory_move"
 end
 
+local function RecordCommittedFact(fact)
+    TriggerEvent("Feather:Weapons:OwnershipTransitionCommitted", fact)
+    diagnostics.observed = diagnostics.observed + 1
+    diagnostics.byType[fact.transitionType] = (diagnostics.byType[fact.transitionType] or 0) + 1
+    diagnostics.last = fact
+end
+
 function WeaponOwnershipService.HandleCommittedMove(payload)
     if type(payload) ~= "table" then return nil end
     if tostring(payload.fromInventoryId) == tostring(payload.toInventoryId) then return nil end
@@ -132,10 +139,7 @@ function WeaponOwnershipService.HandleCommittedMove(payload)
         if ReconciliationService then ReconciliationService.Force(source) end
     end
 
-    TriggerEvent("Feather:Weapons:OwnershipTransitionCommitted", fact)
-    diagnostics.observed = diagnostics.observed + 1
-    diagnostics.byType[fact.transitionType] = (diagnostics.byType[fact.transitionType] or 0) + 1
-    diagnostics.last = fact
+    RecordCommittedFact(fact)
     if Config.DevMode then
         print(("[feather-weapons] ownership transition item=%s serial=%s definition=%s from=%s/%s to=%s/%s type=%s reason=%s"):format(
             tostring(fact.itemInstanceId), tostring(fact.serialNumber), tostring(fact.definitionId),
@@ -153,6 +157,125 @@ function WeaponOwnershipService.GetDiagnostics()
         leaseViolations = diagnostics.leaseViolations,
         byType = diagnostics.byType,
         last = diagnostics.last
+    }
+end
+
+local function AuthorizeDestruction(context, item)
+    local settings = (Config.Ownership or {}).authorization or {}
+    if settings.enabled ~= true then return WeaponResult.Ok(true, context.correlationId) end
+    if not context.actorSource or type(settings.destroyAction) ~= "string"
+        or settings.destroyAction == "" then
+        return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID,
+            "Weapon destruction authorization is not configured", nil, context.correlationId)
+    end
+    local called, decision = pcall(function()
+        return exports["feather-core"]:Authorize(settings.destroyAction, {
+            source = context.actorSource,
+            correlationId = context.correlationId,
+            subject = {
+                operation = "destroy",
+                itemInstanceId = item.id,
+                serialNumber = item.metadata and item.metadata.serialNumber
+            }
+        })
+    end)
+    if not called or type(decision) ~= "table" or decision.ok ~= true
+        or type(decision.value) ~= "table" or decision.value.allowed ~= true then
+        return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID,
+            "This character is not authorized to destroy weapons", nil, context.correlationId)
+    end
+    return WeaponResult.Ok(true, context.correlationId)
+end
+
+function WeaponOwnershipService.Destroy(context, request, invokingResource)
+    context = type(context) == "table" and context or {}
+    request = type(request) == "table" and request or {}
+    local trusted = (Config.Ownership or {}).trustedResources or {}
+    if trusted[invokingResource] ~= true then
+        return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID,
+            "Calling resource is not trusted for weapon destruction", nil, context.correlationId)
+    end
+
+    local characterId = CoreAdapter.NormalizeCharacterId(request.characterId or context.characterId)
+    local itemInstanceId = tonumber(request.itemInstanceId)
+    local expectedSerial = CleanText(request.serialNumber, 128)
+    if not characterId or not itemInstanceId or not expectedSerial then
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+            "Character, item instance, and expected serial are required", nil, context.correlationId)
+    end
+
+    context.characterId = characterId
+    context.actorCharacterId = CoreAdapter.NormalizeCharacterId(context.actorCharacterId)
+    context.reason = CleanText(context.reason or "weapon_destruction", 64)
+    context.resource = invokingResource
+    local itemResult = InventoryAdapter.GetItemForCharacter(context, itemInstanceId)
+    if not itemResult.ok then return itemResult end
+    local item = itemResult.value
+    local definitionId = item.metadata and item.metadata.weaponDefinitionId
+    local definition = DefinitionRegistry.Get("weapon", definitionId)
+    if not definition.ok then return definition end
+    local valid = WeaponMetadata.Validate(item.metadata, definition.value, context.correlationId)
+    if not valid.ok then return valid end
+    if item.metadata.serialNumber ~= expectedSerial then
+        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+            "Weapon serial changed before destruction", {
+                expectedSerial = expectedSerial,
+                actualSerial = item.metadata.serialNumber
+            }, context.correlationId)
+    end
+    local activeSource, activeSlot = WeaponRuntime.FindLeaseByItem(itemInstanceId)
+    if activeSource then
+        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+            "Unequip the weapon before destroying it", {
+                source = activeSource,
+                slot = activeSlot
+            }, context.correlationId)
+    end
+    local allowed, reason = WeaponOwnershipService.EvaluateAdministrativeHold(item.metadata)
+    if not allowed then
+        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, reason, nil, context.correlationId)
+    end
+    local authorized = AuthorizeDestruction(context, item)
+    if not authorized.ok then return authorized end
+
+    local destroyed = InventoryAdapter.DestroyInstance(context, item)
+    if not destroyed.ok then return destroyed end
+    local fact = {
+        operation = "destroy",
+        transitionType = "destruction",
+        outcome = "committed",
+        itemInstanceId = item.id,
+        definitionId = definitionId,
+        serialNumber = item.metadata.serialNumber,
+        revision = item.metadataRevision,
+        fromInventoryId = item.inventoryId,
+        fromCharacterId = characterId,
+        actorSource = context.actorSource,
+        actorCharacterId = context.actorCharacterId,
+        reason = context.reason,
+        resource = context.resource,
+        correlationId = context.correlationId,
+        occurredAt = os.time()
+    }
+    RecordCommittedFact(fact)
+    return WeaponResult.Ok(fact, context.correlationId)
+end
+
+function WeaponOwnershipService.CheckDestructionContract()
+    local trusted = (Config.Ownership or {}).trustedResources or {}
+    local authorization = (Config.Ownership or {}).authorization or {}
+    local untrusted = WeaponOwnershipService.Destroy({}, {}, "untrusted-smoke-resource")
+    local incomplete = WeaponOwnershipService.Destroy({}, {}, "feather-weapons")
+    return {
+        serviceAvailable = type(WeaponOwnershipService.Destroy) == "function",
+        trustedCallerConfigured = trusted["feather-weapons"] == true,
+        authorizationConfigured = authorization.enabled ~= true
+            or (type(authorization.destroyAction) == "string"
+                and authorization.destroyAction ~= ""),
+        untrustedRejected = untrusted.ok == false
+            and untrusted.error and untrusted.error.code == WeaponErrors.AUTHORIZATION_INVALID,
+        incompleteRejected = incomplete.ok == false
+            and incomplete.error and incomplete.error.code == WeaponErrors.ITEM_INVALID
     }
 end
 
