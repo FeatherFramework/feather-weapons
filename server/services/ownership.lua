@@ -1,5 +1,11 @@
 WeaponOwnershipService = {}
-local diagnostics = { observed = 0, failed = 0, leaseViolations = 0, last = nil }
+local diagnostics = {
+    observed = 0,
+    failed = 0,
+    leaseViolations = 0,
+    byType = {},
+    last = nil
+}
 
 local function CleanText(value, maximum)
     if value == nil then return nil end
@@ -19,6 +25,26 @@ function WeaponOwnershipService.EvaluateAdministrativeHold(metadata)
         return false, "This weapon is administratively disabled and cannot be moved or removed."
     end
     return true
+end
+
+local function ClassifyTransition(payload)
+    local reason = tostring(payload.reason or "")
+    if reason == "ground_drop" then return "drop" end
+    if reason == "give" then return "transfer" end
+    if reason == "container_recovery" then return "recovery" end
+
+    local characterId = CoreAdapter.NormalizeCharacterId(payload.actorCharacterId)
+    if characterId then
+        local inventory = InventoryAdapter.GetCharacterInventory({
+            correlationId = payload.correlationId
+        }, characterId)
+        local characterInventoryId = inventory.ok and tonumber(inventory.value.id) or nil
+        if characterInventoryId then
+            if tonumber(payload.toInventoryId) == characterInventoryId then return "pickup" end
+            if tonumber(payload.fromInventoryId) == characterInventoryId then return "deposit" end
+        end
+    end
+    return "inventory_move"
 end
 
 function WeaponOwnershipService.HandleCommittedMove(payload)
@@ -48,6 +74,7 @@ function WeaponOwnershipService.HandleCommittedMove(payload)
 
     local fact = {
         operation = "inventory_move",
+        transitionType = ClassifyTransition(payload),
         outcome = "committed",
         itemInstanceId = tonumber(payload.instanceId),
         definitionId = definitionId,
@@ -77,6 +104,7 @@ function WeaponOwnershipService.HandleCommittedMove(payload)
 
     TriggerEvent("Feather:Weapons:OwnershipTransitionCommitted", fact)
     diagnostics.observed = diagnostics.observed + 1
+    diagnostics.byType[fact.transitionType] = (diagnostics.byType[fact.transitionType] or 0) + 1
     diagnostics.last = fact
     if Config.DevMode then
         print(("[feather-weapons] ownership transition item=%s serial=%s definition=%s from=%s to=%s reason=%s"):format(
@@ -91,6 +119,7 @@ function WeaponOwnershipService.GetDiagnostics()
         observed = diagnostics.observed,
         failed = diagnostics.failed,
         leaseViolations = diagnostics.leaseViolations,
+        byType = diagnostics.byType,
         last = diagnostics.last
     }
 end

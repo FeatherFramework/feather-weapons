@@ -312,6 +312,9 @@ weapon definition and serial identity, origin/destination inventories, and that
 no equipped lease bypassed the registered movement guard.
 It also verifies that ordinary weapon metadata remains movable while evidence
 and administratively disabled states are rejected by Weapons policy.
+Committed facts label explicit `transfer`, `drop`, and `recovery` reasons and
+use the actor's character inventory to distinguish `pickup` and `deposit`.
+Ambiguous container movement remains labeled `inventory_move`.
 
 The ammunition and modification menus display each equipped firearm's persisted
 serial number. The same serial is included in `weaponstate` diagnostics for

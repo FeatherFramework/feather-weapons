@@ -35,6 +35,7 @@ function InventoryAdapter.InstallProvider(candidate)
         or not IsCallable(candidate.PromoteOffhandToPrimary)
         or not IsCallable(candidate.CreateWeapon)
         or not IsCallable(candidate.GetInstance)
+        or not IsCallable(candidate.GetCharacterInventory)
         or not IsCallable(candidate.ResolveWeaponDefinitionId)
         or not IsCallable(candidate.Transaction) then
         return WeaponResult.Error(WeaponErrors.INVENTORY_UNAVAILABLE, "Inventory provider is missing required operations")
@@ -103,6 +104,11 @@ end
 function InventoryAdapter.GetInstance(context, itemInstanceId)
     if not provider then return Unavailable(context, "GetInstance") end
     return provider.GetInstance(context, itemInstanceId)
+end
+
+function InventoryAdapter.GetCharacterInventory(context, characterId)
+    if not provider then return Unavailable(context, "GetCharacterInventory") end
+    return provider.GetCharacterInventory(context, characterId)
 end
 
 function InventoryAdapter.ResolveWeaponDefinitionId(inventoryDefinitionId)

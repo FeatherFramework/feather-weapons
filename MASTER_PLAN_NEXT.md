@@ -335,6 +335,14 @@ Inventory move and destroy guards now fail closed for weapon metadata marked as
 evidence or administratively disabled, matching the existing equip rejection.
 Ordinary weapons remain movable once unequipped; future confiscation/return
 operations must explicitly manage holds rather than bypassing the generic guard.
+Committed movement facts are now classified from Inventory's reason plus the
+actor's canonical character-inventory identity. Explicit give, drop, recovery,
+pickup, and deposit transitions receive stable names; unresolved container
+movement remains `inventory_move` rather than being guessed.
+Live validation passed `11/11` for item `4889`: one `drop` and one `pickup`
+were classified from the committed ground round trip, the final transition was
+`pickup`, and failures and active-lease violations remained zero. Release smoke
+remained `8/8` with no active slots.
 Live validation passed `9/9` after an unequipped drop/pickup round trip for item
 `4889`: ordinary movement remained allowed, evidence and disabled policy cases
 were rejected, and observation health remained at zero failures and zero lease

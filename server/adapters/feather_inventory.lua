@@ -184,6 +184,12 @@ function FeatherInventoryProvider.GetInstance(context, itemInstanceId)
     return WeaponResult.Ok(NormalizeItem(result.value), context and context.correlationId)
 end
 
+function FeatherInventoryProvider.GetCharacterInventory(context, characterId)
+    local result = Inventory.GetCharacterInventory(characterId)
+    if not result.ok then return result end
+    return WeaponResult.Ok(result.value, context and context.correlationId)
+end
+
 function FeatherInventoryProvider.ResolveWeaponDefinitionId(inventoryDefinitionId)
     return WeaponDefinitionsByInventoryId[tonumber(inventoryDefinitionId)]
 end

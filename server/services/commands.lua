@@ -256,6 +256,20 @@ RegisterCommand("WeaponOwnershipTransitionSmokeTest", function(source, args)
                     and last.fromInventoryId ~= last.toInventoryId
             },
             {
+                name = "transition classified",
+                passed = last ~= nil and last.transitionType ~= nil
+                    and last.transitionType ~= "inventory_move",
+                detail = last and ("type=" .. tostring(last.transitionType)) or nil
+            },
+            {
+                name = "ground round trip classified",
+                passed = (diagnostics.byType.drop or 0) > 0
+                    and (diagnostics.byType.pickup or 0) > 0,
+                detail = ("drop=%s pickup=%s"):format(
+                    tostring(diagnostics.byType.drop or 0),
+                    tostring(diagnostics.byType.pickup or 0))
+            },
+            {
                 name = "expected item observed",
                 passed = not expectedItem or (last ~= nil
                     and tonumber(last.itemInstanceId) == expectedItem),
