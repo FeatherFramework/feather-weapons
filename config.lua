@@ -80,11 +80,25 @@ Config = {
         requireStation = true,
         interactionDistance = 2.0,
         serverTolerance = 3.0,
+        authorization = {
+            enabled = false,
+            action = "weapons.attachments.modify"
+        },
         stations = {
             valentine = {
                 label = "Valentine Gunsmith Bench",
                 coords = vector3(-277.455, 779.197, 119.504)
             }
+        }
+    },
+    Ownership = {
+        trustedResources = {
+            ["feather-admin"] = true,
+            ["feather-weapons"] = true
+        },
+        authorization = {
+            enabled = false,
+            destroyAction = "weapons.ownership.destroy"
         }
     },
     Controls = {

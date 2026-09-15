@@ -110,6 +110,23 @@ function WeaponValidation.Definition(definition, expectedKind)
                 end
             end
         end
+        if definition.attachmentDefaults ~= nil then
+            if type(definition.attachmentDefaults) ~= "table" then
+                AddError(errors, "attachmentDefaults", "must be a table keyed by supported slot")
+            else
+                for slot, label in pairs(definition.attachmentDefaults) do
+                    if not WeaponConstants.AttachmentSlots[slot]
+                        or type(definition.attachmentSlots) ~= "table"
+                        or type(definition.attachmentSlots[slot]) ~= "table" then
+                        AddError(errors, "attachmentDefaults." .. tostring(slot),
+                            "must reference a declared attachment slot")
+                    elseif not IsNonEmptyString(label) then
+                        AddError(errors, "attachmentDefaults." .. tostring(slot),
+                            "must be a non-empty label")
+                    end
+                end
+            end
+        end
     elseif expectedKind == "ammunition" then
         if not IsNonEmptyString(definition.nativeAmmoName) then AddError(errors, "nativeAmmoName",
         "must be a non-empty string") end
@@ -122,6 +139,7 @@ function WeaponValidation.Definition(definition, expectedKind)
         if not IsNonEmptyString(definition.nativeComponentName) then AddError(errors, "nativeComponentName",
                 "must be a non-empty string") end
         ValidateStringArray(errors, "conflicts", definition.conflicts)
+        ValidateStringArray(errors, "prerequisites", definition.prerequisites)
         if type(definition.removable) ~= "boolean" then AddError(errors, "removable", "must be boolean") end
     end
 

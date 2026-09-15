@@ -36,7 +36,7 @@ Server operation, recovery, integration, and trust boundaries are documented in
 - Atomically consume the gun oil and update weapon condition.
 - Prevent equipped weapon instances from being moved or destroyed.
 - Reject stale, concurrent, invalid, or unauthorized mutations.
-- Validate attachment definitions, slots, conflicts, and per-weapon compatibility at startup.
+- Validate attachment definitions, slots, conflicts, prerequisites, and per-weapon compatibility at startup.
 - Resolve active characters through Feather Core Contract 1 sessions.
 - Preserve canonical UUID character IDs through issuance, equipment, and Inventory calls.
 
@@ -260,6 +260,17 @@ menu. Full-condition, stale-slot, and invalid repairs do not consume a kit.
 
 Attachment installation and removal require proximity to a configured gunsmith bench. Equip the weapon at the Valentine bench, then press `F6` or use `/weaponmods` to install an owned compatible attachment or remove an installed one. The Long Barrel is not a usable item; the server verifies distance and ownership before starting the Inventory transaction.
 
+`Attachments.authorization.enabled` can route every install and removal through
+Feather Core's policy provider using the configured action (default
+`weapons.attachments.modify`). The policy receives the operation, station,
+weapon definition, and attachment ID, allowing Feather Roles or another jobs
+resource to enforce gunsmith access. Authorization is unrestricted by default
+and fails closed when enabled without an available policy decision.
+
+Modification menus label definition-driven native defaults for empty component
+slots. These labels describe the weapon's built-in baseline and never create or
+return Inventory items.
+
 ## Current revolver settings
 
 | Setting | Value |
@@ -288,9 +299,48 @@ Attachment installation and removal require proximity to a configured gunsmith b
 
 When `DevMode = true`, `/weaponstate` prints the authoritative equipped item ID, loaded ammunition, and condition to F8. Normal equip, reload, unload, and repair testing uses gameplay interactions rather than test commands.
 
-The read-only `WeaponRuntimeLeaseSmokeTest`,
-`WeaponDualSlotContractSmokeTest`, and `WeaponReleaseContractSmokeTest`
-commands remain available from the server console with `DevMode` disabled.
+The read-only `WeaponRuntimeLeaseSmokeTest`, `WeaponDualSlotContractSmokeTest`,
+`WeaponAttachmentContractSmokeTest`, `WeaponOwnershipTransitionSmokeTest`, and
+`WeaponReleaseContractSmokeTest` commands remain available from the server
+console with `DevMode` disabled. The attachment check validates active component
+sets, native mappings, item/slot identity, runtime lease scope, and optional
+authorization configuration without mutating weapons or Inventory.
+
+`WeaponOwnershipTransitionSmokeTest [itemInstanceId]` validates the most recent
+cross-container weapon move observed from Inventory's committed event. It checks
+weapon definition and serial identity, origin/destination inventories, and that
+no equipped lease bypassed the registered movement guard.
+It also verifies that ordinary weapon metadata remains movable while evidence
+and administratively disabled states are rejected by Weapons policy.
+Committed facts label explicit `transfer`, `drop`, and `recovery` reasons and
+use the actor's character inventory to distinguish `pickup` and `deposit`.
+Ambiguous container movement remains labeled `inventory_move`.
+
+`WeaponPlayerTransferSmokeTest [itemInstanceId]` validates Inventory's existing
+give flow for an unequipped firearm. It requires both active character owners
+to resolve, preserves the weapon serial, and rejects any transfer observation
+that coincided with an active lease violation.
+
+`WeaponDestructionContractSmokeTest` checks the trusted destruction surface,
+authorization configuration, rejection behavior, and provider capability
+without deleting an item.
+
+In development mode, the server-console-only
+`WeaponDestroyTest <source> <itemInstanceId> <serialNumber> DESTROY` command
+permanently removes one exact, unequipped test weapon. The mandatory serial and
+confirmation token make the destructive target explicit.
+`WeaponDestructionAuditSmokeTest <itemInstanceId> <serialNumber>` then validates
+the captured terminal ownership fact without performing another mutation.
+
+Trusted server resources may permanently destroy an exact unequipped weapon
+through `DestroyWeapon(request, context)`. The request must include the owning
+character UUID, item instance ID, and expected serial. Calls fail closed for an
+untrusted resource, stale serial, equipped weapon, evidence hold, disabled
+weapon, invalid metadata, or denied optional Core authorization.
+
+The ammunition and modification menus display each equipped firearm's persisted
+serial number. The same serial is included in `weaponstate` diagnostics for
+primary, offhand, shoulder, and back slots.
 Development grants and native probes remain disabled.
 
 ## Known limitations

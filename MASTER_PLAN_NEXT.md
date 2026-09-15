@@ -234,6 +234,63 @@ This is the next implementation phase after the Phase 2/3 live acceptance
 matrix. Only the Cattleman Long Barrel is currently shipped; do not bulk-add
 component definitions without verified native mappings and lifecycle tests.
 
+Attachment prerequisites are now definition-driven. Startup rejects invalid,
+cyclic, conflicting, same-slot, and weapon-incompatible prerequisite graphs;
+installation and removal validate the complete resulting set inside the same
+Inventory transaction. The two shipped Cattleman components remain independent.
+Optional gunsmith job restrictions now use Feather Core's policy-provider
+boundary. They remain disabled by default; when enabled, both installation and
+removal fail closed unless the configured action authorizes the character for
+the specific operation, station, weapon definition, and attachment.
+Live validation passed both policy modes. With authorization disabled, existing
+Cattleman installation and removal remained available and release smoke passed
+`8/8`. With authorization enabled, the active policy denied the character;
+the menu could open, but installation/removal failed with an authorization
+notice and changed neither weapon metadata nor Inventory. The shipped default
+was restored to disabled after the test.
+Native component defaults are now explicit presentation metadata on weapon
+definitions. The Cattleman labels its unmodified barrel and sight without
+turning either baseline into an Inventory item; installed upgrades hide the
+corresponding default, and removal reveals it again. Startup rejects defaults
+for undeclared slots or empty labels.
+The modification menu now remains open after successful mutations, rebuilds
+the active weapon page, uses catalog weapon/component labels, and groups slots
+in a stable order. Live temporary prerequisite validation passed end to end:
+Wide Sight named Long Barrel as its missing requirement, installing Long Barrel
+unlocked the sight, installing the sight marked the barrel as required and
+withheld its removal action, then removing sight before barrel returned both
+items and restored both standard defaults. The temporary dependency was removed
+after testing; the shipped Cattleman components remain independent.
+`WeaponAttachmentContractSmokeTest` now provides a read-only live gate for the
+active four-slot loadout. It validates each complete attachment set, component
+mapping, attachment and slot identity, runtime lease scope, and authorization
+configuration without changing weapon or Inventory state.
+The first live run passed `7/7` with one active weapon carrying both shipped
+Cattleman components (`activeSlots=1 attachments=2`).
+The corresponding unmodified run passed `7/7` with the same active-slot shape
+and zero attachment metadata (`activeSlots=1 attachments=0`), confirming that
+presentation defaults remain distinct from installed component instances.
+The modified Cattleman also passed `7/7` while holstered. Client state remained
+idle with primary/offhand natives cleared, while item `4875` retained both
+component identities under its current primary lease.
+Offhand isolation passed `7/7` with two active sidearm slots. Primary item
+`4888` retained zero attachments while offhand Cattleman item `4875` retained
+both components under generation `3`; the shared revolver ammo coordinator
+remained conserved at an empty authorized pool.
+A second Cattleman instance, item `4889`, then passed `7/7` alone with zero
+attachments, demonstrating that item `4875`'s two-component state did not bleed
+across matching weapon definitions.
+Reselecting original item `4875` completed the identity round trip at generation
+`5`: its two component IDs returned and the attachment contract again passed
+`7/7`, while item `4889` remained independently unmodified.
+After character logout and restoration, item `4875` returned at generation `1`
+with both components, valid active-set metadata, and a current runtime lease;
+the attachment contract passed `7/7`.
+Restarting `feather-weapons` reproduced the same generation `1` state for item
+`4875`; both component identities and the current lease remained valid and the
+attachment contract passed `7/7`. The Phase 4 live attachment lifecycle matrix
+is complete for the shipped Cattleman components.
+
 ### Exit gate
 
 - Install and removal are atomic for equipped, holstered, stored, primary, and
@@ -254,6 +311,71 @@ component definitions without verified native mappings and lifecycle tests.
 - Define recovery for disconnects and resource failure during a transition.
 - Prevent transfers of equipped, stale, invalid, or administratively held
   weapons.
+
+The first Phase 5 slice consumes Inventory's existing committed `ItemMoved`
+event rather than introducing a duplicate movement API. Cross-container weapon
+moves are normalized into `Feather:Weapons:OwnershipTransitionCommitted` facts
+containing item, definition, serial, revision, inventories, actor, reason, and
+correlation identity. Same-inventory slot rearrangements are ignored. Any move
+that somehow retains an active Weapons lease is treated as a critical guard
+violation and forces reconciliation.
+Live ground-transition validation passed: unequipped Cattleman item `4889`
+produced two healthy committed observations across drop and pickup, preserving
+the same item and weapon identity with zero failed observations or active-lease
+violations. The ownership smoke test passed `6/6` and release smoke remained
+`8/8`.
+Weapon serials now travel with approved runtime state and appear in ammunition
+and modification menus plus `weaponstate`, giving players and testers a stable
+firearm identity before and after an ownership transition.
+The player-visible identity round trip passed for item `4889`: serial
+`FW-REVO-6AA86F32-E89E28-0002` was identical before drop and after pickup and
+re-equip. The observer again reported exactly two committed transitions and
+passed `6/6` with zero failures or active-lease violations.
+Inventory move and destroy guards now fail closed for weapon metadata marked as
+evidence or administratively disabled, matching the existing equip rejection.
+Ordinary weapons remain movable once unequipped; future confiscation/return
+operations must explicitly manage holds rather than bypassing the generic guard.
+Committed movement facts are now classified from Inventory's reason plus the
+actor's canonical character-inventory identity. Explicit give, drop, recovery,
+pickup, and deposit transitions receive stable names; unresolved container
+movement remains `inventory_move` rather than being guessed.
+Live validation passed `11/11` for item `4889`: one `drop` and one `pickup`
+were classified from the committed ground round trip, the final transition was
+`pickup`, and failures and active-lease violations remained zero. Release smoke
+remained `8/8` with no active slots.
+Player-to-player `give` facts now resolve both active character owners from the
+committed origin and destination inventory IDs. A dedicated transfer smoke test
+requires distinct source/recipient characters, preserved serial identity, and
+zero observation or lease failures.
+The forward two-player transfer passed `7/7` for item `4889`. Both character
+owners resolved, ownership changed once, and the recipient equipped the same
+serial `FW-REVO-6AA86F32-E89E28-0002` with its high-velocity ammunition type,
+empty ammo state, zero attachments, and condition `100` intact. Release smoke
+remained `8/8` for the sender with no active slots.
+The recipient then unequipped and returned item `4889`. The transfer observer
+passed `7/7` with `count=2`, distinct source and recipient owners, and no failed
+observations or lease violations. The original player re-equipped the unchanged
+serial with high-velocity ammunition selected, zero rounds, zero attachments,
+and condition `100`.
+After restarting `feather-weapons`, the returned item restored to the original
+owner at generation `1` with the same serial and high-velocity ammunition type.
+Release smoke passed `8/8` and the restored primary lease passed `5/5`.
+The first explicit terminal transition is now a trusted server-only destruction
+operation. It requires exact character ownership, instance ID, expected serial,
+valid weapon metadata, no active lease, no administrative hold, an allowlisted
+calling resource, and optional Core authorization before Inventory atomically
+deletes the instance and emits its committed audit facts.
+Live validation uses a development-only, server-console command requiring the
+player source, exact instance ID, exact serial, and a literal `DESTROY` token.
+Its companion audit smoke test is read-only.
+Live destruction validation passed for disposable item `4938`, serial
+`FW-REVO-6AA8A2CA-4EF025-0001`. The exact instance was removed, the terminal
+audit retained its serial and former character owner, destruction audit smoke
+passed `6/6`, and release smoke remained `8/8` with one active slot.
+Live validation passed `9/9` after an unequipped drop/pickup round trip for item
+`4889`: ordinary movement remained allowed, evidence and disabled policy cases
+were rejected, and observation health remained at zero failures and zero lease
+violations. Release smoke remained `8/8` with no active slots.
 
 ### Exit gate
 
@@ -1029,3 +1151,5 @@ A phase is complete only when:
    quit, resource restart, and full-server-restart validation.
 8. [x] Build the attachment compatibility worksheet and add one fully tested
    component vertical slice beyond the Cattleman Long Barrel.
+9. [x] Run `WeaponAttachmentContractSmokeTest` against unmodified, modified,
+   holstered, offhand, distinct-instance, logout, and resource-restart states.

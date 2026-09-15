@@ -4,6 +4,7 @@ local FeatherInventoryProvider = {}
 ---@type table
 local Inventory = {}
 local DefinitionIds = {}
+local WeaponDefinitionsByInventoryId = {}
 local MissingDefinitions = {}
 local DuplicateDefinitions = {}
 
@@ -43,6 +44,7 @@ end
 -- to report when the real answer is "inventory did not answer".
 local function BuildDefinitionIndex()
     DefinitionIds = {}
+    WeaponDefinitionsByInventoryId = {}
     DuplicateDefinitions = {}
     local definitionsByName = {}
 
@@ -135,6 +137,13 @@ local function BuildDefinitionIndex()
         })
     end
 
+    for definitionId, definition in pairs(WeaponDefinitionCatalog.weapons or {}) do
+        local inventoryDefinitionId = DefinitionIds[definition.itemName]
+        if inventoryDefinitionId then
+            WeaponDefinitionsByInventoryId[inventoryDefinitionId] = definitionId
+        end
+    end
+
     return WeaponResult.Ok(true)
 end
 
@@ -167,6 +176,32 @@ function FeatherInventoryProvider.GetItemForCharacter(context, itemInstanceId)
     local result = Inventory.GetItemForCharacter(context.characterId, itemInstanceId)
     if not result.ok then return result end
     return WeaponResult.Ok(NormalizeItem(result.value), context.correlationId)
+end
+
+function FeatherInventoryProvider.GetInstance(context, itemInstanceId)
+    local result = Inventory.Instances.GetInstance(itemInstanceId)
+    if not result.ok then return result end
+    return WeaponResult.Ok(NormalizeItem(result.value), context and context.correlationId)
+end
+
+function FeatherInventoryProvider.GetCharacterInventory(context, characterId)
+    local result = Inventory.GetCharacterInventory(characterId)
+    if not result.ok then return result end
+    return WeaponResult.Ok(result.value, context and context.correlationId)
+end
+
+function FeatherInventoryProvider.DestroyInstance(context, item)
+    local result = Inventory.DestroyInstances(context, {
+        inventoryId = item.inventoryId,
+        expectedLocation = "character",
+        instanceIds = { item.id }
+    })
+    if not result.ok then return result end
+    return WeaponResult.Ok(result.value, context and context.correlationId)
+end
+
+function FeatherInventoryProvider.ResolveWeaponDefinitionId(inventoryDefinitionId)
+    return WeaponDefinitionsByInventoryId[tonumber(inventoryDefinitionId)]
 end
 
 function FeatherInventoryProvider.GetEquippedForCharacter(context)
@@ -515,7 +550,7 @@ local function RegisterGuards()
     -- the envelope itself would veto every move on a database error -- and
     -- treating an unanswerable question as "not equipped" would let an
     -- equipped weapon leave the inventory while the game still holds it.
-    local function EquippedGuard(instance)
+    local function WeaponGuard(instance)
         local equipped = Inventory.Equipment.IsInstanceEquipped(instance.id)
         if not equipped.ok then
             return false, "Unable to verify equipped state."
@@ -523,16 +558,20 @@ local function RegisterGuards()
         if equipped.value then
             return false, "Unequip this item before moving or removing it."
         end
+        local definition = instance.definition or {}
+        if WeaponDefinitionsByInventoryId[tonumber(definition.id)] then
+            return WeaponOwnershipService.EvaluateAdministrativeHold(instance.metadata)
+        end
         return true
     end
 
-    local move = Inventory.Guards.RegisterMoveGuard("feather-weapons", EquippedGuard)
+    local move = Inventory.Guards.RegisterMoveGuard("feather-weapons", WeaponGuard)
     if type(move) ~= "table" or move.ok ~= true then
         return Failure(nil, "Move guard registration failed",
             { reason = type(move) == "table" and move.error and move.error.message or nil })
     end
 
-    local destroy = Inventory.Guards.RegisterDestroyGuard("feather-weapons", EquippedGuard)
+    local destroy = Inventory.Guards.RegisterDestroyGuard("feather-weapons", WeaponGuard)
     if type(destroy) ~= "table" or destroy.ok ~= true then
         return Failure(nil, "Destroy guard registration failed",
             { reason = type(destroy) == "table" and destroy.error and destroy.error.message or nil })
@@ -553,7 +592,7 @@ function InstallFeatherInventoryProvider()
 
     local required = { "Items", "Instances", "Equipment", "Guards", "Transaction", "MutateItem", "MutateItems", "CreateInstance",
         "PromoteEquippedSlot",
-        "GetCapabilities",
+        "GetCapabilities", "DestroyInstances",
         "GetItemForCharacter", "GetEquippedForCharacter", "SetEquippedForCharacter",
         "GetCharacterInventory" }
     for _, name in ipairs(required) do
@@ -562,8 +601,9 @@ function InstallFeatherInventoryProvider()
         end
     end
     if type(api.Inventory) ~= "table" or not IsCallable(api.Inventory.GetInventoryItems)
-        or not IsCallable(api.GetCharacterInventory) then
-        return Failure(nil, "feather-inventory is missing weapon listing APIs")
+        or not IsCallable(api.GetCharacterInventory)
+        or not IsCallable(api.DestroyInstances) then
+        return Failure(nil, "feather-inventory is missing weapon listing or destruction APIs")
     end
 
     Inventory = api

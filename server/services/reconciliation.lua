@@ -58,6 +58,7 @@ function ReconciliationService.Snapshot(source, sessionId, correlationId)
     if runtime.equipped then
         equipped = {
             itemInstanceId = runtime.equipped.itemInstanceId,
+            serialNumber = runtime.equipped.serialNumber,
             definitionId = runtime.equipped.definitionId,
             nativeWeaponName = runtime.equipped.nativeWeaponName,
             ammunitionType = runtime.equipped.ammunitionType,
@@ -80,6 +81,7 @@ function ReconciliationService.Snapshot(source, sessionId, correlationId)
             slots[slot] = {
                 slot = slot,
                 itemInstanceId = value.itemInstanceId,
+                serialNumber = value.serialNumber,
                 definitionId = value.definitionId,
                 nativeWeaponName = value.nativeWeaponName,
                 ammunitionType = value.ammunitionType,

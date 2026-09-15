@@ -812,6 +812,7 @@ local function ApprovedState(approved)
     return {
         slot = approved.slot or 'primary',
         itemInstanceId = approved.itemInstanceId,
+        serialNumber = approved.serialNumber,
         definitionId = approved.definitionId,
         nativeWeaponName = approved.nativeWeaponName,
         ammunitionType = approved.ammunitionType,
@@ -1967,6 +1968,8 @@ RegisterNetEvent('feather-weapons:client:useInventoryWeapon', function(itemInsta
     end)
 end)
 
+local BuildModificationMenu
+
 local function HandleAttachmentResult(result)
     if result and result.ok then
         local slot = result.value.slot or 'primary'
@@ -1984,11 +1987,15 @@ local function HandleAttachmentResult(result)
             FeatherWeaponsClient.Reconcile(function(reconciled)
                 Notify(reconciled and reconciled.ok and message
                     or 'Attachment changed, but the weapon pair could not be restored.')
+                if reconciled and reconciled.ok and BuildModificationMenu then
+                    BuildModificationMenu(slot)
+                end
             end)
         else
             RestoreApprovedNativeWeapon(state.nativeWeaponName, state.nativeAmmoName, state.ammo,
                 state.loaded, state.attachments)
             Notify(message)
+            if BuildModificationMenu then BuildModificationMenu(slot) end
         end
         return
     end
@@ -2115,7 +2122,7 @@ end
 
 local BuildModificationPage
 
-local function BuildModificationMenu()
+BuildModificationMenu = function(preferredSlot)
     if not equipped and not offhand and not extraSlots.shoulder and not extraSlots.back then
         Notify('Equip a weapon before modifying it.')
         return
@@ -2155,6 +2162,10 @@ local function BuildModificationMenu()
             end
         end
 
+        if preferredSlot and ModificationPages[preferredSlot] then
+            OpenWeaponPage(ModificationPages[preferredSlot])
+            return
+        end
         OpenWeaponPage(selector)
         return
     end
@@ -2169,65 +2180,150 @@ end
 BuildModificationPage = function(slot)
     local selected = SlotState(slot)
     if not selected then return nil end
+    local weaponDefinition = WeaponDefinitionCatalog.weapons[selected.definitionId]
 
     local page = CreateWeaponPage(ModificationMenu, ('feather-weapons:installed-attachments:%s'):format(slot))
 
     AddWeaponElement(page, 'header', { value = 'Weapon Modifications', slot = 'header' })
 
     AddWeaponElement(page, 'subheader', {
-        value = ('%s: %s'):format(SlotLabel(slot), selected.definitionId or 'Equipped weapon'),
+        value = ('%s: %s'):format(SlotLabel(slot),
+            weaponDefinition and weaponDefinition.label or selected.definitionId or 'Equipped weapon'),
         slot = 'header'
     })
 
     AddWeaponElement(page, 'line', { slot = 'header' })
 
-    local installedIds = {}
+    AddWeaponElement(page, 'textdisplay', {
+        value = ('Serial: %s'):format(selected.serialNumber or 'Unknown'),
+        slot = 'content'
+    })
+
+    local installedBySlot, installedIds = {}, {}
     for _, installed in ipairs(selected.attachments or {}) do
+        installedBySlot[installed.slot] = installed
         installedIds[installed.definitionId] = true
     end
-
-    local weaponDefinition = WeaponDefinitionCatalog.weapons[selected.definitionId]
-    local compatibleIds = {}
-    for _, attachmentIds in pairs(weaponDefinition and weaponDefinition.attachmentSlots or {}) do
-        for _, attachmentId in ipairs(attachmentIds) do compatibleIds[attachmentId] = true end
+    local requiredBy = {}
+    for attachmentId in pairs(installedIds) do
+        local definition = WeaponDefinitionCatalog.attachments[attachmentId]
+        for _, prerequisiteId in ipairs(definition and definition.prerequisites or {}) do
+            requiredBy[prerequisiteId] = requiredBy[prerequisiteId] or {}
+            requiredBy[prerequisiteId][#requiredBy[prerequisiteId] + 1] =
+                definition.label or attachmentId:gsub('_', ' ')
+        end
     end
 
-    for attachmentId in pairs(compatibleIds) do
-        if not installedIds[attachmentId] then
+    local slotNames = {}
+    for slotName in pairs(weaponDefinition and weaponDefinition.attachmentSlots or {}) do
+        slotNames[#slotNames + 1] = slotName
+    end
+    table.sort(slotNames)
+
+    for _, slotName in ipairs(slotNames) do
+        local installed = installedBySlot[slotName]
+        if installed then
+            local attachmentId = installed.definitionId
             local definition = WeaponDefinitionCatalog.attachments[attachmentId]
-            AddWeaponElement(page, 'button', {
-                label = ('Install %s'):format(definition and definition.label or attachmentId:gsub('_', ' ')),
+            local label = definition and definition.label or attachmentId:gsub('_', ' ')
+            AddWeaponElement(page, 'textdisplay', {
+                value = ('%s: %s'):format(
+                    slotName:gsub('^%l', string.upper), label),
                 slot = 'content'
-            }, function()
-                CloseWeaponMenu(ModificationMenu)
-                RequestAttachmentMutation('feather-weapons:attachment:install', {
-                    attachmentId = attachmentId,
-                    slot = slot,
-                    itemInstanceId = selected.itemInstanceId,
-                    generation = selected.generation
+            })
+            if requiredBy[attachmentId] then
+                table.sort(requiredBy[attachmentId])
+                AddWeaponElement(page, 'textdisplay', {
+                    value = ('Required by: %s'):format(table.concat(requiredBy[attachmentId], ', ')),
+                    slot = 'content'
                 })
-            end)
+            else
+                AddWeaponElement(page, 'button', {
+                    label = ('Remove %s'):format(label),
+                    slot = 'content'
+                }, function()
+                    RequestAttachmentMutation('feather-weapons:attachment:remove', {
+                        attachmentId = attachmentId,
+                        slot = slot,
+                        itemInstanceId = selected.itemInstanceId,
+                        generation = selected.generation
+                    })
+                end)
+            end
+        else
+            local defaultLabel = weaponDefinition.attachmentDefaults
+                and weaponDefinition.attachmentDefaults[slotName] or nil
+            if defaultLabel then
+                AddWeaponElement(page, 'textdisplay', {
+                    value = ('%s: %s'):format(
+                        slotName:gsub('^%l', string.upper), defaultLabel),
+                    slot = 'content'
+                })
+            end
+            for _, attachmentId in ipairs(weaponDefinition.attachmentSlots[slotName]) do
+                local definition = WeaponDefinitionCatalog.attachments[attachmentId]
+                local missing = {}
+                for _, prerequisiteId in ipairs(definition and definition.prerequisites or {}) do
+                    if not installedIds[prerequisiteId] then
+                        local prerequisite = WeaponDefinitionCatalog.attachments[prerequisiteId]
+                        missing[#missing + 1] = prerequisite and prerequisite.label
+                            or prerequisiteId:gsub('_', ' ')
+                    end
+                end
+                local conflicts = {}
+                for installedId in pairs(installedIds) do
+                    local installedDefinition = WeaponDefinitionCatalog.attachments[installedId]
+                    local conflicted = false
+                    for _, conflictId in ipairs(definition and definition.conflicts or {}) do
+                        if conflictId == installedId then conflicted = true; break end
+                    end
+                    if not conflicted then
+                        for _, conflictId in ipairs(
+                            installedDefinition and installedDefinition.conflicts or {}) do
+                            if conflictId == attachmentId then conflicted = true; break end
+                        end
+                    end
+                    if conflicted then
+                        conflicts[#conflicts + 1] = installedDefinition and installedDefinition.label
+                            or installedId:gsub('_', ' ')
+                    end
+                end
+                if #missing > 0 then
+                    table.sort(missing)
+                    AddWeaponElement(page, 'textdisplay', {
+                        value = ('%s - Requires %s'):format(
+                            definition and definition.label or attachmentId:gsub('_', ' '),
+                            table.concat(missing, ', ')),
+                        slot = 'content'
+                    })
+                elseif #conflicts > 0 then
+                    table.sort(conflicts)
+                    AddWeaponElement(page, 'textdisplay', {
+                        value = ('%s - Conflicts with %s'):format(
+                            definition and definition.label or attachmentId:gsub('_', ' '),
+                            table.concat(conflicts, ', ')),
+                        slot = 'content'
+                    })
+                else
+                    AddWeaponElement(page, 'button', {
+                        label = ('Install %s'):format(
+                            definition and definition.label or attachmentId:gsub('_', ' ')),
+                        slot = 'content'
+                    }, function()
+                        RequestAttachmentMutation('feather-weapons:attachment:install', {
+                            attachmentId = attachmentId,
+                            slot = slot,
+                            itemInstanceId = selected.itemInstanceId,
+                            generation = selected.generation
+                        })
+                    end)
+                end
+            end
         end
     end
 
     if not selected.attachments or #selected.attachments == 0 then
         AddWeaponElement(page, 'textdisplay', { value = 'No attachments are installed.', slot = 'content' })
-    else
-        for _, installed in ipairs(selected.attachments) do
-            local attachmentId = installed.definitionId
-            AddWeaponElement(page, 'button', {
-                label = ('Remove %s'):format(attachmentId:gsub('_', ' ')),
-                slot = 'content'
-            }, function()
-                CloseWeaponMenu(ModificationMenu)
-                RequestAttachmentMutation('feather-weapons:attachment:remove', {
-                    attachmentId = attachmentId,
-                    slot = slot,
-                    itemInstanceId = selected.itemInstanceId,
-                    generation = selected.generation
-                })
-            end)
-        end
     end
 
     if ModificationPages.selector then
@@ -2396,6 +2492,11 @@ local function BuildAmmunitionPage(slot)
     AddWeaponElement(page, 'subheader', {
         value = ('%s: %s'):format(SlotLabel(slot), weapon.label or selected.definitionId),
         slot = 'header'
+    })
+
+    AddWeaponElement(page, 'textdisplay', {
+        value = ('Serial: %s'):format(selected.serialNumber or 'Unknown'),
+        slot = 'content'
     })
 
     AddWeaponElement(page, 'textdisplay', {
@@ -3407,10 +3508,11 @@ if Config.DevMode then
                 local state = result.value.equipped
                 local slots = result.value.slots or {}
                 local secondary = slots.offhand
-                print(('[feather-weapons] state equipped=%s primaryEquipped=%s item=%s generation=%s total=%s loaded=%s reserve=%s condition=%s')
+                print(('[feather-weapons] state equipped=%s primaryEquipped=%s item=%s serial=%s generation=%s total=%s loaded=%s reserve=%s condition=%s')
                     :format(
                         tostring(next(slots) ~= nil), tostring(state ~= nil),
                         tostring(state and state.itemInstanceId),
+                        tostring(state and state.serialNumber),
                         tostring(state and state.generation),
                         tostring(state and state.ammo), tostring(state and state.loaded),
                         tostring(state and state.reserve), tostring(state and state.condition)))
@@ -3441,9 +3543,10 @@ if Config.DevMode then
                     print(('[feather-weapons] offhand ammo type=%s native=%s'):format(
                         tostring(secondary.ammunitionType), tostring(secondary.nativeAmmoName)))
                     local _, _, clipOk, nativeLoaded = PairNativeClips(state, secondary)
-                    print(('[feather-weapons] offhand item=%s generation=%s total=%s loaded=%s reserve=%s condition=%s attachments=%s nativeLoaded=%s clipOk=%s')
+                    print(('[feather-weapons] offhand item=%s serial=%s generation=%s total=%s loaded=%s reserve=%s condition=%s attachments=%s nativeLoaded=%s clipOk=%s')
                     :format(
-                        tostring(secondary.itemInstanceId), tostring(secondary.generation),
+                        tostring(secondary.itemInstanceId), tostring(secondary.serialNumber),
+                        tostring(secondary.generation),
                         tostring(secondary.ammo), tostring(secondary.loaded),
                         tostring(secondary.reserve), tostring(secondary.condition),
                         tostring(#(secondary.attachments or {})),
@@ -3467,9 +3570,10 @@ if Config.DevMode then
                             and Config.Loadout.shoulderAttachPoint or Config.Loadout.backAttachPoint
                         local attachOk, attachedWeapon = GetCurrentPedWeapon(
                             PlayerPedId(), true, attachPoint, true)
-                        print(('[feather-weapons] %s item=%s definition=%s generation=%s total=%s loaded=%s reserve=%s condition=%s ammoType=%s nativeAmmo=%s nativeTotal=%s nativeLoaded=%s clipOk=%s attachPoint=%s attached=%s/%s')
+                        print(('[feather-weapons] %s item=%s serial=%s definition=%s generation=%s total=%s loaded=%s reserve=%s condition=%s ammoType=%s nativeAmmo=%s nativeTotal=%s nativeLoaded=%s clipOk=%s attachPoint=%s attached=%s/%s')
                             :format(slot, tostring(longgun.itemInstanceId),
-                                tostring(longgun.definitionId), tostring(longgun.generation),
+                                tostring(longgun.serialNumber), tostring(longgun.definitionId),
+                                tostring(longgun.generation),
                                 tostring(longgun.ammo), tostring(longgun.loaded),
                                 tostring(longgun.reserve), tostring(longgun.condition),
                                 tostring(longgun.ammunitionType), tostring(longgun.nativeAmmoName),

@@ -55,6 +55,21 @@ function DefinitionRegistry.Start()
                     errors[#errors + 1] = { kind = "weapon", key = id, errors = { { path = "attachmentSlots." .. slot, message = "references unknown attachment " .. attachmentId } } }
                 elseif attachment.slot ~= slot then
                     errors[#errors + 1] = { kind = "weapon", key = id, errors = { { path = "attachmentSlots." .. slot, message = "attachment " .. attachmentId .. " belongs to slot " .. tostring(attachment.slot) } } }
+                else
+                    for _, prerequisiteId in ipairs(attachment.prerequisites or {}) do
+                        local prerequisite = registry.attachment[prerequisiteId]
+                        if prerequisite and prerequisite.slot == attachment.slot then
+                            errors[#errors + 1] = { kind = "weapon", key = id, errors = { { path = "attachmentSlots." .. slot, message = "attachment " .. attachmentId .. " requires " .. prerequisiteId .. " in the same exclusive slot" } } }
+                        elseif prerequisite then
+                            local compatible = false
+                            for _, allowedId in ipairs((definition.attachmentSlots or {})[prerequisite.slot] or {}) do
+                                if allowedId == prerequisiteId then compatible = true; break end
+                            end
+                            if not compatible then
+                                errors[#errors + 1] = { kind = "weapon", key = id, errors = { { path = "attachmentSlots." .. slot, message = "attachment " .. attachmentId .. " requires incompatible attachment " .. prerequisiteId } } }
+                            end
+                        end
+                    end
                 end
             end
         end
@@ -65,7 +80,39 @@ function DefinitionRegistry.Start()
                 errors[#errors + 1] = { kind = "attachment", key = id, errors = { { path = "conflicts", message = "references invalid attachment " .. tostring(conflictId) } } }
             end
         end
+        for _, prerequisiteId in ipairs(attachment.prerequisites or {}) do
+            if prerequisiteId == id or not registry.attachment[prerequisiteId] then
+                errors[#errors + 1] = { kind = "attachment", key = id, errors = { { path = "prerequisites", message = "references invalid attachment " .. tostring(prerequisiteId) } } }
+            end
+            for _, conflictId in ipairs(attachment.conflicts or {}) do
+                if conflictId == prerequisiteId then
+                    errors[#errors + 1] = { kind = "attachment", key = id, errors = { { path = "prerequisites", message = "also conflicts with attachment " .. tostring(prerequisiteId) } } }
+                end
+            end
+            local prerequisite = registry.attachment[prerequisiteId]
+            for _, conflictId in ipairs(prerequisite and prerequisite.conflicts or {}) do
+                if conflictId == id then
+                    errors[#errors + 1] = { kind = "attachment", key = id, errors = { { path = "prerequisites", message = "is conflicted by attachment " .. tostring(prerequisiteId) } } }
+                end
+            end
+        end
     end
+
+    local visiting, visited = {}, {}
+    local function VisitPrerequisites(id)
+        if visiting[id] then
+            errors[#errors + 1] = { kind = "attachment", key = id, errors = { { path = "prerequisites", message = "contains a cycle" } } }
+            return
+        end
+        if visited[id] then return end
+        visiting[id] = true
+        local attachment = registry.attachment[id]
+        for _, prerequisiteId in ipairs(attachment and attachment.prerequisites or {}) do
+            if registry.attachment[prerequisiteId] then VisitPrerequisites(prerequisiteId) end
+        end
+        visiting[id], visited[id] = nil, true
+    end
+    for id in pairs(registry.attachment) do VisitPrerequisites(id) end
 
     ready = #errors == 0
     if not ready then
@@ -104,6 +151,12 @@ function DefinitionRegistry.ValidateAttachmentSet(weaponId, installed)
             if present[conflictId] then
                 return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Installed attachments conflict",
                     { attachmentId = entry.definitionId, conflictId = conflictId })
+            end
+        end
+        for _, prerequisiteId in ipairs(attachment.prerequisites or {}) do
+            if not present[prerequisiteId] then
+                return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Attachment prerequisite is not installed",
+                    { attachmentId = entry.definitionId, prerequisiteId = prerequisiteId })
             end
         end
     end
