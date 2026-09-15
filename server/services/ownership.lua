@@ -27,22 +27,37 @@ function WeaponOwnershipService.EvaluateAdministrativeHold(metadata)
     return true
 end
 
-local function ClassifyTransition(payload)
+local function CharacterInventoryId(characterId, correlationId)
+    if not characterId then return nil end
+    local inventory = InventoryAdapter.GetCharacterInventory({
+        correlationId = correlationId
+    }, characterId)
+    return inventory.ok and tonumber(inventory.value.id) or nil
+end
+
+local function ActiveCharacterForInventory(inventoryId, correlationId)
+    inventoryId = tonumber(inventoryId)
+    if not inventoryId then return nil end
+    for _, playerId in ipairs(GetPlayers()) do
+        local session = CoreAdapter.ResolveSession(tonumber(playerId))
+        local characterId = session.ok
+            and CoreAdapter.NormalizeCharacterId(session.value.characterId) or nil
+        if characterId and CharacterInventoryId(characterId, correlationId) == inventoryId then
+            return characterId
+        end
+    end
+    return nil
+end
+
+local function ClassifyTransition(payload, actorInventoryId)
     local reason = tostring(payload.reason or "")
     if reason == "ground_drop" then return "drop" end
     if reason == "give" then return "transfer" end
     if reason == "container_recovery" then return "recovery" end
 
-    local characterId = CoreAdapter.NormalizeCharacterId(payload.actorCharacterId)
-    if characterId then
-        local inventory = InventoryAdapter.GetCharacterInventory({
-            correlationId = payload.correlationId
-        }, characterId)
-        local characterInventoryId = inventory.ok and tonumber(inventory.value.id) or nil
-        if characterInventoryId then
-            if tonumber(payload.toInventoryId) == characterInventoryId then return "pickup" end
-            if tonumber(payload.fromInventoryId) == characterInventoryId then return "deposit" end
-        end
+    if actorInventoryId then
+        if tonumber(payload.toInventoryId) == actorInventoryId then return "pickup" end
+        if tonumber(payload.fromInventoryId) == actorInventoryId then return "deposit" end
     end
     return "inventory_move"
 end
@@ -72,9 +87,22 @@ function WeaponOwnershipService.HandleCommittedMove(payload)
             }, payload.correlationId)
     end
 
+    local actorCharacterId = CoreAdapter.NormalizeCharacterId(payload.actorCharacterId)
+    local actorInventoryId = CharacterInventoryId(actorCharacterId, payload.correlationId)
+    local fromCharacterId = tonumber(payload.fromInventoryId) == actorInventoryId
+        and actorCharacterId or nil
+    local toCharacterId = tonumber(payload.toInventoryId) == actorInventoryId
+        and actorCharacterId or nil
+    if not fromCharacterId then
+        fromCharacterId = ActiveCharacterForInventory(payload.fromInventoryId, payload.correlationId)
+    end
+    if not toCharacterId then
+        toCharacterId = ActiveCharacterForInventory(payload.toInventoryId, payload.correlationId)
+    end
+
     local fact = {
         operation = "inventory_move",
-        transitionType = ClassifyTransition(payload),
+        transitionType = ClassifyTransition(payload, actorInventoryId),
         outcome = "committed",
         itemInstanceId = tonumber(payload.instanceId),
         definitionId = definitionId,
@@ -83,7 +111,9 @@ function WeaponOwnershipService.HandleCommittedMove(payload)
         fromInventoryId = tonumber(payload.fromInventoryId),
         toInventoryId = tonumber(payload.toInventoryId),
         actorSource = tonumber(payload.actorSource),
-        actorCharacterId = CoreAdapter.NormalizeCharacterId(payload.actorCharacterId),
+        actorCharacterId = actorCharacterId,
+        fromCharacterId = fromCharacterId,
+        toCharacterId = toCharacterId,
         reason = CleanText(payload.reason or "inventory_move", 64),
         resource = CleanText(payload.resource or "feather-inventory", 64),
         correlationId = CleanText(payload.correlationId, 128),
@@ -107,9 +137,11 @@ function WeaponOwnershipService.HandleCommittedMove(payload)
     diagnostics.byType[fact.transitionType] = (diagnostics.byType[fact.transitionType] or 0) + 1
     diagnostics.last = fact
     if Config.DevMode then
-        print(("[feather-weapons] ownership transition item=%s serial=%s definition=%s from=%s to=%s reason=%s"):format(
+        print(("[feather-weapons] ownership transition item=%s serial=%s definition=%s from=%s/%s to=%s/%s type=%s reason=%s"):format(
             tostring(fact.itemInstanceId), tostring(fact.serialNumber), tostring(fact.definitionId),
-            tostring(fact.fromInventoryId), tostring(fact.toInventoryId), tostring(fact.reason)))
+            tostring(fact.fromInventoryId), tostring(fact.fromCharacterId),
+            tostring(fact.toInventoryId), tostring(fact.toCharacterId),
+            tostring(fact.transitionType), tostring(fact.reason)))
     end
     return WeaponResult.Ok(fact, payload.correlationId)
 end

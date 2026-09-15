@@ -316,6 +316,11 @@ Committed facts label explicit `transfer`, `drop`, and `recovery` reasons and
 use the actor's character inventory to distinguish `pickup` and `deposit`.
 Ambiguous container movement remains labeled `inventory_move`.
 
+`WeaponPlayerTransferSmokeTest [itemInstanceId]` validates Inventory's existing
+give flow for an unequipped firearm. It requires both active character owners
+to resolve, preserves the weapon serial, and rejects any transfer observation
+that coincided with an active lease violation.
+
 The ammunition and modification menus display each equipped firearm's persisted
 serial number. The same serial is included in `weaponstate` diagnostics for
 primary, offhand, shoulder, and back slots.

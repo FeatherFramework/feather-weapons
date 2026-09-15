@@ -343,6 +343,23 @@ Live validation passed `11/11` for item `4889`: one `drop` and one `pickup`
 were classified from the committed ground round trip, the final transition was
 `pickup`, and failures and active-lease violations remained zero. Release smoke
 remained `8/8` with no active slots.
+Player-to-player `give` facts now resolve both active character owners from the
+committed origin and destination inventory IDs. A dedicated transfer smoke test
+requires distinct source/recipient characters, preserved serial identity, and
+zero observation or lease failures.
+The forward two-player transfer passed `7/7` for item `4889`. Both character
+owners resolved, ownership changed once, and the recipient equipped the same
+serial `FW-REVO-6AA86F32-E89E28-0002` with its high-velocity ammunition type,
+empty ammo state, zero attachments, and condition `100` intact. Release smoke
+remained `8/8` for the sender with no active slots.
+The recipient then unequipped and returned item `4889`. The transfer observer
+passed `7/7` with `count=2`, distinct source and recipient owners, and no failed
+observations or lease violations. The original player re-equipped the unchanged
+serial with high-velocity ammunition selected, zero rounds, zero attachments,
+and condition `100`.
+After restarting `feather-weapons`, the returned item restored to the original
+owner at generation `1` with the same serial and high-velocity ammunition type.
+Release smoke passed `8/8` and the restored primary lease passed `5/5`.
 Live validation passed `9/9` after an unequipped drop/pickup round trip for item
 `4889`: ordinary movement remained allowed, evidence and disabled policy cases
 were rejected, and observation health remained at zero failures and zero lease
