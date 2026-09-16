@@ -718,7 +718,10 @@ RegisterCommand("WeaponIssuanceContractSmokeTest", function(source)
             { 'incomplete request rejected', contract.incompleteRejected },
             { 'secure issuance ready', capabilities.features.secureIssuance == true },
             { 'stable request id required', contract.requestIdRequired },
-            { 'idempotent issuance ready', capabilities.features.idempotentIssuance == true }
+            { 'oversized request id rejected', contract.oversizedRequestIdRejected },
+            { 'malformed request id rejected', contract.malformedRequestIdRejected },
+            { 'idempotent issuance ready', capabilities.features.idempotentIssuance == true },
+            { 'issuance payload binding ready', capabilities.features.issuancePayloadBinding == true }
         }
         local passed = 0
         for _, test in ipairs(tests) do
@@ -750,12 +753,24 @@ if Config.DevMode then
                 reason = 'admin_issue', resource = 'feather-weapons' }, request, 'feather-weapons')
         end
         local first, second = Issue('first'), Issue('retry')
+        local otherDefinition = definitionId == 'revolver_schofield'
+            and 'revolver_cattleman' or 'revolver_schofield'
+        local mismatchRequest = { characterId = session.value.characterId, definitionId = otherDefinition,
+            purpose = 'admin_issue', requestId = requestId,
+            provenance = { type = 'admin_issue', reference = requestId } }
+        local mismatch = IssuanceService.Issue({ characterId = session.value.characterId,
+            correlationId = ('idempotency-test:%s:mismatch'):format(requestId),
+            reason = 'admin_issue', resource = 'feather-weapons' }, mismatchRequest, 'feather-weapons')
+        local mismatchRejected = not mismatch.ok and mismatch.error
+            and mismatch.error.code == WeaponErrors.OPERATION_CONFLICT
         local passed = first.ok and second.ok
             and tonumber(first.value.itemInstanceId) == tonumber(second.value.itemInstanceId)
             and first.value.serialNumber == second.value.serialNumber and second.value.replayed == true
-        print(('[WeaponIssuanceIdempotencyTest] %s item=%s serial=%s replayed=%s'):format(
+            and mismatchRejected
+        print(('[WeaponIssuanceIdempotencyTest] %s item=%s serial=%s replayed=%s mismatchRejected=%s'):format(
             passed and 'PASS' or 'FAIL', tostring(first.ok and first.value.itemInstanceId),
-            tostring(first.ok and first.value.serialNumber), tostring(second.ok and second.value.replayed)))
+            tostring(first.ok and first.value.serialNumber), tostring(second.ok and second.value.replayed),
+            tostring(mismatchRejected)))
     end, true)
 end
 

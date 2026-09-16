@@ -10,6 +10,12 @@ local function CleanText(value, maximum)
     return value:sub(1, maximum)
 end
 
+local function ValidateRequestId(value)
+    if type(value) ~= "string" or #value < 1 or #value > 128 then return nil end
+    if not value:match("^[A-Za-z0-9][A-Za-z0-9._:%-]*$") then return nil end
+    return value
+end
+
 local function NextSerial(definition)
     local family = tostring(definition.family or "weapon"):upper():gsub("[^A-Z0-9]", ""):sub(1, 4)
     if family == "" then family = "WPN" end
@@ -88,7 +94,12 @@ function IssuanceService.Issue(context, request, invokingResource)
     context.resource = CleanText(invokingResource or context.resource, 64)
     local authorized = Authorize(context, definitionId, purpose)
     if not authorized.ok then return authorized end
-    local requestId = CleanText(request.requestId, 128)
+    local requestId = ValidateRequestId(request.requestId)
+    if request.requestId ~= nil and not requestId then
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+            "requestId must be 1-128 characters using letters, numbers, dot, underscore, colon, or hyphen",
+            nil, context.correlationId)
+    end
     if purpose ~= "development_grant" and not requestId then
         return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
             "A stable requestId is required for this issuance purpose", nil, context.correlationId)
@@ -96,7 +107,7 @@ function IssuanceService.Issue(context, request, invokingResource)
     local reservationId
     if requestId then
         local begun = WeaponProvenanceService.BeginIssuance(context.resource, requestId, purpose,
-            context.correlationId)
+            characterId, definitionId, context.correlationId)
         if not begun.ok then return begun end
         if begun.value.replayed == true then return WeaponResult.Ok(begun.value, context.correlationId) end
         reservationId = begun.value.reservationId
@@ -177,6 +188,16 @@ function IssuanceService.CheckContract()
         characterId = "00000000-0000-0000-0000-000000000001",
         definitionId = "revolver_cattleman", purpose = "purchase"
     }, "feather-weapons")
+    local oversizedRequestId = IssuanceService.Issue({ reason = "purchase" }, {
+        characterId = "00000000-0000-0000-0000-000000000001",
+        definitionId = "revolver_cattleman", purpose = "purchase",
+        requestId = string.rep("a", 129)
+    }, "feather-weapons")
+    local malformedRequestId = IssuanceService.Issue({ reason = "purchase" }, {
+        characterId = "00000000-0000-0000-0000-000000000001",
+        definitionId = "revolver_cattleman", purpose = "purchase",
+        requestId = "invalid request id"
+    }, "feather-weapons")
     local settings, authorization = Config.Issuance or {}, (Config.Issuance or {}).authorization or {}
     return {
         serviceAvailable = type(IssuanceService.Issue) == "function",
@@ -189,6 +210,10 @@ function IssuanceService.CheckContract()
         incompleteRejected = not incomplete.ok and incomplete.error
             and incomplete.error.code == WeaponErrors.ITEM_INVALID,
         requestIdRequired = not missingRequestId.ok and missingRequestId.error
-            and missingRequestId.error.code == WeaponErrors.ITEM_INVALID
+            and missingRequestId.error.code == WeaponErrors.ITEM_INVALID,
+        oversizedRequestIdRejected = not oversizedRequestId.ok and oversizedRequestId.error
+            and oversizedRequestId.error.code == WeaponErrors.ITEM_INVALID,
+        malformedRequestIdRejected = not malformedRequestId.ok and malformedRequestId.error
+            and malformedRequestId.error.code == WeaponErrors.ITEM_INVALID
     }
 end

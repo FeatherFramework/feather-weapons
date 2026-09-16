@@ -112,6 +112,11 @@ Weapons stores the trusted resource plus request ID in a durable registry. A
 committed retry returns the original item and serial with `replayed = true`;
 concurrent retries fail closed while the first request is pending. Callers must
 reuse the same request ID after timeouts rather than generating a new one.
+Each key is permanently bound to its original target character, weapon
+definition, and purpose; reusing it with a different payload fails closed.
+Request IDs must be 1-128 characters, start with a letter or number, and use
+only letters, numbers, dots, underscores, colons, or hyphens. Invalid IDs are
+rejected instead of truncated.
 
 ## Configuration
 

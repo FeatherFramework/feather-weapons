@@ -44,6 +44,8 @@ function WeaponProvenanceService.Start()
           `resource` VARCHAR(64) NOT NULL,
           `request_id` VARCHAR(128) NOT NULL,
           `purpose` VARCHAR(48) NOT NULL,
+          `character_id` CHAR(36) NULL,
+          `definition_id` VARCHAR(64) NULL,
           `status` VARCHAR(16) NOT NULL,
           `item_instance_id` BIGINT UNSIGNED NULL,
           `serial_number` VARCHAR(128) NULL,
@@ -54,6 +56,16 @@ function WeaponProvenanceService.Start()
           UNIQUE KEY `uq_weapon_issuance_request` (`resource`,`request_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]])
+    for _, column in ipairs({
+        { name = 'character_id', sql = 'ADD COLUMN `character_id` CHAR(36) NULL AFTER `purpose`' },
+        { name = 'definition_id', sql = 'ADD COLUMN `definition_id` VARCHAR(64) NULL AFTER `character_id`' }
+    }) do
+        local found = MySQL.query.await('SHOW COLUMNS FROM `feather_weapon_issuance_requests` LIKE ?',
+            { column.name }) or {}
+        if not found[1] then
+            MySQL.query.await(('ALTER TABLE `feather_weapon_issuance_requests` %s'):format(column.sql))
+        end
+    end
     ready = true
     return WeaponResult.Ok(true)
 end
@@ -131,21 +143,32 @@ end
 
 function WeaponProvenanceService.IsReady() return ready end
 
-function WeaponProvenanceService.BeginIssuance(resource, requestId, purpose, correlationId)
+function WeaponProvenanceService.BeginIssuance(resource, requestId, purpose, characterId, definitionId, correlationId)
     resource, requestId = Clean(resource, 64), Clean(requestId, 128)
-    if not ready or not resource or not requestId then
+    purpose = Clean(purpose, 48) or 'issued'
+    characterId = CoreAdapter.NormalizeCharacterId(characterId)
+    definitionId = Clean(definitionId, 64)
+    if not ready or not resource or not requestId or not characterId or not definitionId then
         return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
             'A durable issuance request identity is required', nil, correlationId)
     end
     local inserted = MySQL.insert.await([[INSERT IGNORE INTO `feather_weapon_issuance_requests`
-        (`resource`,`request_id`,`purpose`,`status`) VALUES (?,?,?,'pending')]],
-        { resource, requestId, Clean(purpose, 48) or 'issued' })
+        (`resource`,`request_id`,`purpose`,`character_id`,`definition_id`,`status`)
+        VALUES (?,?,?,?,?,'pending')]],
+        { resource, requestId, purpose, characterId, definitionId })
     if inserted and tonumber(inserted) and tonumber(inserted) > 0 then
         return WeaponResult.Ok({ reservationId = tonumber(inserted), replayed = false }, correlationId)
     end
     local rows = MySQL.query.await([[SELECT * FROM `feather_weapon_issuance_requests`
         WHERE `resource`=? AND `request_id`=? LIMIT 1]], { resource, requestId }) or {}
     local row = rows[1]
+    if row and (row.purpose ~= purpose or row.character_id ~= characterId
+        or row.definition_id ~= definitionId) then
+        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+            'Issuance request ID was already used for a different payload', {
+                resource = resource, requestId = requestId
+            }, correlationId)
+    end
     if row and row.status == 'committed' and row.result_json then
         local ok, value = pcall(json.decode, row.result_json)
         if ok and type(value) == 'table' then
