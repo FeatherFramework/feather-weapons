@@ -38,6 +38,22 @@ function WeaponProvenanceService.Start()
           KEY `idx_weapon_events_serial` (`serial_number`,`id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]])
+    MySQL.query.await([[
+        CREATE TABLE IF NOT EXISTS `feather_weapon_issuance_requests` (
+          `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+          `resource` VARCHAR(64) NOT NULL,
+          `request_id` VARCHAR(128) NOT NULL,
+          `purpose` VARCHAR(48) NOT NULL,
+          `status` VARCHAR(16) NOT NULL,
+          `item_instance_id` BIGINT UNSIGNED NULL,
+          `serial_number` VARCHAR(128) NULL,
+          `result_json` LONGTEXT NULL,
+          `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (`id`),
+          UNIQUE KEY `uq_weapon_issuance_request` (`resource`,`request_id`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ]])
     ready = true
     return WeaponResult.Ok(true)
 end
@@ -114,6 +130,51 @@ function WeaponProvenanceService.Inspect(request, context, invokingResource)
 end
 
 function WeaponProvenanceService.IsReady() return ready end
+
+function WeaponProvenanceService.BeginIssuance(resource, requestId, purpose, correlationId)
+    resource, requestId = Clean(resource, 64), Clean(requestId, 128)
+    if not ready or not resource or not requestId then
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+            'A durable issuance request identity is required', nil, correlationId)
+    end
+    local inserted = MySQL.insert.await([[INSERT IGNORE INTO `feather_weapon_issuance_requests`
+        (`resource`,`request_id`,`purpose`,`status`) VALUES (?,?,?,'pending')]],
+        { resource, requestId, Clean(purpose, 48) or 'issued' })
+    if inserted and tonumber(inserted) and tonumber(inserted) > 0 then
+        return WeaponResult.Ok({ reservationId = tonumber(inserted), replayed = false }, correlationId)
+    end
+    local rows = MySQL.query.await([[SELECT * FROM `feather_weapon_issuance_requests`
+        WHERE `resource`=? AND `request_id`=? LIMIT 1]], { resource, requestId }) or {}
+    local row = rows[1]
+    if row and row.status == 'committed' and row.result_json then
+        local ok, value = pcall(json.decode, row.result_json)
+        if ok and type(value) == 'table' then
+            value.replayed = true
+            return WeaponResult.Ok(value, correlationId)
+        end
+    end
+    return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+        'Weapon issuance request is already pending', { resource = resource, requestId = requestId }, correlationId)
+end
+
+function WeaponProvenanceService.CommitIssuance(reservationId, value, correlationId)
+    local changed = MySQL.update.await([[UPDATE `feather_weapon_issuance_requests`
+        SET `status`='committed',`item_instance_id`=?,`serial_number`=?,`result_json`=?
+        WHERE `id`=? AND `status`='pending']],
+        { value.itemInstanceId, value.serialNumber, json.encode(value), tonumber(reservationId) })
+    if tonumber(changed) ~= 1 then
+        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+            'Issuance request could not be committed', nil, correlationId)
+    end
+    return WeaponResult.Ok(true, correlationId)
+end
+
+function WeaponProvenanceService.CancelIssuance(reservationId)
+    if reservationId then
+        MySQL.update.await([[DELETE FROM `feather_weapon_issuance_requests`
+            WHERE `id`=? AND `status`='pending']], { tonumber(reservationId) })
+    end
+end
 
 function WeaponProvenanceService.CheckContract()
     local untrusted = WeaponProvenanceService.Inspect({ itemInstanceId = 1 }, {}, 'untrusted-smoke-resource')

@@ -716,7 +716,9 @@ RegisterCommand("WeaponIssuanceContractSmokeTest", function(source)
             { 'authorization configured', contract.authorizationConfigured },
             { 'untrusted caller rejected', contract.untrustedRejected },
             { 'incomplete request rejected', contract.incompleteRejected },
-            { 'secure issuance ready', capabilities.features.secureIssuance == true }
+            { 'secure issuance ready', capabilities.features.secureIssuance == true },
+            { 'stable request id required', contract.requestIdRequired },
+            { 'idempotent issuance ready', capabilities.features.idempotentIssuance == true }
         }
         local passed = 0
         for _, test in ipairs(tests) do
@@ -726,6 +728,36 @@ RegisterCommand("WeaponIssuanceContractSmokeTest", function(source)
         end
         print(("[WeaponIssuanceContractSmokeTest] done %d/%d passed (read-only)"):format(passed, #tests))
     end, true)
+
+if Config.DevMode then
+    RegisterCommand("WeaponIssuanceIdempotencyTest", function(source, args)
+        if source ~= 0 then return end
+        local targetSource = tonumber(args and args[1])
+        local definitionId = args and args[2] or 'revolver_cattleman'
+        local requestId = args and args[3]
+        if not targetSource or type(requestId) ~= 'string' or requestId == '' then
+            print('[WeaponIssuanceIdempotencyTest] usage: WeaponIssuanceIdempotencyTest <source> <definitionId> <requestId>')
+            return
+        end
+        local session = CoreAdapter.ResolveSession(targetSource)
+        if not session.ok then print('[WeaponIssuanceIdempotencyTest] FAIL session unavailable'); return end
+        local request = { characterId = session.value.characterId, definitionId = definitionId,
+            purpose = 'admin_issue', requestId = requestId,
+            provenance = { type = 'admin_issue', reference = requestId } }
+        local function Issue(suffix)
+            return IssuanceService.Issue({ characterId = session.value.characterId,
+                correlationId = ('idempotency-test:%s:%s'):format(requestId, suffix),
+                reason = 'admin_issue', resource = 'feather-weapons' }, request, 'feather-weapons')
+        end
+        local first, second = Issue('first'), Issue('retry')
+        local passed = first.ok and second.ok
+            and tonumber(first.value.itemInstanceId) == tonumber(second.value.itemInstanceId)
+            and first.value.serialNumber == second.value.serialNumber and second.value.replayed == true
+        print(('[WeaponIssuanceIdempotencyTest] %s item=%s serial=%s replayed=%s'):format(
+            passed and 'PASS' or 'FAIL', tostring(first.ok and first.value.itemInstanceId),
+            tostring(first.ok and first.value.serialNumber), tostring(second.ok and second.value.replayed)))
+    end, true)
+end
 
 RegisterCommand("WeaponProvenanceInspect", function(source, args)
         if source ~= 0 then return end

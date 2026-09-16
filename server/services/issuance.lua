@@ -88,8 +88,25 @@ function IssuanceService.Issue(context, request, invokingResource)
     context.resource = CleanText(invokingResource or context.resource, 64)
     local authorized = Authorize(context, definitionId, purpose)
     if not authorized.ok then return authorized end
+    local requestId = CleanText(request.requestId, 128)
+    if purpose ~= "development_grant" and not requestId then
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+            "A stable requestId is required for this issuance purpose", nil, context.correlationId)
+    end
+    local reservationId
+    if requestId then
+        local begun = WeaponProvenanceService.BeginIssuance(context.resource, requestId, purpose,
+            context.correlationId)
+        if not begun.ok then return begun end
+        if begun.value.replayed == true then return WeaponResult.Ok(begun.value, context.correlationId) end
+        reservationId = begun.value.reservationId
+    end
+    local function CancelReservation()
+        if reservationId then WeaponProvenanceService.CancelIssuance(reservationId) end
+    end
     local serialNumber = NextSerial(definition)
     if not serialNumber then
+        CancelReservation()
         return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
             "A unique weapon serial could not be generated", nil, context.correlationId)
     end
@@ -107,12 +124,14 @@ function IssuanceService.Issue(context, request, invokingResource)
     })
     if not metadataResult.ok then
         reservedSerials[serialNumber] = nil
+        CancelReservation()
         return metadataResult
     end
 
     local created = InventoryAdapter.CreateWeapon(context, definition, metadataResult.value)
     if not created.ok then
         reservedSerials[serialNumber] = nil
+        CancelReservation()
         return created
     end
 
@@ -141,6 +160,10 @@ function IssuanceService.Issue(context, request, invokingResource)
         print(('[feather-weapons] CRITICAL issuance provenance failed item=%s serial=%s'):format(
             tostring(value.itemInstanceId), tostring(serialNumber)))
     end
+    if reservationId then
+        local committed = WeaponProvenanceService.CommitIssuance(reservationId, value, context.correlationId)
+        if not committed.ok then return committed end
+    end
     return WeaponResult.Ok(value, context.correlationId)
 end
 
@@ -150,6 +173,10 @@ function IssuanceService.CheckContract()
         definitionId = "revolver_cattleman", purpose = "development_grant"
     }, "untrusted-smoke-resource")
     local incomplete = IssuanceService.Issue({ reason = "development_grant" }, {}, "feather-weapons")
+    local missingRequestId = IssuanceService.Issue({ reason = "purchase" }, {
+        characterId = "00000000-0000-0000-0000-000000000001",
+        definitionId = "revolver_cattleman", purpose = "purchase"
+    }, "feather-weapons")
     local settings, authorization = Config.Issuance or {}, (Config.Issuance or {}).authorization or {}
     return {
         serviceAvailable = type(IssuanceService.Issue) == "function",
@@ -160,6 +187,8 @@ function IssuanceService.CheckContract()
         untrustedRejected = not untrusted.ok and untrusted.error
             and untrusted.error.code == WeaponErrors.AUTHORIZATION_INVALID,
         incompleteRejected = not incomplete.ok and incomplete.error
-            and incomplete.error.code == WeaponErrors.ITEM_INVALID
+            and incomplete.error.code == WeaponErrors.ITEM_INVALID,
+        requestIdRequired = not missingRequestId.ok and missingRequestId.error
+            and missingRequestId.error.code == WeaponErrors.ITEM_INVALID
     }
 end

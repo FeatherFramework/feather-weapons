@@ -460,6 +460,12 @@ resource restart.
   `FW-REVO-6AAA0D42-206177-0001`, with exactly one durable `issuance` event and
   the correct target character/inventory. Exact-item destruction then removed
   the disposable instance, and the release regression remained `8/8`.
+- Durable issuance idempotency passed `9/9`. Two trusted `admin_issue` calls
+  using request ID `idempotency-test-001` returned the same canonical item
+  `66` and serial `FW-REVO-6AAA0FD7-08CED4-0001`; the retry reported
+  `replayed=true`, Inventory contained exactly one instance, and exact-item
+  cleanup succeeded. Non-development issuance now requires a stable request ID
+  and persists pending/committed request state across resource restarts.
 
 ### Exit gate
 

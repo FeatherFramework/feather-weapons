@@ -107,6 +107,12 @@ an explicit purpose (`purchase`, `crafting`, `job_issue`, `admin_issue`, or
 `weapons.issuance.issue` can apply future license, job, or shop policy. Callers
 cannot authenticate themselves by supplying a resource name.
 
+All non-development issuance requests must also provide a stable `requestId`.
+Weapons stores the trusted resource plus request ID in a durable registry. A
+committed retry returns the original item and serial with `replayed = true`;
+concurrent retries fail closed while the first request is pending. Callers must
+reuse the same request ID after timeouts rather than generating a new one.
+
 ## Configuration
 
 ```lua

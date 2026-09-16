@@ -42,6 +42,7 @@ function WeaponAPI.GetCapabilities()
             slotRepair = InventoryAdapter.IsReady(),
             issuance = InventoryAdapter.IsReady(),
             secureIssuance = InventoryAdapter.IsReady(),
+            idempotentIssuance = InventoryAdapter.IsReady(),
             attachmentDefinitions = true,
             attachmentTransactions = InventoryAdapter.IsReady(),
             slotAttachments = InventoryAdapter.IsReady(),
