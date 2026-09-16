@@ -38,11 +38,43 @@ local function BuildProvenance(context, request)
     }
 end
 
-function IssuanceService.Issue(context, request)
+local function Authorize(context, definitionId, purpose)
+    local settings = Config.Issuance or {}
+    if (settings.trustedResources or {})[context.resource] ~= true then
+        return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID,
+            "Calling resource is not trusted for weapon issuance", nil, context.correlationId)
+    end
+    if (settings.allowedPurposes or {})[purpose] ~= true then
+        return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID,
+            "Weapon issuance purpose is not allowed", { purpose = purpose }, context.correlationId)
+    end
+    local authorization = settings.authorization or {}
+    if authorization.enabled ~= true then return WeaponResult.Ok(true, context.correlationId) end
+    if not context.actorSource or type(authorization.action) ~= "string" or authorization.action == "" then
+        return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID,
+            "Weapon issuance authorization is not configured", nil, context.correlationId)
+    end
+    local called, decision = pcall(function()
+        return exports["feather-core"]:Authorize(authorization.action, {
+            source = context.actorSource, correlationId = context.correlationId,
+            subject = { operation = "issue", purpose = purpose,
+                definitionId = definitionId, characterId = context.characterId }
+        })
+    end)
+    if not called or type(decision) ~= "table" or not decision.ok
+        or type(decision.value) ~= "table" or decision.value.allowed ~= true then
+        return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID,
+            "This character is not authorized to issue weapons", nil, context.correlationId)
+    end
+    return WeaponResult.Ok(true, context.correlationId)
+end
+
+function IssuanceService.Issue(context, request, invokingResource)
     context = type(context) == "table" and context or {}
     request = type(request) == "table" and request or {}
     local characterId = CoreAdapter.NormalizeCharacterId(request.characterId or context.characterId)
     local definitionId = CleanText(request.definitionId, 64)
+    local purpose = CleanText(request.purpose or context.reason or "issued", 48)
     if not characterId or not definitionId then
         return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
             "A target character and weapon definition are required", nil, context.correlationId)
@@ -51,15 +83,17 @@ function IssuanceService.Issue(context, request)
     local definitionResult = DefinitionRegistry.Get("weapon", definitionId)
     if not definitionResult.ok then return definitionResult end
     local definition = definitionResult.value
+    context.characterId = characterId
+    context.reason = purpose
+    context.resource = CleanText(invokingResource or context.resource, 64)
+    local authorized = Authorize(context, definitionId, purpose)
+    if not authorized.ok then return authorized end
     local serialNumber = NextSerial(definition)
     if not serialNumber then
         return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
             "A unique weapon serial could not be generated", nil, context.correlationId)
     end
 
-    context.characterId = characterId
-    context.reason = CleanText(context.reason or "weapon_issuance", 64)
-    context.resource = CleanText(context.resource or "feather-weapons", 64)
     context.correlationId = context.correlationId
         or ("issue:%s:%s:%s"):format(tostring(characterId), tostring(GetGameTimer()), tostring(serialCounter))
 
@@ -108,4 +142,24 @@ function IssuanceService.Issue(context, request)
             tostring(value.itemInstanceId), tostring(serialNumber)))
     end
     return WeaponResult.Ok(value, context.correlationId)
+end
+
+function IssuanceService.CheckContract()
+    local untrusted = IssuanceService.Issue({ reason = "development_grant" }, {
+        characterId = "00000000-0000-0000-0000-000000000001",
+        definitionId = "revolver_cattleman", purpose = "development_grant"
+    }, "untrusted-smoke-resource")
+    local incomplete = IssuanceService.Issue({ reason = "development_grant" }, {}, "feather-weapons")
+    local settings, authorization = Config.Issuance or {}, (Config.Issuance or {}).authorization or {}
+    return {
+        serviceAvailable = type(IssuanceService.Issue) == "function",
+        trustedCallerConfigured = (settings.trustedResources or {})["feather-weapons"] == true,
+        purposeConfigured = (settings.allowedPurposes or {}).development_grant == true,
+        authorizationConfigured = authorization.enabled ~= true
+            or (type(authorization.action) == "string" and authorization.action ~= ""),
+        untrustedRejected = not untrusted.ok and untrusted.error
+            and untrusted.error.code == WeaponErrors.AUTHORIZATION_INVALID,
+        incompleteRejected = not incomplete.ok and incomplete.error
+            and incomplete.error.code == WeaponErrors.ITEM_INVALID
+    }
 end

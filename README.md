@@ -101,6 +101,12 @@ The installation SQL adds the ammunition catalog, gun oil, and the Cattleman Lon
 > [!NOTE]
 > Weapon instances are created through the inventory transaction service with unique serials and complete metadata. When `DevMode = true`, authorized staff can issue the configured Cattleman with `/grantweapon revolver_cattleman` in chat, or `grantweapon revolver_cattleman [targetServerId]` from the server console.
 
+Cross-resource issuance is restricted to `Config.Issuance.trustedResources` and
+an explicit purpose (`purchase`, `crafting`, `job_issue`, `admin_issue`, or
+`recovery`; development grants remain development-only). Optional Core action
+`weapons.issuance.issue` can apply future license, job, or shop policy. Callers
+cannot authenticate themselves by supplying a resource name.
+
 ## Configuration
 
 ```lua

@@ -629,8 +629,9 @@ if Config.DevMode then
         }, {
             characterId = targetSession.value.characterId,
             definitionId = definitionId,
+            purpose = "development_grant",
             provenance = { type = "development_grant" }
-        })
+        }, "feather-weapons")
 
         if not result.ok then
             local message = ("Weapon grant failed: %s"):format(result.error.message)
@@ -703,6 +704,27 @@ RegisterCommand("WeaponProvenanceContractSmokeTest", function(source)
         end
         print(("[WeaponProvenanceContractSmokeTest] done %d/%d passed (read-only)")
             :format(passed, #tests))
+    end, true)
+
+RegisterCommand("WeaponIssuanceContractSmokeTest", function(source)
+        if source ~= 0 then return end
+        local contract, capabilities = IssuanceService.CheckContract(), WeaponAPI.GetCapabilities()
+        local tests = {
+            { 'service available', contract.serviceAvailable },
+            { 'trusted caller configured', contract.trustedCallerConfigured },
+            { 'issuance purpose configured', contract.purposeConfigured },
+            { 'authorization configured', contract.authorizationConfigured },
+            { 'untrusted caller rejected', contract.untrustedRejected },
+            { 'incomplete request rejected', contract.incompleteRejected },
+            { 'secure issuance ready', capabilities.features.secureIssuance == true }
+        }
+        local passed = 0
+        for _, test in ipairs(tests) do
+            if test[2] then passed = passed + 1 end
+            print(("[WeaponIssuanceContractSmokeTest] %-29s %s"):format(
+                test[1], test[2] and 'PASS' or 'FAIL'))
+        end
+        print(("[WeaponIssuanceContractSmokeTest] done %d/%d passed (read-only)"):format(passed, #tests))
     end, true)
 
 RegisterCommand("WeaponProvenanceInspect", function(source, args)

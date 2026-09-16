@@ -449,6 +449,18 @@ resource restart.
 - Add server-owner examples for legal shops, job armories, and restricted
   weapons.
 
+### Current foundation evidence
+
+- Cross-resource issuance now derives the caller from the Cfx runtime, requires
+  a configured trusted resource and allowlisted purpose, and can route through
+  Core action `weapons.issuance.issue` for future license/job/shop policy.
+  The read-only issuance contract passed `7/7`, including untrusted and
+  incomplete-request rejection.
+- The trusted development path issued disposable Cattleman item `65`, serial
+  `FW-REVO-6AAA0D42-206177-0001`, with exactly one durable `issuance` event and
+  the correct target character/inventory. Exact-item destruction then removed
+  the disposable instance, and the release regression remained `8/8`.
+
 ### Exit gate
 
 - Buying, crafting, and job issuance cannot bypass unique-item creation,

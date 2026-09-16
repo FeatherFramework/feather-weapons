@@ -109,6 +109,14 @@ Config = {
         retentionDays = 0,
         maxInspectionEvents = 100
     },
+    Issuance = {
+        trustedResources = { ["feather-weapons"] = true, ["feather-admin"] = true },
+        allowedPurposes = {
+            development_grant = true, admin_issue = true, purchase = true,
+            crafting = true, job_issue = true, recovery = true
+        },
+        authorization = { enabled = false, action = "weapons.issuance.issue" }
+    },
     Controls = {
         unload = {
             enabled = true,

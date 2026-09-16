@@ -41,6 +41,7 @@ function WeaponAPI.GetCapabilities()
             repair = InventoryAdapter.IsReady(),
             slotRepair = InventoryAdapter.IsReady(),
             issuance = InventoryAdapter.IsReady(),
+            secureIssuance = InventoryAdapter.IsReady(),
             attachmentDefinitions = true,
             attachmentTransactions = InventoryAdapter.IsReady(),
             slotAttachments = InventoryAdapter.IsReady(),
@@ -78,10 +79,10 @@ function WeaponAPI.ReconcileEquippedWeapons(source)
     return ReconciliationService.Force(tonumber(source))
 end
 
-function WeaponAPI.IssueWeapon(request, context)
+function WeaponAPI.IssueWeapon(request, context, invokingResource)
     context = type(context) == "table" and context or {}
-    context.resource = context.resource or GetInvokingResource() or "feather-weapons"
-    return IssuanceService.Issue(context, request)
+    context.resource = invokingResource or GetInvokingResource()
+    return IssuanceService.Issue(context, request, context.resource)
 end
 
 function WeaponAPI.DestroyWeapon(request, context, invokingResource)
@@ -113,7 +114,9 @@ exports("initiate", function()
                 return WeaponAPI.InspectWeaponHistory(request, context, GetInvokingResource())
             end
         },
-        Issuance = { Issue = WeaponAPI.IssueWeapon },
+        Issuance = { Issue = function(request, context)
+            return WeaponAPI.IssueWeapon(request, context, GetInvokingResource())
+        end },
         Ownership = {
             Destroy = function(request, context)
                 local invokingResource = GetInvokingResource()
@@ -137,7 +140,7 @@ end)
 -- named export instead of relying on nested functions surviving Cfx's API
 -- table boundary.
 exports("IssueWeapon", function(request, context)
-    return WeaponAPI.IssueWeapon(request, context)
+    return WeaponAPI.IssueWeapon(request, context, GetInvokingResource())
 end)
 
 exports("DestroyWeapon", function(request, context)
