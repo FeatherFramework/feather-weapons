@@ -98,8 +98,16 @@ Config = {
         },
         authorization = {
             enabled = false,
-            destroyAction = "weapons.ownership.destroy"
+            destroyAction = "weapons.ownership.destroy",
+            holdAction = "weapons.evidence.hold",
+            releaseAction = "weapons.evidence.release"
         }
+    },
+    Provenance = {
+        -- Zero retains audit events indefinitely. Any future purge workflow
+        -- must be an explicit server-owner operation, never an automatic side effect.
+        retentionDays = 0,
+        maxInspectionEvents = 100
     },
     Controls = {
         unload = {

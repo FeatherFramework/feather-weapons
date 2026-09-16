@@ -343,6 +343,27 @@ serial number. The same serial is included in `weaponstate` diagnostics for
 primary, offhand, shoulder, and back slots.
 Development grants and native probes remain disabled.
 
+Issuance, cross-inventory ownership transitions, and destruction are also
+written to the append-only `feather_weapon_events` ledger. Trusted resources
+may call `InspectWeaponHistory` with an `itemInstanceId` or `serialNumber` and
+an optional bounded `limit` (maximum 100) to retrieve the current item, terminal
+state, and newest-first audit history. Run `WeaponProvenanceContractSmokeTest`
+from the server console to verify the read-only contract.
+
+History is private to resources explicitly listed in
+`Config.Ownership.trustedResources`. `Config.Provenance.maxInspectionEvents`
+bounds each query. `retentionDays = 0` is the safe default and retains the
+append-only audit indefinitely; Weapons does not silently purge ownership
+history.
+
+Trusted resources may place or release an exact unequipped character-owned
+weapon under evidence hold through `HoldWeaponEvidence` and
+`ReleaseWeaponEvidence`. Both require the canonical character UUID, item
+instance ID, and expected serial. Held weapons fail closed for equip, ordinary
+movement, and ordinary destruction; the canonical item is mutated in place and
+each state change is appended to the provenance ledger. Optional Core actions
+are configured as `weapons.evidence.hold` and `weapons.evidence.release`.
+
 ## Known limitations
 
 - The Cattleman Long Barrel and Wide Sight are live-validated functional

@@ -45,6 +45,9 @@ function WeaponAPI.GetCapabilities()
             attachmentTransactions = InventoryAdapter.IsReady(),
             slotAttachments = InventoryAdapter.IsReady(),
             ownershipTransitionEvents = InventoryAdapter.IsReady(),
+            durableProvenance = WeaponProvenanceService.IsReady(),
+            serialInspection = WeaponProvenanceService.IsReady(),
+            evidenceHolds = InventoryAdapter.IsReady(),
             administrativeHoldGuards = InventoryAdapter.IsReady(),
             destruction = InventoryAdapter.IsReady()
         }
@@ -85,6 +88,18 @@ function WeaponAPI.DestroyWeapon(request, context, invokingResource)
     return WeaponOwnershipService.Destroy(context, request, invokingResource)
 end
 
+function WeaponAPI.InspectWeaponHistory(request, context, invokingResource)
+    return WeaponProvenanceService.Inspect(request, context, invokingResource)
+end
+
+function WeaponAPI.HoldEvidence(request, context, resource)
+    return WeaponEvidenceService.Hold(context, request, resource)
+end
+
+function WeaponAPI.ReleaseEvidence(request, context, resource)
+    return WeaponEvidenceService.Release(context, request, resource)
+end
+
 exports("initiate", function()
     return {
         GetCapabilities = WeaponAPI.GetCapabilities,
@@ -93,13 +108,22 @@ exports("initiate", function()
         Runtime = { Get = WeaponAPI.GetRuntime },
         Inspection = {
             Inspect = WeaponAPI.InspectEquippedWeapons,
-            Reconcile = WeaponAPI.ReconcileEquippedWeapons
+            Reconcile = WeaponAPI.ReconcileEquippedWeapons,
+            History = function(request, context)
+                return WeaponAPI.InspectWeaponHistory(request, context, GetInvokingResource())
+            end
         },
         Issuance = { Issue = WeaponAPI.IssueWeapon },
         Ownership = {
             Destroy = function(request, context)
                 local invokingResource = GetInvokingResource()
                 return WeaponAPI.DestroyWeapon(request, context, invokingResource)
+            end,
+            HoldEvidence = function(request, context)
+                return WeaponAPI.HoldEvidence(request, context, GetInvokingResource())
+            end,
+            ReleaseEvidence = function(request, context)
+                return WeaponAPI.ReleaseEvidence(request, context, GetInvokingResource())
             end
         },
         Inventory = {
@@ -119,6 +143,18 @@ end)
 exports("DestroyWeapon", function(request, context)
     local invokingResource = GetInvokingResource()
     return WeaponAPI.DestroyWeapon(request, context, invokingResource)
+end)
+
+exports("InspectWeaponHistory", function(request, context)
+    return WeaponAPI.InspectWeaponHistory(request, context, GetInvokingResource())
+end)
+
+exports("HoldWeaponEvidence", function(request, context)
+    return WeaponAPI.HoldEvidence(request, context, GetInvokingResource())
+end)
+
+exports("ReleaseWeaponEvidence", function(request, context)
+    return WeaponAPI.ReleaseEvidence(request, context, GetInvokingResource())
 end)
 
 exports("InspectEquippedWeapons", function(source)

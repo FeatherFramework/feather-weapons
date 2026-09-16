@@ -82,7 +82,7 @@ function IssuanceService.Issue(context, request)
         return created
     end
 
-    return WeaponResult.Ok({
+    local value = {
         itemInstanceId = created.value.instanceId,
         inventoryId = created.value.inventoryId,
         revision = created.value.revision,
@@ -91,5 +91,21 @@ function IssuanceService.Issue(context, request)
         itemName = definition.itemName,
         serialNumber = serialNumber,
         metadata = metadataResult.value
-    }, context.correlationId)
+    }
+    local recorded = WeaponProvenanceService.Record({
+        operation = 'issue', transitionType = 'issuance', outcome = 'committed',
+        itemInstanceId = value.itemInstanceId, definitionId = definition.id,
+        serialNumber = serialNumber, revision = value.revision,
+        toInventoryId = value.inventoryId, toCharacterId = characterId,
+        actorSource = context.actorSource, actorCharacterId = context.actorCharacterId,
+        reason = context.reason, resource = context.resource,
+        correlationId = context.correlationId, occurredAt = os.time(),
+        metadata = metadataResult.value
+    })
+    value.provenanceEventId = recorded.ok and recorded.value.eventId or nil
+    if not recorded.ok then
+        print(('[feather-weapons] CRITICAL issuance provenance failed item=%s serial=%s'):format(
+            tostring(value.itemInstanceId), tostring(serialNumber)))
+    end
+    return WeaponResult.Ok(value, context.correlationId)
 end
