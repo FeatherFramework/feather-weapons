@@ -466,6 +466,19 @@ resource restart.
   `replayed=true`, Inventory contained exactly one instance, and exact-item
   cleanup succeeded. Non-development issuance now requires a stable request ID
   and persists pending/committed request state across resource restarts.
+- Issuance request keys are now permanently bound to their original character,
+  weapon definition, and purpose. Strict request-ID validation rejects
+  malformed or oversized keys instead of truncating them; the expanded
+  read-only issuance contract passed `13/13`.
+- Interrupted issuance recovery passed across a real Weapons restart. Request
+  `recovery-restart-001` created Cattleman item `68`, serial
+  `FW-REVO-6AAA1951-5DF238-0001`, then stopped before committing its issuance
+  reservation. Retrying the same request after restart found exactly one
+  canonical metadata match and returned that item with `replayed=true` and
+  `recovered=true`; no duplicate was created. Exact-item cleanup then passed.
+  Requests created during the current process remain non-recoverable while
+  active, preserving concurrent retry rejection, and missing or ambiguous
+  recovery matches fail closed.
 
 ### Exit gate
 

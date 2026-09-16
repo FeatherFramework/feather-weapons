@@ -721,7 +721,8 @@ RegisterCommand("WeaponIssuanceContractSmokeTest", function(source)
             { 'oversized request id rejected', contract.oversizedRequestIdRejected },
             { 'malformed request id rejected', contract.malformedRequestIdRejected },
             { 'idempotent issuance ready', capabilities.features.idempotentIssuance == true },
-            { 'issuance payload binding ready', capabilities.features.issuancePayloadBinding == true }
+            { 'issuance payload binding ready', capabilities.features.issuancePayloadBinding == true },
+            { 'interrupted issuance recovery ready', capabilities.features.issuanceRecovery == true }
         }
         local passed = 0
         for _, test in ipairs(tests) do
@@ -771,6 +772,61 @@ if Config.DevMode then
             passed and 'PASS' or 'FAIL', tostring(first.ok and first.value.itemInstanceId),
             tostring(first.ok and first.value.serialNumber), tostring(second.ok and second.value.replayed),
             tostring(mismatchRejected)))
+    end, true)
+
+    RegisterCommand("WeaponIssuanceRecoveryTest", function(source, args)
+        if source ~= 0 then return end
+        local targetSource = tonumber(args and args[1])
+        local definitionId = args and args[2] or 'revolver_cattleman'
+        local requestId = args and args[3]
+        local phase = args and args[4] or 'combined'
+        if not targetSource or type(requestId) ~= 'string' or requestId == '' then
+            print('[WeaponIssuanceRecoveryTest] usage: WeaponIssuanceRecoveryTest <source> <definitionId> <requestId> [prepare|retry]')
+            return
+        end
+        local session = CoreAdapter.ResolveSession(targetSource)
+        if not session.ok then print('[WeaponIssuanceRecoveryTest] FAIL session unavailable'); return end
+        local request = { characterId = session.value.characterId, definitionId = definitionId,
+            purpose = 'admin_issue', requestId = requestId,
+            provenance = { type = 'admin_issue', reference = requestId } }
+        local base = { characterId = session.value.characterId, reason = 'admin_issue',
+            resource = 'feather-weapons' }
+        local interruptedContext = {
+            characterId = base.characterId, reason = base.reason, resource = base.resource,
+            correlationId = ('issuance-recovery:%s:interrupted'):format(requestId),
+            failureInjection = 'after_create'
+        }
+        local interrupted
+        if phase ~= 'retry' then
+            interrupted = IssuanceService.Issue(
+                interruptedContext, request, 'feather-weapons')
+        end
+        local interruptedAsExpected = interrupted and not interrupted.ok and interrupted.error
+            and interrupted.error.code == WeaponErrors.OPERATION_CONFLICT
+            and tonumber(interrupted.error.details and interrupted.error.details.itemInstanceId) ~= nil
+        if phase == 'prepare' then
+            print(('[WeaponIssuanceRecoveryTest] %s prepared item=%s serial=%s; restart feather-weapons then rerun with retry'):format(
+                interruptedAsExpected and 'PASS' or 'FAIL',
+                tostring(interruptedAsExpected and interrupted.error.details.itemInstanceId),
+                tostring(interruptedAsExpected and interrupted.error.details.serialNumber)))
+            return
+        end
+        local recovered = IssuanceService.Issue({
+            characterId = base.characterId, reason = base.reason, resource = base.resource,
+            correlationId = ('issuance-recovery:%s:retry'):format(requestId)
+        }, request, 'feather-weapons')
+        local expectedItemId = interruptedAsExpected
+            and tonumber(interrupted.error.details.itemInstanceId) or nil
+        local passed = (phase == 'retry' or interruptedAsExpected) and recovered.ok
+            and recovered.value.replayed == true and recovered.value.recovered == true
+            and (not expectedItemId or tonumber(recovered.value.itemInstanceId) == expectedItemId)
+        print(('[WeaponIssuanceRecoveryTest] %s item=%s serial=%s interrupted=%s replayed=%s recovered=%s'):format(
+            passed and 'PASS' or 'FAIL',
+            tostring(recovered.ok and recovered.value.itemInstanceId),
+            tostring(recovered.ok and recovered.value.serialNumber),
+            tostring(interruptedAsExpected == true),
+            tostring(recovered.ok and recovered.value.replayed),
+            tostring(recovered.ok and recovered.value.recovered)))
     end, true)
 end
 

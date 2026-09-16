@@ -75,6 +75,83 @@ local function Authorize(context, definitionId, purpose)
     return WeaponResult.Ok(true, context.correlationId)
 end
 
+local function BuildIssuedValue(item, definition, characterId)
+    return {
+        itemInstanceId = tonumber(item.id),
+        inventoryId = tonumber(item.inventoryId),
+        revision = tonumber(item.metadataRevision),
+        characterId = characterId,
+        definitionId = definition.id,
+        itemName = definition.itemName,
+        serialNumber = item.metadata.serialNumber,
+        metadata = item.metadata
+    }
+end
+
+local function RecordIssuance(value, context, recovered)
+    local existing = WeaponProvenanceService.FindIssuanceEvent(
+        value.itemInstanceId, context.correlationId)
+    if existing.ok and existing.value.eventId then
+        value.provenanceEventId = existing.value.eventId
+        return existing
+    end
+    local recorded = WeaponProvenanceService.Record({
+        operation = 'issue', transitionType = 'issuance', outcome = 'committed',
+        itemInstanceId = value.itemInstanceId, definitionId = value.definitionId,
+        serialNumber = value.serialNumber, revision = value.revision,
+        toInventoryId = value.inventoryId, toCharacterId = value.characterId,
+        actorSource = context.actorSource, actorCharacterId = context.actorCharacterId,
+        reason = context.reason, resource = context.resource,
+        correlationId = context.correlationId, occurredAt = os.time(),
+        metadata = value.metadata, recovered = recovered == true
+    })
+    value.provenanceEventId = recorded.ok and recorded.value.eventId or nil
+    return recorded
+end
+
+local function RecoverPending(context, requestId, definition, characterId, reservationId)
+    local listed = InventoryAdapter.ListWeaponsForCharacter({
+        characterId = characterId, correlationId = context.correlationId
+    })
+    if not listed.ok then return listed end
+    local matches = {}
+    for _, item in ipairs(listed.value or {}) do
+        local metadata = type(item.metadata) == 'table' and item.metadata or {}
+        local provenance = type(metadata.provenance) == 'table' and metadata.provenance or {}
+        if metadata.weaponDefinitionId == definition.id
+            and provenance.resource == context.resource
+            and provenance.reference == requestId
+            and CoreAdapter.NormalizeCharacterId(provenance.issuedToCharacterId) == characterId then
+            matches[#matches + 1] = item
+        end
+    end
+    if #matches ~= 1 then
+        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+            'Pending issuance could not be recovered unambiguously', {
+                requestId = requestId, matches = #matches
+            }, context.correlationId)
+    end
+    local valid = WeaponMetadata.Validate(matches[1].metadata, definition, context.correlationId)
+    if not valid.ok then return valid end
+    local value = BuildIssuedValue(matches[1], definition, characterId)
+    local recorded = RecordIssuance(value, context, true)
+    if not recorded.ok then return recorded end
+    local committed = WeaponProvenanceService.CommitIssuance(
+        reservationId, value, context.correlationId)
+    if not committed.ok then
+        local replay = WeaponProvenanceService.BeginIssuance(context.resource, requestId,
+            context.reason, characterId, definition.id, context.correlationId)
+        if replay.ok and replay.value.replayed == true then
+            replay.value.recovered = true
+            return WeaponResult.Ok(replay.value, context.correlationId)
+        end
+        return committed
+    end
+    value.replayed = true
+    value.recovered = true
+    return WeaponResult.Ok(value, context.correlationId)
+end
+
 function IssuanceService.Issue(context, request, invokingResource)
     context = type(context) == "table" and context or {}
     request = type(request) == "table" and request or {}
@@ -111,6 +188,9 @@ function IssuanceService.Issue(context, request, invokingResource)
         if not begun.ok then return begun end
         if begun.value.replayed == true then return WeaponResult.Ok(begun.value, context.correlationId) end
         reservationId = begun.value.reservationId
+        if begun.value.pending == true then
+            return RecoverPending(context, requestId, definition, characterId, reservationId)
+        end
     end
     local function CancelReservation()
         if reservationId then WeaponProvenanceService.CancelIssuance(reservationId) end
@@ -146,30 +226,22 @@ function IssuanceService.Issue(context, request, invokingResource)
         return created
     end
 
-    local value = {
-        itemInstanceId = created.value.instanceId,
-        inventoryId = created.value.inventoryId,
-        revision = created.value.revision,
-        characterId = characterId,
-        definitionId = definition.id,
-        itemName = definition.itemName,
-        serialNumber = serialNumber,
-        metadata = metadataResult.value
-    }
-    local recorded = WeaponProvenanceService.Record({
-        operation = 'issue', transitionType = 'issuance', outcome = 'committed',
-        itemInstanceId = value.itemInstanceId, definitionId = definition.id,
-        serialNumber = serialNumber, revision = value.revision,
-        toInventoryId = value.inventoryId, toCharacterId = characterId,
-        actorSource = context.actorSource, actorCharacterId = context.actorCharacterId,
-        reason = context.reason, resource = context.resource,
-        correlationId = context.correlationId, occurredAt = os.time(),
-        metadata = metadataResult.value
-    })
-    value.provenanceEventId = recorded.ok and recorded.value.eventId or nil
+    local value = BuildIssuedValue({
+        id = created.value.instanceId, inventoryId = created.value.inventoryId,
+        metadataRevision = created.value.revision, metadata = metadataResult.value
+    }, definition, characterId)
+    local recorded = RecordIssuance(value, context, false)
     if not recorded.ok then
         print(('[feather-weapons] CRITICAL issuance provenance failed item=%s serial=%s'):format(
             tostring(value.itemInstanceId), tostring(serialNumber)))
+    end
+    if Config.DevMode and context.resource == 'feather-weapons'
+        and context.failureInjection == 'after_create' then
+        WeaponProvenanceService.MarkIssuanceInterrupted(reservationId)
+        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+            'Injected failure after weapon creation', {
+                itemInstanceId = value.itemInstanceId, serialNumber = value.serialNumber
+            }, context.correlationId)
     end
     if reservationId then
         local committed = WeaponProvenanceService.CommitIssuance(reservationId, value, context.correlationId)

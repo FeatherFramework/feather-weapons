@@ -118,6 +118,12 @@ Request IDs must be 1-128 characters, start with a letter or number, and use
 only letters, numbers, dots, underscores, colons, or hyphens. Invalid IDs are
 rejected instead of truncated.
 
+If a request is interrupted after Inventory creates the weapon but before its
+issuance reservation commits, retrying the same request reconciles the pending
+record against the target character's canonical weapon metadata. Recovery only
+commits when exactly one matching item exists; missing or ambiguous outcomes
+remain fail-closed for operator review.
+
 ## Configuration
 
 ```lua

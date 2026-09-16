@@ -1,6 +1,7 @@
 WeaponProvenanceService = {}
 
 local ready = false
+local recoverableIssuanceIds = {}
 
 local function Clean(value, maximum)
     if value == nil then return nil end
@@ -65,6 +66,13 @@ function WeaponProvenanceService.Start()
         if not found[1] then
             MySQL.query.await(('ALTER TABLE `feather_weapon_issuance_requests` %s'):format(column.sql))
         end
+    end
+    recoverableIssuanceIds = {}
+    local pending = MySQL.query.await([[SELECT `id` FROM `feather_weapon_issuance_requests`
+        WHERE `status`='pending']]) or {}
+    for _, row in ipairs(pending) do
+        local id = tonumber(row.id)
+        if id then recoverableIssuanceIds[id] = true end
     end
     ready = true
     return WeaponResult.Ok(true)
@@ -176,8 +184,36 @@ function WeaponProvenanceService.BeginIssuance(resource, requestId, purpose, cha
             return WeaponResult.Ok(value, correlationId)
         end
     end
+    if row and row.status == 'pending' then
+        local reservationId = tonumber(row.id)
+        if not recoverableIssuanceIds[reservationId] then
+            return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+                'Weapon issuance request is already pending', {
+                    resource = resource, requestId = requestId
+                }, correlationId)
+        end
+        return WeaponResult.Ok({
+            reservationId = reservationId,
+            replayed = false,
+            pending = true
+        }, correlationId)
+    end
     return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
-        'Weapon issuance request is already pending', { resource = resource, requestId = requestId }, correlationId)
+        'Weapon issuance request could not be resumed',
+        { resource = resource, requestId = requestId, status = row and row.status or nil }, correlationId)
+end
+
+function WeaponProvenanceService.MarkIssuanceInterrupted(reservationId)
+    if Config.DevMode and tonumber(reservationId) then
+        recoverableIssuanceIds[tonumber(reservationId)] = true
+    end
+end
+
+function WeaponProvenanceService.FindIssuanceEvent(itemInstanceId, correlationId)
+    local rows = MySQL.query.await([[SELECT `id` FROM `feather_weapon_events`
+        WHERE `item_instance_id`=? AND `event_type`='issuance'
+        ORDER BY `id` ASC LIMIT 1]], { tonumber(itemInstanceId) }) or {}
+    return WeaponResult.Ok({ eventId = rows[1] and tonumber(rows[1].id) or nil }, correlationId)
 end
 
 function WeaponProvenanceService.CommitIssuance(reservationId, value, correlationId)
@@ -189,11 +225,13 @@ function WeaponProvenanceService.CommitIssuance(reservationId, value, correlatio
         return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
             'Issuance request could not be committed', nil, correlationId)
     end
+    recoverableIssuanceIds[tonumber(reservationId)] = nil
     return WeaponResult.Ok(true, correlationId)
 end
 
 function WeaponProvenanceService.CancelIssuance(reservationId)
     if reservationId then
+        recoverableIssuanceIds[tonumber(reservationId)] = nil
         MySQL.update.await([[DELETE FROM `feather_weapon_issuance_requests`
             WHERE `id`=? AND `status`='pending']], { tonumber(reservationId) })
     end

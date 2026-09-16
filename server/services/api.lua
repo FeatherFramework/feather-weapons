@@ -44,6 +44,7 @@ function WeaponAPI.GetCapabilities()
             secureIssuance = InventoryAdapter.IsReady(),
             idempotentIssuance = InventoryAdapter.IsReady(),
             issuancePayloadBinding = InventoryAdapter.IsReady(),
+            issuanceRecovery = InventoryAdapter.IsReady() and WeaponProvenanceService.IsReady(),
             attachmentDefinitions = true,
             attachmentTransactions = InventoryAdapter.IsReady(),
             slotAttachments = InventoryAdapter.IsReady(),
