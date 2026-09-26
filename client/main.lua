@@ -191,8 +191,17 @@ local function AddOffhandEntitlement(itemName, slotId)
     offhandEntitlements[#offhandEntitlements + 1] = {
         inventoryId = inventoryId,
         guid = itemGuid,
-        itemName = itemName
+        itemName = itemName,
+        componentHash = itemName:match('^CLOTHING_') and itemHash or nil
     }
+
+    if itemName:match('^CLOTHING_') then
+        local ped = PlayerPedId()
+        Citizen.InvokeNative(0xD3A7B003ED343FD9, ped, itemHash, false, false, false)
+        Citizen.InvokeNative(0xD3A7B003ED343FD9, ped, itemHash, false, true, false)
+        Citizen.InvokeNative(0xCC8CA3E88256E58F, ped, false, true, true, true, false)
+        Citizen.InvokeNative(0xAAB86462966168CE, ped, true)
+    end
     return true
 end
 
@@ -201,21 +210,34 @@ local function EnsureOffhandEntitlement()
         return NativeTrue(GetAllowDualWield(PlayerPedId()))
     end
 
+    local ped = PlayerPedId()
+    local modelHash = GetEntityModel(ped)
+    local model = modelHash == joaat('mp_male') and 'mp_male'
+        or modelHash == joaat('mp_female') and 'mp_female' or nil
+    local entitlements = model and Config.Offhand.nativeEntitlements[model] or nil
+    if type(entitlements) ~= 'table' then return false end
+
     local provisioned = true
-    for _, entitlement in ipairs(Config.Offhand.nativeEntitlements) do
+    for _, entitlement in ipairs(entitlements) do
         if not AddOffhandEntitlement(entitlement.itemName, entitlement.slotId) then
             provisioned = false
             break
         end
     end
-    SetAllowDualWield(PlayerPedId(), true)
+    SetAllowDualWield(ped, true)
 
-    return provisioned and NativeTrue(GetAllowDualWield(PlayerPedId()))
+    return provisioned and NativeTrue(GetAllowDualWield(ped))
 end
 
 local function RemoveOffhandEntitlements()
+    local ped = PlayerPedId()
+    local variationChanged = false
     for index = #offhandEntitlements, 1, -1 do
         local value = offhandEntitlements[index]
+        if value.componentHash then
+            Citizen.InvokeNative(0x0D7FFA1B2F69ED82, ped, value.componentHash, 0, 0)
+            variationChanged = true
+        end
         Citizen.InvokeNative(0x3E4E811480B3AE79, -- InventoryRemoveInventoryItemWithGuid
             value.inventoryId,
             value.guid,
@@ -224,6 +246,10 @@ local function RemoveOffhandEntitlements()
         )
     end
     offhandEntitlements = {}
+    if variationChanged then
+        Citizen.InvokeNative(0xCC8CA3E88256E58F, ped, false, true, true, true, false)
+        Citizen.InvokeNative(0xAAB86462966168CE, ped, true)
+    end
 end
 
 RemoveNativeWeapon = function(ped, weaponHash)

@@ -565,13 +565,23 @@ end, false)
 RegisterCommand('WeaponNativeProbeDualEntitle', function()
     if RefuseInventoryWeapon() then return end
 
+    local ped = PlayerPedId()
+    local modelHash = GetEntityModel(ped)
+    local model = modelHash == joaat('mp_male') and 'mp_male'
+        or modelHash == joaat('mp_female') and 'mp_female' or nil
+    local entitlements = model and Config.Offhand.nativeEntitlements[model] or nil
+    if type(entitlements) ~= 'table' then
+        print(('[WeaponNativeProbe] no offhand entitlement policy for model=%s')
+            :format(tostring(modelHash)))
+        return
+    end
+
     local outcomes = {}
-    for _, entitlement in ipairs(Config.Offhand.nativeEntitlements) do
+    for _, entitlement in ipairs(entitlements) do
         outcomes[#outcomes + 1] = AddNativeWardrobeEntitlement(
             entitlement.itemName, entitlement.slotId)
     end
 
-    local ped = PlayerPedId()
     SetDualWieldAllowed(ped, true)
     for _, outcome in ipairs(outcomes) do
         print(('[WeaponNativeProbe] dual-entitlement item=%s result=%s/%s existing=%s'):format(

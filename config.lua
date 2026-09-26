@@ -48,11 +48,14 @@ Config = {
         -- RedM requires both an offhand clothing entitlement and its upgrade.
         -- Tested tint variants did not visibly restyle the equipped holster.
         nativeEntitlements = {
-            -- RedM uses this exact wardrobe inventory item to back the working
-            -- offhand-holster state. Other tints may look identical but are
-            -- distinct native inventory entries.
-            { itemName = "CLOTHING_ITEM_M_OFFHAND_000_TINT_004", slotId = 0xF20B6B4A },
-            { itemName = "UPGRADE_OFFHAND_HOLSTER", slotId = 0x39E57B01 }
+            mp_male = {
+                { itemName = "CLOTHING_ITEM_M_OFFHAND_000_TINT_004", slotId = 0xF20B6B4A },
+                { itemName = "UPGRADE_OFFHAND_HOLSTER", slotId = 0x39E57B01 }
+            },
+            mp_female = {
+                { itemName = "CLOTHING_ITEM_F_OFFHAND_000_TINT_004", slotId = 0xF20B6B4A },
+                { itemName = "UPGRADE_OFFHAND_HOLSTER", slotId = 0x39E57B01 }
+            }
         },
         -- Native holster points; change only for a tested clothing setup.
         primaryAttachPoint = 2,

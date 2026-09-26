@@ -159,8 +159,14 @@ Config = {
         allowedWeaponSlots = { sidearm = true },
         provisionNativeEntitlement = true,
         nativeEntitlements = {
-            { itemName = "CLOTHING_ITEM_M_OFFHAND_000_TINT_001", slotId = 0xF20B6B4A },
-            { itemName = "UPGRADE_OFFHAND_HOLSTER", slotId = 0x39E57B01 }
+            mp_male = {
+                { itemName = "CLOTHING_ITEM_M_OFFHAND_000_TINT_004", slotId = 0xF20B6B4A },
+                { itemName = "UPGRADE_OFFHAND_HOLSTER", slotId = 0x39E57B01 }
+            },
+            mp_female = {
+                { itemName = "CLOTHING_ITEM_F_OFFHAND_000_TINT_004", slotId = 0xF20B6B4A },
+                { itemName = "UPGRADE_OFFHAND_HOLSTER", slotId = 0x39E57B01 }
+            }
         },
         primaryAttachPoint = 2,
         offhandAttachPoint = 3
@@ -203,9 +209,11 @@ RedM's offhand holster unlock. Testing confirmed that the upgrade entitlement
 alone is insufficient: RedM also requires an offhand clothing entitlement.
 Testing the available tint variants produced no visible cosmetic difference,
 so Feather treats this item as a native inventory marker rather than character
-styling. `nativeEntitlements` remains server-owned. Replace its clothing item
-only after testing the alternative in game. Attach-point values should only be
-changed for a tested setup.
+styling. `nativeEntitlements` is keyed by the supported multiplayer character
+model so male and female characters receive their matching wardrobe component.
+It remains server-owned. Replace a clothing item only after testing the
+alternative in game. Attach-point values should only be changed for a tested
+setup.
 
 `data/weapon_holsters.meta` applies RedM's required short-arm holster-depth
 override for the M1899 pistol. This native metadata correction controls how that
@@ -412,6 +420,10 @@ slot-aware repair and attachments, movement guards, reconciliation, entitlement
 recovery, reconnect/resource/server restart, Admin operations, and two-player
 isolation. Matching-hash pairs are rejected by policy. Different-hash sidearm
 pairs, all four logical slots, and primary-only behavior remain regression tested.
+The female Cattleman/Schofield pair has also passed visible offhand entitlement
+provisioning and cleanup, alternating fire, automatic holster reload,
+logout/reselection, resource restart, and full server restart checks without
+changing unrelated clothing.
 
 ## Attachment phase
 
@@ -451,7 +463,7 @@ Operations return a consistent result envelope:
 
 ## Next milestones
 
-1. Complete male/female offhand entitlement validation.
+1. Complete the per-model live matrix for the remaining firearm families.
 2. Expand the weapon catalog one tested family at a time.
 3. Add ammunition types and complete the modification catalog.
 4. Add transfers, storage, evidence, destruction, and recovery flows.
