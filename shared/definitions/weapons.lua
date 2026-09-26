@@ -248,7 +248,14 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            barrel = { "lemat_long_barrel" },
+            sight = { "lemat_wide_sight" }
+        },
+        attachmentDefaults = {
+            barrel = "Standard Barrel",
+            sight = "Standard Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,

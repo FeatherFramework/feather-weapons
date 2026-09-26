@@ -50,5 +50,29 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "schofield" }
+    },
+    lemat_long_barrel = {
+        id = "lemat_long_barrel",
+        kind = "attachment",
+        itemName = "lemat_long_barrel",
+        label = "LeMat Long Barrel",
+        slot = "barrel",
+        nativeComponentName = "COMPONENT_REVOLVER_LEMAT_BARREL_LONG",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "lemat" }
+    },
+    lemat_wide_sight = {
+        id = "lemat_wide_sight",
+        kind = "attachment",
+        itemName = "lemat_wide_sight",
+        label = "LeMat Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_REVOLVER_LEMAT_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "lemat" }
     }
 }
