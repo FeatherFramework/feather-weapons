@@ -412,8 +412,9 @@ are configured as `weapons.evidence.hold` and `weapons.evidence.release`.
 
 ## Known limitations
 
-- The Cattleman Long Barrel and Wide Sight are live-validated functional
-  attachment slices. Broader model compatibility remains unfinished.
+- The Cattleman Long Barrel and Wide Sight and the Schofield Short Barrel and
+  Wide Sight are live-validated functional attachment slices. Broader model
+  compatibility remains unfinished.
 - Alternate ammunition, expanded provenance, evidence, licenses, shops, and crafting remain planned.
 
 ## Validation status

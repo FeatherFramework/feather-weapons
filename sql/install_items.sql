@@ -299,6 +299,16 @@ INSERT INTO `items`
 SELECT 'cattleman_wide_sight', 'Cattleman Wide Sight', 'A wide sight made for the Cattleman Revolver.', 20, 10, 1, 0, 3, 'item_item', 'stack'
 WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'cattleman_wide_sight');
 
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'schofield_short_barrel', 'Schofield Short Barrel', 'A short barrel made for the Schofield Revolver.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'schofield_short_barrel');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'schofield_wide_sight', 'Schofield Wide Sight', 'A wide sight made for the Schofield Revolver.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'schofield_wide_sight');
+
 UPDATE `items`
 SET `display_name` = 'Cattleman Revolver',
     `description` = 'A standard single-action revolver.',
@@ -333,3 +343,17 @@ SET `display_name` = 'Cattleman Wide Sight',
     `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
     `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
 WHERE `name` = 'cattleman_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Schofield Short Barrel',
+    `description` = 'A short barrel made for the Schofield Revolver.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'schofield_short_barrel';
+
+UPDATE `items`
+SET `display_name` = 'Schofield Wide Sight',
+    `description` = 'A wide sight made for the Schofield Revolver.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'schofield_wide_sight';

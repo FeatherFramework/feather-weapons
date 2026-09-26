@@ -8,6 +8,8 @@ of scope until their representation and conflict rules are designed.
 | --- | --- | --- | --- | --- | --- |
 | Cattleman Revolver | Barrel | Cattleman Long Barrel | `COMPONENT_REVOLVER_CATTLEMAN_BARREL_LONG` | Shipped | Passed full lifecycle |
 | Cattleman Revolver | Sight | Cattleman Wide Sight | `COMPONENT_REVOLVER_CATTLEMAN_SIGHT_WIDE` | Shipped | Passed full lifecycle |
+| Schofield Revolver | Barrel | Schofield Short Barrel | `COMPONENT_REVOLVER_SCHOFIELD_BARREL_SHORT` | Shipped | Passed full lifecycle |
+| Schofield Revolver | Sight | Schofield Wide Sight | `COMPONENT_REVOLVER_SCHOFIELD_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 
 ## Wide Sight acceptance matrix
 
@@ -48,3 +50,13 @@ condition. It coexisted with the Long Barrel through resource restart, logout,
 and full server restart in both primary and offhand roles. Duplicate installation
 was unavailable without consuming the extra item, and an equipped Mauser exposed
 no incompatible installation action.
+
+## Schofield live result
+
+The native Schofield baseline is the long barrel, so the initial Long Barrel
+candidate was rejected during visual validation and replaced with the visibly
+distinct Short Barrel. The Short Barrel and Wide Sight installed independently,
+coexisted visibly, survived a Weapons resource restart, and removed selectively
+with exact item returns. Removing the Short Barrel restored the standard long
+barrel. Throughout the lifecycle the weapon identity, runtime lease, ammunition,
+and condition remained aligned.

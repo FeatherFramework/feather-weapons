@@ -181,7 +181,14 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            barrel = { "schofield_short_barrel" },
+            sight = { "schofield_wide_sight" }
+        },
+        attachmentDefaults = {
+            barrel = "Standard Long Barrel",
+            sight = "Standard Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
