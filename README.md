@@ -416,7 +416,8 @@ are configured as `weapons.evidence.hold` and `weapons.evidence.release`.
   Wide Sight are live-validated functional attachment slices. Broader model
   compatibility remains unfinished. The LeMat Long Barrel and Wide Sight are
   also live-validated functional attachment slices. The Navy Long Barrel and
-  Wide Sight are live validated as well.
+  Wide Sight are live validated as well. The Double-Action Long Barrel and Wide
+  Sight are live validated as well.
 - Alternate ammunition, expanded provenance, evidence, licenses, shops, and crafting remain planned.
 
 ## Validation status

@@ -14,6 +14,8 @@ of scope until their representation and conflict rules are designed.
 | LeMat Revolver | Sight | LeMat Wide Sight | `COMPONENT_REVOLVER_LEMAT_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 | Navy Revolver | Barrel | Navy Long Barrel | `COMPONENT_REVOLVER_NAVY_BARREL_LONG` | Shipped | Passed full lifecycle |
 | Navy Revolver | Sight | Navy Wide Sight | `COMPONENT_REVOLVER_NAVY_SIGHT_WIDE` | Shipped | Passed full lifecycle |
+| Double-Action Revolver | Barrel | Double-Action Long Barrel | `COMPONENT_REVOLVER_DOUBLEACTION_BARREL_LONG` | Shipped | Passed full lifecycle |
+| Double-Action Revolver | Sight | Double-Action Wide Sight | `COMPONENT_REVOLVER_DOUBLEACTION_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 
 ## Wide Sight acceptance matrix
 
@@ -80,3 +82,11 @@ profile. The Long Barrel and Wide Sight installed independently, coexisted
 visibly, survived a Weapons resource restart, and removed selectively with exact
 item returns. Removing the Long Barrel restored the standard shorter barrel.
 The weapon identity, runtime lease, ammunition, and condition remained aligned.
+
+## Double-Action live result
+
+The native Double-Action baseline uses the short barrel. The Long Barrel and
+Wide Sight installed independently, coexisted visibly, survived a Weapons
+resource restart, and removed selectively with exact item returns. Removing the
+Long Barrel restored the standard short barrel. The weapon identity, runtime
+lease, ammunition, and condition remained aligned.

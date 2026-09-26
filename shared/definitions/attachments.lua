@@ -98,5 +98,29 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "navy" }
+    },
+    doubleaction_long_barrel = {
+        id = "doubleaction_long_barrel",
+        kind = "attachment",
+        itemName = "doubleaction_long_barrel",
+        label = "Double-Action Long Barrel",
+        slot = "barrel",
+        nativeComponentName = "COMPONENT_REVOLVER_DOUBLEACTION_BARREL_LONG",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "doubleaction" }
+    },
+    doubleaction_wide_sight = {
+        id = "doubleaction_wide_sight",
+        kind = "attachment",
+        itemName = "doubleaction_wide_sight",
+        label = "Double-Action Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_REVOLVER_DOUBLEACTION_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "doubleaction" }
     }
 }
