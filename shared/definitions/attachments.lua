@@ -74,5 +74,29 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "lemat" }
+    },
+    navy_long_barrel = {
+        id = "navy_long_barrel",
+        kind = "attachment",
+        itemName = "navy_long_barrel",
+        label = "Navy Long Barrel",
+        slot = "barrel",
+        nativeComponentName = "COMPONENT_REVOLVER_NAVY_BARREL_LONG",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "navy" }
+    },
+    navy_wide_sight = {
+        id = "navy_wide_sight",
+        kind = "attachment",
+        itemName = "navy_wide_sight",
+        label = "Navy Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_REVOLVER_NAVY_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "navy" }
     }
 }

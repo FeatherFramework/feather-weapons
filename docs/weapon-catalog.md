@@ -37,7 +37,7 @@ Existing installations using the old inventory names must first run
 sql/rename_weapon_item_names.sql as described in the README.
 
 Run WeaponReleaseContractSmokeTest 1; expected counts are
-weapon=24 ammunition=27 attachment=6.
+weapon=24 ammunition=27 attachment=8.
 
 Live-test each new model: grant, equip, refill, fire, reload, unload, repair,
 logout/rejoin, and verify native clip capacity against the configured capacity.

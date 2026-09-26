@@ -12,6 +12,8 @@ of scope until their representation and conflict rules are designed.
 | Schofield Revolver | Sight | Schofield Wide Sight | `COMPONENT_REVOLVER_SCHOFIELD_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 | LeMat Revolver | Barrel | LeMat Long Barrel | `COMPONENT_REVOLVER_LEMAT_BARREL_LONG` | Shipped | Passed full lifecycle |
 | LeMat Revolver | Sight | LeMat Wide Sight | `COMPONENT_REVOLVER_LEMAT_SIGHT_WIDE` | Shipped | Passed full lifecycle |
+| Navy Revolver | Barrel | Navy Long Barrel | `COMPONENT_REVOLVER_NAVY_BARREL_LONG` | Shipped | Passed full lifecycle |
+| Navy Revolver | Sight | Navy Wide Sight | `COMPONENT_REVOLVER_NAVY_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 
 ## Wide Sight acceptance matrix
 
@@ -70,3 +72,11 @@ survived a Weapons resource restart, and removed selectively with exact item
 returns. Removing the Long Barrel restored the standard shorter barrel while
 preserving the Wide Sight. The weapon identity, runtime lease, ammunition, and
 condition remained aligned throughout the lifecycle.
+
+## Navy live result
+
+The Navy native baseline uses the short-barrel component despite its long visual
+profile. The Long Barrel and Wide Sight installed independently, coexisted
+visibly, survived a Weapons resource restart, and removed selectively with exact
+item returns. Removing the Long Barrel restored the standard shorter barrel.
+The weapon identity, runtime lease, ammunition, and condition remained aligned.
