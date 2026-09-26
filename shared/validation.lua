@@ -89,9 +89,6 @@ function WeaponValidation.Definition(definition, expectedKind)
             or definition.condition.equipMinimum > definition.condition.maximum then
             AddError(errors, "condition", "must define ordered minimum, equipMinimum, and maximum values")
         end
-        if type(definition.condition.wearPerShot) ~= "number" or definition.condition.wearPerShot < 0 then
-            AddError(errors, "condition.wearPerShot", "must be a non-negative number")
-        end
         local repair = definition.condition.repair
         if type(repair) ~= "table" or not IsNonEmptyString(repair.itemDefinitionId)
             or type(repair.quantity) ~= "number" or repair.quantity < 1 or repair.quantity % 1 ~= 0

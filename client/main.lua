@@ -3315,6 +3315,17 @@ local function ScheduleCharacterRestore(generation, delayMs, reason)
     end)
 end
 
+local function BeginCharacterRestoreWindow(reason)
+    characterRestoreGeneration = characterRestoreGeneration + 1
+    characterRestoreInFlight = false
+    characterRestoreComplete = false
+    characterRestoreAttempts = 0
+    local generation = characterRestoreGeneration
+    ScheduleCharacterRestore(generation, math.max(1000, math.floor(tonumber(
+        Config.Runtime and Config.Runtime.characterRestoreFallbackMs) or 6000)), reason)
+    return generation
+end
+
 RestoreRuntimeWeapons = function(reason)
     if characterRestoreComplete or characterRestoreInFlight or not CharacterIsActive() then
         return
@@ -3382,12 +3393,7 @@ end
 
 AddEventHandler('Feather:Character:Spawned', function()
     RegisterCharacterLogoutCheckpoint()
-    characterRestoreGeneration = characterRestoreGeneration + 1
-    characterRestoreInFlight = false
-    characterRestoreComplete = false
-    characterRestoreAttempts = 0
-    ScheduleCharacterRestore(characterRestoreGeneration, math.max(1000, math.floor(tonumber(
-        Config.Runtime and Config.Runtime.characterRestoreFallbackMs) or 6000)), 'spawn-fallback')
+    BeginCharacterRestoreWindow('spawn-fallback')
 end)
 
 AddEventHandler('feather-character:client:runtime-ready.v1', function()
@@ -3471,7 +3477,16 @@ end)
 AddEventHandler('onClientResourceStart', function(resourceName)
     if resourceName == GetCurrentResourceName() then
         RegisterCharacterLogoutCheckpoint()
-        TriggerServerEvent('feather-weapons:server:client-ready')
+        local generation = BeginCharacterRestoreWindow('resource-start-fallback')
+        -- Client scripts can start before the restarted server listener is
+        -- registered. Send the handshake after both environments have had
+        -- time to finish loading. The bounded restore window remains the
+        -- fallback if that event is still missed.
+        SetTimeout(500, function()
+            if generation == characterRestoreGeneration and not characterRestoreComplete then
+                TriggerServerEvent('feather-weapons:server:client-ready')
+            end
+        end)
     elseif resourceName == 'feather-character' then
         RegisterCharacterLogoutCheckpoint()
     end

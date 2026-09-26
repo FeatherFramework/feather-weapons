@@ -10,12 +10,15 @@ Lancaster maps to WEAPON_REPEATER_WINCHESTER and Litchfield to
 WEAPON_REPEATER_HENRY. Scoped rifles use the WEAPON_SNIPERRIFLE natives.
 
 All new entries inherit the existing condition policy: 100 maximum condition,
-one condition per shot, and one gun_oil restoring 25 condition. New inventory
-rows use the existing weapon defaults (weight 2, maximum quantity 20).
+native RedM maintenance determines wear, and one gun_oil restores up to 25
+condition without crossing the permanent-wear floor. New inventory rows use the
+existing weapon defaults (weight 2, maximum quantity 20).
 Only the existing Cattleman currently has configured attachment slots.
 
 The Varmint Rifle uses ammo_varmint. The Elephant Rifle uses
 ammo_rifle_elephant (AMMO_RIFLE_ELEPHANT), bringing ammunition definitions to 27.
+Nitro Express has a definition-level 20-round escrow ceiling, so loading from a
+larger Inventory stack moves at most 20 cartridges into the Elephant Rifle.
 Regular ammunition is the default. Each weapon also declares its supported
 ammunitionTypes: regular, express, high velocity, split point and explosive
 for pistols/revolvers/repeaters/ordinary rifles; regular, slug, incendiary and

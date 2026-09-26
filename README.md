@@ -225,7 +225,9 @@ Startup always fails closed when required dependencies, definitions, or contract
 
 The normal Character runtime-ready signal restores equipped weapons. A bounded,
 idempotent fallback retries restoration when that one-time signal is missed.
-The fallback is cancelled on logout and never applies a completed loadout twice.
+Weapons-only restarts open the same fallback window and retry the client-ready
+handshake after server listeners finish loading. The fallback is cancelled on
+logout and never applies a completed loadout twice.
 
 `DevMode` enables diagnostic output and development-only weapon grants; disable it on production servers. Keep `authoritativeNativeAmmo = true` when Feather Weapons owns all weapons and ammunition. At weapon boundaries, this clears the player's native ammo—including ammo granted by other resources—before restoring the equipped inventory item's saved rounds.
 
@@ -294,9 +296,11 @@ Inventory ownership.
 
 Weapon condition is derived from RedM's native maintenance state; ammunition
 checkpoints never apply condition wear. Use `gun_oil` from Inventory to clean
-soot and dirt and restore degradation up to the weapon's permanent wear floor. When two
-weapons are equipped, choose the primary, offhand, shoulder, or back weapon from the repair
-menu. Full-condition, stale-slot, and invalid repairs do not consume a kit.
+soot and dirt and restore degradation up to the weapon's permanent wear floor.
+Definitions do not declare deterministic per-shot wear because that would
+double-count RedM's native degradation. When multiple weapons are equipped,
+choose the primary, offhand, shoulder, or back weapon from the repair menu.
+Full-condition, stale-slot, and invalid repairs do not consume a kit.
 
 ### Weapon modifications
 
@@ -424,6 +428,13 @@ The female Cattleman/Schofield pair has also passed visible offhand entitlement
 provisioning and cleanup, alternating fire, automatic holster reload,
 logout/reselection, resource restart, and full server restart checks without
 changing unrelated clothing.
+The Sawed-Off passed its two-round capacity, regular/slug switching, unload
+conservation, repair, and restart matrix. The LeMat passed its nine-round
+cylinder and safely inert unsupported shotgun-barrel boundary. Varmint regular
+and tranquilizer ammunition passed shoulder restoration and exact returns. The
+Elephant Rifle passed its 20-round Nitro Express ceiling, back-slot isolation,
+and dual-long-gun restart restoration. Weapons-only restarts now restore
+long-gun-only loadouts after the server/client listener startup race.
 
 ## Attachment phase
 
