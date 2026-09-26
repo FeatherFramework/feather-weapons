@@ -139,17 +139,23 @@ function EquipService.ValidateConfiguration()
             "Offhand configuration is invalid")
     end
     if settings.provisionNativeEntitlement then
-        if type(settings.nativeEntitlements) ~= "table"
-            or #settings.nativeEntitlements < 1 then
+        if type(settings.nativeEntitlements) ~= "table" then
             return WeaponResult.Error(WeaponErrors.INVALID_DEFINITION,
                 "Offhand native entitlements are invalid")
         end
-        for _, entitlement in ipairs(settings.nativeEntitlements) do
-            local slotId = type(entitlement) == "table" and tonumber(entitlement.slotId) or nil
-            if type(entitlement) ~= "table" or type(entitlement.itemName) ~= "string"
-                or entitlement.itemName == "" or not slotId or slotId % 1 ~= 0 then
+        for _, model in ipairs({ "mp_male", "mp_female" }) do
+            local entitlements = settings.nativeEntitlements[model]
+            if type(entitlements) ~= "table" or #entitlements < 1 then
                 return WeaponResult.Error(WeaponErrors.INVALID_DEFINITION,
-                    "Offhand native entitlement entry is invalid")
+                    "Offhand native entitlement model policy is invalid", { model = model })
+            end
+            for _, entitlement in ipairs(entitlements) do
+                local slotId = type(entitlement) == "table" and tonumber(entitlement.slotId) or nil
+                if type(entitlement) ~= "table" or type(entitlement.itemName) ~= "string"
+                    or entitlement.itemName == "" or not slotId or slotId % 1 ~= 0 then
+                    return WeaponResult.Error(WeaponErrors.INVALID_DEFINITION,
+                        "Offhand native entitlement entry is invalid", { model = model })
+                end
             end
         end
     end

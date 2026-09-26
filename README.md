@@ -22,8 +22,8 @@ Server operation, recovery, integration, and trust boundaries are documented in
 - Equip a second supported sidearm and use RedM's native dual-wield controls.
 - Reject matching-hash equipped pairs; RedM cannot reliably preserve two copies
   through wheel, holster, and character-restoration transitions.
-- Require shoulder and back weapons to use different native ammunition types;
-  unsafe shared-ammo long-gun combinations fail closed.
+- Support different-model shoulder and back weapons that share a native
+  ammunition type while preserving independent item escrow and clips.
 - Unequip it by using the same item again.
 - Restore the equipped weapon after reconnects and resource or server restarts.
 - Finish reconnect and resource-start restoration with equipped guns holstered.
@@ -130,6 +130,8 @@ remain fail-closed for operator review.
 Config = {
     DevMode = false,
     RequiredCoreContract = 1,
+    RequiredCharacterContract = 1,
+    CharacterReadyTimeoutMs = 30000,
     Inventory = {
         requiredContract = 4,
         equipmentSlot = "weapon",
@@ -142,7 +144,10 @@ Config = {
         authorizationTtlMs = 5000,
         authoritativeNativeAmmo = true,
         observationIntervalMs = 50,
-        checkpointDebounceMs = 250
+        checkpointDebounceMs = 250,
+        characterRestoreFallbackMs = 6000,
+        characterRestoreRetryMs = 2000,
+        characterRestoreMaxAttempts = 3
     },
     Escrow = {
         maxTotal = 200,
@@ -154,8 +159,14 @@ Config = {
         allowedWeaponSlots = { sidearm = true },
         provisionNativeEntitlement = true,
         nativeEntitlements = {
-            { itemName = "CLOTHING_ITEM_M_OFFHAND_000_TINT_001", slotId = 0xF20B6B4A },
-            { itemName = "UPGRADE_OFFHAND_HOLSTER", slotId = 0x39E57B01 }
+            mp_male = {
+                { itemName = "CLOTHING_ITEM_M_OFFHAND_000_TINT_004", slotId = 0xF20B6B4A },
+                { itemName = "UPGRADE_OFFHAND_HOLSTER", slotId = 0x39E57B01 }
+            },
+            mp_female = {
+                { itemName = "CLOTHING_ITEM_F_OFFHAND_000_TINT_004", slotId = 0xF20B6B4A },
+                { itemName = "UPGRADE_OFFHAND_HOLSTER", slotId = 0x39E57B01 }
+            }
         },
         primaryAttachPoint = 2,
         offhandAttachPoint = 3
@@ -198,9 +209,11 @@ RedM's offhand holster unlock. Testing confirmed that the upgrade entitlement
 alone is insufficient: RedM also requires an offhand clothing entitlement.
 Testing the available tint variants produced no visible cosmetic difference,
 so Feather treats this item as a native inventory marker rather than character
-styling. `nativeEntitlements` remains server-owned. Replace its clothing item
-only after testing the alternative in game. Attach-point values should only be
-changed for a tested setup.
+styling. `nativeEntitlements` is keyed by the supported multiplayer character
+model so male and female characters receive their matching wardrobe component.
+It remains server-owned. Replace a clothing item only after testing the
+alternative in game. Attach-point values should only be changed for a tested
+setup.
 
 `data/weapon_holsters.meta` applies RedM's required short-arm holster-depth
 override for the M1899 pistol. This native metadata correction controls how that
@@ -208,7 +221,15 @@ model sits in equipped holsters; it does not change Feather's logical loadout
 slots. Other pistols remain on their native defaults unless live testing proves
 that a model-specific correction is required.
 
-Startup always fails closed when required dependencies, definitions, or contracts are unavailable. `Inventory.requiredContract` must match the contract feather-inventory reports from `GetCapabilities().value.contractVersion` -- it is checked before any definition, usable callback or guard is registered, and a version below it aborts installation rather than degrading to an empty index. `DevMode` enables diagnostic output and development-only weapon grants; disable it on production servers. Keep `authoritativeNativeAmmo = true` when Feather Weapons owns all weapons and ammunition. At weapon boundaries, this clears the player's native ammo—including ammo granted by other resources—before restoring the equipped inventory item's saved rounds.
+Startup always fails closed when required dependencies, definitions, or contracts are unavailable. Weapons verifies that Feather Character is ready and exposes the required profile, activation, and spawn capabilities before registering its runtime. `Inventory.requiredContract` must match the contract feather-inventory reports from `GetCapabilities().value.contractVersion` -- it is checked before any definition, usable callback or guard is registered, and a version below it aborts installation rather than degrading to an empty index.
+
+The normal Character runtime-ready signal restores equipped weapons. A bounded,
+idempotent fallback retries restoration when that one-time signal is missed.
+Weapons-only restarts open the same fallback window and retry the client-ready
+handshake after server listeners finish loading. The fallback is cancelled on
+logout and never applies a completed loadout twice.
+
+`DevMode` enables diagnostic output and development-only weapon grants; disable it on production servers. Keep `authoritativeNativeAmmo = true` when Feather Weapons owns all weapons and ammunition. At weapon boundaries, this clears the player's native ammo—including ammo granted by other resources—before restoring the equipped inventory item's saved rounds.
 
 Trusted server resources issue unique weapons through the stable named export:
 
@@ -275,9 +296,11 @@ Inventory ownership.
 
 Weapon condition is derived from RedM's native maintenance state; ammunition
 checkpoints never apply condition wear. Use `gun_oil` from Inventory to clean
-soot and dirt and restore degradation up to the weapon's permanent wear floor. When two
-weapons are equipped, choose the primary, offhand, shoulder, or back weapon from the repair
-menu. Full-condition, stale-slot, and invalid repairs do not consume a kit.
+soot and dirt and restore degradation up to the weapon's permanent wear floor.
+Definitions do not declare deterministic per-shot wear because that would
+double-count RedM's native degradation. When multiple weapons are equipped,
+choose the primary, offhand, shoulder, or back weapon from the repair menu.
+Full-condition, stale-slot, and invalid repairs do not consume a kit.
 
 ### Weapon modifications
 
@@ -286,7 +309,7 @@ Attachment installation and removal require proximity to a configured gunsmith b
 `Attachments.authorization.enabled` can route every install and removal through
 Feather Core's policy provider using the configured action (default
 `weapons.attachments.modify`). The policy receives the operation, station,
-weapon definition, and attachment ID, allowing Feather Roles or another jobs
+weapon definition, and attachment ID, allowing an Authority-backed domain or jobs
 resource to enforce gunsmith access. Authorization is unrestricted by default
 and fails closed when enabled without an available policy decision.
 
@@ -401,6 +424,24 @@ slot-aware repair and attachments, movement guards, reconciliation, entitlement
 recovery, reconnect/resource/server restart, Admin operations, and two-player
 isolation. Matching-hash pairs are rejected by policy. Different-hash sidearm
 pairs, all four logical slots, and primary-only behavior remain regression tested.
+The female Cattleman/Schofield pair has also passed visible offhand entitlement
+provisioning and cleanup, alternating fire, automatic holster reload,
+logout/reselection, resource restart, and full server restart checks without
+changing unrelated clothing.
+The Sawed-Off passed its two-round capacity, regular/slug switching, unload
+conservation, repair, and restart matrix. The LeMat passed its nine-round
+cylinder and safely inert unsupported shotgun-barrel boundary. Varmint regular
+and tranquilizer ammunition passed shoulder restoration and exact returns. The
+Elephant Rifle passed its 20-round Nitro Express ceiling, back-slot isolation,
+and dual-long-gun restart restoration. Weapons-only restarts now restore
+long-gun-only loadouts after the server/client listener startup race.
+The M1899 passed its model-specific holster placement, eight-round pistol
+capacity, reload, restart, and unload checks. The Pump Shotgun passed its
+five-shell cycling, native wear, reload, restart, and conservation checks. The
+Rolling Block passed scoped aiming, one-round automatic reload, restart, and
+unload checks. Different-model repeaters sharing `AMMO_REPEATER` passed
+independent loading, firing, controlled reload, restart, and exact combined
+unload conservation; shared-ammo long guns are supported.
 
 ## Attachment phase
 
@@ -440,12 +481,13 @@ Operations return a consistent result envelope:
 
 ## Next milestones
 
-1. Complete male/female offhand entitlement validation.
+1. Complete the per-model live matrix for the remaining firearm families.
 2. Expand the weapon catalog one tested family at a time.
 3. Add ammunition types and complete the modification catalog.
 4. Add transfers, storage, evidence, destruction, and recovery flows.
 5. Integrate shops, licenses, jobs, and crafting through public contracts.
 
-See [`MASTER_PLAN_NEXT.md`](MASTER_PLAN_NEXT.md) for the expansion plan. The
-completed native-first architecture and validation record remains in
-[`MASTER_PLAN.md`](MASTER_PLAN.md).
+See the centralized
+[Weapons expansion master plan](https://github.com/DavFount/feather-framework-docs/blob/main/feather-weapons/FEATHER_WEAPONS_MASTER_PLAN_NEXT.md).
+The completed native-first architecture and validation record remains in the
+[Weapons master plan](https://github.com/DavFount/feather-framework-docs/blob/main/feather-weapons/FEATHER_WEAPONS_MASTER_PLAN.md).

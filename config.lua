@@ -1,6 +1,8 @@
 Config = {
     DevMode = true,
     RequiredCoreContract = 1,
+    RequiredCharacterContract = 1,
+    CharacterReadyTimeoutMs = 30000,
     Inventory = {
         requiredContract = 4,
         -- Stable Inventory equipment keys. Do not rename these after launch.
@@ -17,7 +19,13 @@ Config = {
         authoritativeNativeAmmo = true,
         observationIntervalMs = 50,
         checkpointDebounceMs = 250,
-        maintenanceCheckpointMs = 5000
+        maintenanceCheckpointMs = 5000,
+        -- Character normally signals when the player ped is ready. This
+        -- bounded fallback restores the loadout if that one-time signal is
+        -- missed, without applying the same loadout twice.
+        characterRestoreFallbackMs = 6000,
+        characterRestoreRetryMs = 2000,
+        characterRestoreMaxAttempts = 3
     },
     Escrow = {
         -- Maximum cartridges authorized across every equipped weapon sharing
@@ -40,11 +48,14 @@ Config = {
         -- RedM requires both an offhand clothing entitlement and its upgrade.
         -- Tested tint variants did not visibly restyle the equipped holster.
         nativeEntitlements = {
-            -- RedM uses this exact wardrobe inventory item to back the working
-            -- offhand-holster state. Other tints may look identical but are
-            -- distinct native inventory entries.
-            { itemName = "CLOTHING_ITEM_M_OFFHAND_000_TINT_004", slotId = 0xF20B6B4A },
-            { itemName = "UPGRADE_OFFHAND_HOLSTER", slotId = 0x39E57B01 }
+            mp_male = {
+                { itemName = "CLOTHING_ITEM_M_OFFHAND_000_TINT_004", slotId = 0xF20B6B4A },
+                { itemName = "UPGRADE_OFFHAND_HOLSTER", slotId = 0x39E57B01 }
+            },
+            mp_female = {
+                { itemName = "CLOTHING_ITEM_F_OFFHAND_000_TINT_004", slotId = 0xF20B6B4A },
+                { itemName = "UPGRADE_OFFHAND_HOLSTER", slotId = 0x39E57B01 }
+            }
         },
         -- Native holster points; change only for a tested clothing setup.
         primaryAttachPoint = 2,

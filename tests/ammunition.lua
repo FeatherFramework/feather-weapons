@@ -214,10 +214,9 @@ check(fullRuntime.slots.primary ~= nil and fullRuntime.slots.offhand ~= nil
     'Four sidearm and long-gun runtime slots coexist')
 reset('revolver_cattleman', 'pistol_volcanic', 'repeater_carbine', 'repeater_evans')
 assert(WeaponRuntime.Unequip(1, 'test', 'test', 'back').ok)
-local conflictingLonggun = EquipService.Request(1, context, 4, 'back')
-check(not conflictingLonggun.ok
-    and conflictingLonggun.error.code == WeaponErrors.OPERATION_CONFLICT,
-    'Second long gun rejects a duplicate native ammunition type')
+local sharedLonggun = EquipService.Request(1, context, 4, 'back')
+check(sharedLonggun.ok,
+    'Second different-model long gun accepts a shared native ammunition type')
 assert(WeaponRuntime.RestoreEquipped(1, 'test', items[4],
     DefinitionRegistry.Get('weapon', 'repeater_evans').value, 'test', 'back').ok)
 stock.ammo_repeater_express = 10
