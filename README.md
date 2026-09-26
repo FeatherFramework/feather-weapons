@@ -130,6 +130,8 @@ remain fail-closed for operator review.
 Config = {
     DevMode = false,
     RequiredCoreContract = 1,
+    RequiredCharacterContract = 1,
+    CharacterReadyTimeoutMs = 30000,
     Inventory = {
         requiredContract = 4,
         equipmentSlot = "weapon",
@@ -142,7 +144,10 @@ Config = {
         authorizationTtlMs = 5000,
         authoritativeNativeAmmo = true,
         observationIntervalMs = 50,
-        checkpointDebounceMs = 250
+        checkpointDebounceMs = 250,
+        characterRestoreFallbackMs = 6000,
+        characterRestoreRetryMs = 2000,
+        characterRestoreMaxAttempts = 3
     },
     Escrow = {
         maxTotal = 200,
@@ -208,7 +213,13 @@ model sits in equipped holsters; it does not change Feather's logical loadout
 slots. Other pistols remain on their native defaults unless live testing proves
 that a model-specific correction is required.
 
-Startup always fails closed when required dependencies, definitions, or contracts are unavailable. `Inventory.requiredContract` must match the contract feather-inventory reports from `GetCapabilities().value.contractVersion` -- it is checked before any definition, usable callback or guard is registered, and a version below it aborts installation rather than degrading to an empty index. `DevMode` enables diagnostic output and development-only weapon grants; disable it on production servers. Keep `authoritativeNativeAmmo = true` when Feather Weapons owns all weapons and ammunition. At weapon boundaries, this clears the player's native ammo—including ammo granted by other resources—before restoring the equipped inventory item's saved rounds.
+Startup always fails closed when required dependencies, definitions, or contracts are unavailable. Weapons verifies that Feather Character is ready and exposes the required profile, activation, and spawn capabilities before registering its runtime. `Inventory.requiredContract` must match the contract feather-inventory reports from `GetCapabilities().value.contractVersion` -- it is checked before any definition, usable callback or guard is registered, and a version below it aborts installation rather than degrading to an empty index.
+
+The normal Character runtime-ready signal restores equipped weapons. A bounded,
+idempotent fallback retries restoration when that one-time signal is missed.
+The fallback is cancelled on logout and never applies a completed loadout twice.
+
+`DevMode` enables diagnostic output and development-only weapon grants; disable it on production servers. Keep `authoritativeNativeAmmo = true` when Feather Weapons owns all weapons and ammunition. At weapon boundaries, this clears the player's native ammo—including ammo granted by other resources—before restoring the equipped inventory item's saved rounds.
 
 Trusted server resources issue unique weapons through the stable named export:
 
@@ -286,7 +297,7 @@ Attachment installation and removal require proximity to a configured gunsmith b
 `Attachments.authorization.enabled` can route every install and removal through
 Feather Core's policy provider using the configured action (default
 `weapons.attachments.modify`). The policy receives the operation, station,
-weapon definition, and attachment ID, allowing Feather Roles or another jobs
+weapon definition, and attachment ID, allowing an Authority-backed domain or jobs
 resource to enforce gunsmith access. Authorization is unrestricted by default
 and fails closed when enabled without an available policy decision.
 
@@ -446,6 +457,7 @@ Operations return a consistent result envelope:
 4. Add transfers, storage, evidence, destruction, and recovery flows.
 5. Integrate shops, licenses, jobs, and crafting through public contracts.
 
-See [`MASTER_PLAN_NEXT.md`](MASTER_PLAN_NEXT.md) for the expansion plan. The
-completed native-first architecture and validation record remains in
-[`MASTER_PLAN.md`](MASTER_PLAN.md).
+See the centralized
+[Weapons expansion master plan](https://github.com/DavFount/feather-framework-docs/blob/main/feather-weapons/FEATHER_WEAPONS_MASTER_PLAN_NEXT.md).
+The completed native-first architecture and validation record remains in the
+[Weapons master plan](https://github.com/DavFount/feather-framework-docs/blob/main/feather-weapons/FEATHER_WEAPONS_MASTER_PLAN.md).

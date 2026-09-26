@@ -10,6 +10,12 @@ if not coreResult.ok then
     return
 end
 
+local characterResult = CoreAdapter.CheckCharacterCapabilities()
+if not characterResult.ok then
+    FailStartup(characterResult.error.message, characterResult.error.details)
+    return
+end
+
 local definitionResult = DefinitionRegistry.Start()
 if not definitionResult.ok then
     FailStartup(definitionResult.error.message, definitionResult.error.details)

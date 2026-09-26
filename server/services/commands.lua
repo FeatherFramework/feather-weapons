@@ -931,6 +931,7 @@ RegisterCommand("WeaponReleaseContractSmokeTest", function(source, args)
             targetSource = players[1] and tonumber(players[1]) or nil
         end
         local capabilities = WeaponAPI.GetCapabilities()
+        local character = CoreAdapter.CheckCharacterCapabilities()
         local routesResult = exports["feather-core"]:GetRpcRoutes()
         local routes = {}
         if type(routesResult) == "table" and routesResult.ok == true then
@@ -965,6 +966,13 @@ RegisterCommand("WeaponReleaseContractSmokeTest", function(source, args)
                     tostring(capabilities.definitions.attachment))
             },
             { name = "inventory ready",      passed = capabilities.inventory.ready == true },
+            {
+                name = "character ready",
+                passed = character.ok == true
+                    and type(character.value) == "table"
+                    and (tonumber(character.value.contract) or 0)
+                        >= (tonumber(Config.RequiredCharacterContract) or 1)
+            },
             {
                 name = "native reload surface",
                 passed = capabilities.features.nativeReload == true

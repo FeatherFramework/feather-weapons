@@ -1,6 +1,8 @@
 Config = {
     DevMode = true,
     RequiredCoreContract = 1,
+    RequiredCharacterContract = 1,
+    CharacterReadyTimeoutMs = 30000,
     Inventory = {
         requiredContract = 4,
         -- Stable Inventory equipment keys. Do not rename these after launch.
@@ -17,7 +19,13 @@ Config = {
         authoritativeNativeAmmo = true,
         observationIntervalMs = 50,
         checkpointDebounceMs = 250,
-        maintenanceCheckpointMs = 5000
+        maintenanceCheckpointMs = 5000,
+        -- Character normally signals when the player ped is ready. This
+        -- bounded fallback restores the loadout if that one-time signal is
+        -- missed, without applying the same loadout twice.
+        characterRestoreFallbackMs = 6000,
+        characterRestoreRetryMs = 2000,
+        characterRestoreMaxAttempts = 3
     },
     Escrow = {
         -- Maximum cartridges authorized across every equipped weapon sharing

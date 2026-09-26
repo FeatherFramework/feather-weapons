@@ -33,6 +33,10 @@ local maintenanceSyncInFlight = {}
 local maintenanceBatchInFlight = false
 local inventoryMutationCooldownUntil = 0
 local logoutCheckpointInFlight = false
+local characterRestoreGeneration = 0
+local characterRestoreInFlight = false
+local characterRestoreComplete = false
+local characterRestoreAttempts = 0
 
 local function NativeTrue(value)
     return value == true or value == 1
@@ -3265,11 +3269,45 @@ CreateThread(function()
     end
 end)
 
-AddEventHandler('Feather:Character:Spawned', function()
-    RegisterCharacterLogoutCheckpoint()
-end)
+local RestoreRuntimeWeapons
 
-local function RestoreRuntimeWeapons()
+local function CharacterIsActive()
+    if GetResourceState('feather-character') ~= 'started' then return false end
+    local called, active = pcall(function()
+        return exports['feather-character']:HasActiveCharacter()
+    end)
+    return called and active == true
+end
+
+local function ScheduleCharacterRestore(generation, delayMs, reason)
+    SetTimeout(delayMs, function()
+        if generation ~= characterRestoreGeneration or characterRestoreComplete
+            or characterRestoreInFlight or not CharacterIsActive() then
+            return
+        end
+        RestoreRuntimeWeapons(reason)
+    end)
+end
+
+RestoreRuntimeWeapons = function(reason)
+    if characterRestoreComplete or characterRestoreInFlight or not CharacterIsActive() then
+        return
+    end
+
+    local runtimeConfig = Config.Runtime or {}
+    local maxAttempts = math.max(1, math.floor(tonumber(
+        runtimeConfig.characterRestoreMaxAttempts) or 3))
+    if characterRestoreAttempts >= maxAttempts then
+        if Config.DevMode then
+            print(('[feather-weapons] character restore abandoned attempts=%d reason=%s')
+                :format(characterRestoreAttempts, tostring(reason)))
+        end
+        return
+    end
+
+    characterRestoreAttempts = characterRestoreAttempts + 1
+    characterRestoreInFlight = true
+    local generation = characterRestoreGeneration
     CreateThread(function()
         -- Native inventory preparation may discard weapon instances. Block
         -- observation and invalidate any earlier restore before invoking it.
@@ -3277,11 +3315,21 @@ local function RestoreRuntimeWeapons()
         singleNativeReady = false
         local prepared = FeatherNativeWeaponCoordinator.PrepareCharacterRestore(
             PlayerPedId(), 5000)
+        if generation ~= characterRestoreGeneration then
+            return
+        end
+        if not CharacterIsActive() then
+            characterRestoreInFlight = false
+            return
+        end
         if not prepared.ok then
+            characterRestoreInFlight = false
             Notify(prepared.message or 'The native carried-weapon inventory did not become ready.')
             if Config.DevMode then
                 print(('[feather-weapons] restore deferred code=%s message=%s'):format(tostring(prepared.code), tostring(prepared.message)))
             end
+            ScheduleCharacterRestore(generation, math.max(250, math.floor(tonumber(
+                runtimeConfig.characterRestoreRetryMs) or 2000)), 'prepare-retry')
             return
         end
 
@@ -3291,17 +3339,44 @@ local function RestoreRuntimeWeapons()
         -- Reconciliation must recreate every approved instance after native
         -- preparation; stale local state must never suppress that grant.
         ClearNativeWeapon()
-        FeatherWeaponsClient.Reconcile(nil, { holster = true })
+        FeatherWeaponsClient.Reconcile(function(result)
+            if generation ~= characterRestoreGeneration then return end
+            characterRestoreInFlight = false
+            characterRestoreComplete = type(result) == 'table' and result.ok == true
+            if not characterRestoreComplete then
+                ScheduleCharacterRestore(generation, math.max(250, math.floor(tonumber(
+                    runtimeConfig.characterRestoreRetryMs) or 2000)), 'reconcile-retry')
+            elseif Config.DevMode then
+                print(('[feather-weapons] character restore complete attempt=%d reason=%s')
+                    :format(characterRestoreAttempts, tostring(reason)))
+            end
+        end, { holster = true })
     end)
 end
 
-AddEventHandler('feather-character:client:runtime-ready.v1', function()
-    RestoreRuntimeWeapons()
+AddEventHandler('Feather:Character:Spawned', function()
+    RegisterCharacterLogoutCheckpoint()
+    characterRestoreGeneration = characterRestoreGeneration + 1
+    characterRestoreInFlight = false
+    characterRestoreComplete = false
+    characterRestoreAttempts = 0
+    ScheduleCharacterRestore(characterRestoreGeneration, math.max(1000, math.floor(tonumber(
+        Config.Runtime and Config.Runtime.characterRestoreFallbackMs) or 6000)), 'spawn-fallback')
 end)
 
-RegisterNetEvent('feather-weapons:client:runtime-ready', RestoreRuntimeWeapons)
+AddEventHandler('feather-character:client:runtime-ready.v1', function()
+    RestoreRuntimeWeapons('character-runtime-ready')
+end)
+
+RegisterNetEvent('feather-weapons:client:runtime-ready', function()
+    RestoreRuntimeWeapons('weapons-runtime-ready')
+end)
 
 AddEventHandler('Feather:Character:Logout', function()
+    characterRestoreGeneration = characterRestoreGeneration + 1
+    characterRestoreInFlight = false
+    characterRestoreComplete = false
+    characterRestoreAttempts = 0
     inventoryWeaponInFlight = false
     ClearNativeWeapon()
 end)
