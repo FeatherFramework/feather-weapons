@@ -22,8 +22,8 @@ Server operation, recovery, integration, and trust boundaries are documented in
 - Equip a second supported sidearm and use RedM's native dual-wield controls.
 - Reject matching-hash equipped pairs; RedM cannot reliably preserve two copies
   through wheel, holster, and character-restoration transitions.
-- Require shoulder and back weapons to use different native ammunition types;
-  unsafe shared-ammo long-gun combinations fail closed.
+- Support different-model shoulder and back weapons that share a native
+  ammunition type while preserving independent item escrow and clips.
 - Unequip it by using the same item again.
 - Restore the equipped weapon after reconnects and resource or server restarts.
 - Finish reconnect and resource-start restoration with equipped guns holstered.
@@ -435,6 +435,13 @@ and tranquilizer ammunition passed shoulder restoration and exact returns. The
 Elephant Rifle passed its 20-round Nitro Express ceiling, back-slot isolation,
 and dual-long-gun restart restoration. Weapons-only restarts now restore
 long-gun-only loadouts after the server/client listener startup race.
+The M1899 passed its model-specific holster placement, eight-round pistol
+capacity, reload, restart, and unload checks. The Pump Shotgun passed its
+five-shell cycling, native wear, reload, restart, and conservation checks. The
+Rolling Block passed scoped aiming, one-round automatic reload, restart, and
+unload checks. Different-model repeaters sharing `AMMO_REPEATER` passed
+independent loading, firing, controlled reload, restart, and exact combined
+unload conservation; shared-ammo long guns are supported.
 
 ## Attachment phase
 
