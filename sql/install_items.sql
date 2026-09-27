@@ -389,6 +389,11 @@ INSERT INTO `items`
 SELECT 'lancaster_wide_sight', 'Lancaster Wide Sight', 'A wide sight made for the Lancaster Repeater.', 20, 10, 1, 0, 3, 'item_item', 'stack'
 WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'lancaster_wide_sight');
 
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'litchfield_wide_sight', 'Litchfield Wide Sight', 'A wide sight made for the Litchfield Repeater.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'litchfield_wide_sight');
+
 UPDATE `items`
 SET `display_name` = 'Cattleman Revolver',
     `description` = 'A standard single-action revolver.',
@@ -549,3 +554,10 @@ SET `display_name` = 'Lancaster Wide Sight',
     `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
     `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
 WHERE `name` = 'lancaster_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Litchfield Wide Sight',
+    `description` = 'A wide sight made for the Litchfield Repeater.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'litchfield_wide_sight';

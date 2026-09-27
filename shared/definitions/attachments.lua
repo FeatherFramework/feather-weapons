@@ -242,5 +242,17 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "lancaster" }
+    },
+    litchfield_wide_sight = {
+        id = "litchfield_wide_sight",
+        kind = "attachment",
+        itemName = "litchfield_wide_sight",
+        label = "Litchfield Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_REPEATER_HENRY_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "litchfield" }
     }
 }
