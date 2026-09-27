@@ -266,5 +266,17 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "evans" }
+    },
+    springfield_wide_sight = {
+        id = "springfield_wide_sight",
+        kind = "attachment",
+        itemName = "springfield_wide_sight",
+        label = "Springfield Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_RIFLE_SPRINGFIELD_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "springfield" }
     }
 }

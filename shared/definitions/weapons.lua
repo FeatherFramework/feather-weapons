@@ -499,7 +499,12 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            sight = { "springfield_wide_sight" }
+        },
+        attachmentDefaults = {
+            sight = "Standard Narrow Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
