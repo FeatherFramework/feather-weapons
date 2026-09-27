@@ -230,5 +230,17 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "carbine" }
+    },
+    lancaster_wide_sight = {
+        id = "lancaster_wide_sight",
+        kind = "attachment",
+        itemName = "lancaster_wide_sight",
+        label = "Lancaster Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_REPEATER_WINCHESTER_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "lancaster" }
     }
 }
