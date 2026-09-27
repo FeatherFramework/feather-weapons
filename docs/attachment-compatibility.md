@@ -24,6 +24,7 @@ of scope until their representation and conflict rules are designed.
 | Semi-Automatic Pistol | Sight | Semi-Automatic Wide Sight | `COMPONENT_PISTOL_SEMIAUTO_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 | Mauser Pistol | Barrel | Mauser Long Barrel | `COMPONENT_PISTOL_MAUSER_BARREL_LONG` | Shipped | Passed full lifecycle |
 | Mauser Pistol | Sight | Mauser Wide Sight | `COMPONENT_PISTOL_MAUSER_SIGHT_WIDE` | Shipped | Passed full lifecycle |
+| Carbine Repeater | Sight | Carbine Wide Sight | `COMPONENT_REPEATER_CARBINE_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 
 ## Wide Sight acceptance matrix
 
@@ -131,3 +132,10 @@ and removed selectively with exact item returns. Removing the Long Barrel
 restored the standard short barrel while preserving the Wide Sight. The weapon
 identity, runtime lease, ammunition, and condition remained aligned throughout
 the lifecycle.
+
+## Carbine Repeater live result
+
+The Wide Sight installed visibly in the shoulder slot, survived a Weapons
+resource restart, and removed with an exact item return. Removal restored the
+standard narrow sight. The weapon identity, runtime lease, ammunition, and
+condition remained aligned throughout the lifecycle.

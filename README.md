@@ -421,7 +421,7 @@ are configured as `weapons.evidence.hold` and `weapons.evidence.release`.
   live validated as well. The Volcanic Long Barrel and Wide Sight are live
   validated as well. The Semi-Automatic Long Barrel and Wide Sight are live
   validated as well. The Mauser Long Barrel and Wide Sight are live validated
-  as well.
+  as well. The Carbine Wide Sight is live validated as well.
 - Alternate ammunition, expanded provenance, evidence, licenses, shops, and crafting remain planned.
 
 ## Validation status

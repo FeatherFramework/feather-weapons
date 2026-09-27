@@ -218,5 +218,17 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "mauser" }
+    },
+    carbine_wide_sight = {
+        id = "carbine_wide_sight",
+        kind = "attachment",
+        itemName = "carbine_wide_sight",
+        label = "Carbine Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_REPEATER_CARBINE_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "carbine" }
     }
 }

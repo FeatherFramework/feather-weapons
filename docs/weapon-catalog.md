@@ -13,7 +13,8 @@ All new entries inherit the existing condition policy: 100 maximum condition,
 native RedM maintenance determines wear, and one gun_oil restores up to 25
 condition without crossing the permanent-wear floor. New inventory rows use the
 existing weapon defaults (weight 2, maximum quantity 20).
-Only the existing Cattleman currently has configured attachment slots.
+Configured attachment slots currently cover the live-validated sidearm models
+and Carbine Repeater Wide Sight.
 
 The Varmint Rifle uses ammo_varmint. The Elephant Rifle uses
 ammo_rifle_elephant (AMMO_RIFLE_ELEPHANT), bringing ammunition definitions to 27.
@@ -37,7 +38,7 @@ Existing installations using the old inventory names must first run
 sql/rename_weapon_item_names.sql as described in the README.
 
 Run WeaponReleaseContractSmokeTest 1; expected counts are
-weapon=24 ammunition=27 attachment=18.
+weapon=24 ammunition=27 attachment=19.
 
 Live-test each new model: grant, equip, refill, fire, reload, unload, repair,
 logout/rejoin, and verify native clip capacity against the configured capacity.
