@@ -34,6 +34,7 @@ of scope until their representation and conflict rules are designed.
 | Elephant Rifle | Barrel | Elephant Long Barrel | `COMPONENT_RIFLE_ELEPHANT_BARREL_LONG` | Shipped | Passed full lifecycle |
 | Elephant Rifle | Sight | Elephant Wide Sight | `COMPONENT_RIFLE_ELEPHANT_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 | Rolling Block Rifle | Sight | Rolling Block Wide Sight | `COMPONENT_RIFLE_ROLLINGBLOCK_SIGHT_WIDE` | Shipped | Passed full lifecycle |
+| Carcano Rifle | Sight | Carcano Wide Sight | `COMPONENT_RIFLE_CARCANO_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 
 ## Wide Sight acceptance matrix
 
@@ -202,6 +203,13 @@ preserving the Wide Sight. The weapon identity, runtime lease, ammunition, and
 condition remained aligned throughout the lifecycle.
 
 ## Rolling Block Rifle live result
+
+The Wide Sight was visibly present on the held scoped rifle, survived a Weapons
+resource restart, and removed with an exact item return. Removal restored the
+standard narrow sight. The weapon identity, runtime lease, ammunition, and
+condition remained aligned throughout the lifecycle.
+
+## Carcano Rifle live result
 
 The Wide Sight was visibly present on the held scoped rifle, survived a Weapons
 resource restart, and removed with an exact item return. Removal restored the

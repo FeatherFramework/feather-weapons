@@ -338,5 +338,17 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "rollingblock" }
+    },
+    carcano_wide_sight = {
+        id = "carcano_wide_sight",
+        kind = "attachment",
+        itemName = "carcano_wide_sight",
+        label = "Carcano Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_RIFLE_CARCANO_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "carcano" }
     }
 }
