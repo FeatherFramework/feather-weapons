@@ -29,6 +29,7 @@ of scope until their representation and conflict rules are designed.
 | Litchfield Repeater | Sight | Litchfield Wide Sight | `COMPONENT_REPEATER_HENRY_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 | Evans Repeater | Sight | Evans Wide Sight | `COMPONENT_REPEATER_EVANS_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 | Springfield Rifle | Sight | Springfield Wide Sight | `COMPONENT_RIFLE_SPRINGFIELD_SIGHT_WIDE` | Shipped | Passed full lifecycle |
+| Bolt Action Rifle | Sight | Bolt Action Wide Sight | `COMPONENT_RIFLE_BOLTACTION_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 
 ## Wide Sight acceptance matrix
 
@@ -166,6 +167,13 @@ standard narrow sight. The weapon identity, runtime lease, ammunition, and
 condition remained aligned throughout the lifecycle.
 
 ## Springfield Rifle live result
+
+The Wide Sight installed visibly in the shoulder slot, survived a Weapons
+resource restart, and removed with an exact item return. Removal restored the
+standard narrow sight. The weapon identity, runtime lease, ammunition, and
+condition remained aligned throughout the lifecycle.
+
+## Bolt Action Rifle live result
 
 The Wide Sight installed visibly in the shoulder slot, survived a Weapons
 resource restart, and removed with an exact item return. Removal restored the

@@ -278,5 +278,17 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "springfield" }
+    },
+    boltaction_wide_sight = {
+        id = "boltaction_wide_sight",
+        kind = "attachment",
+        itemName = "boltaction_wide_sight",
+        label = "Bolt Action Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_RIFLE_BOLTACTION_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "boltaction" }
     }
 }
