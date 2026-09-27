@@ -22,6 +22,8 @@ of scope until their representation and conflict rules are designed.
 | Volcanic Pistol | Sight | Volcanic Wide Sight | `COMPONENT_PISTOL_VOLCANIC_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 | Semi-Automatic Pistol | Barrel | Semi-Automatic Long Barrel | `COMPONENT_PISTOL_SEMIAUTO_BARREL_LONG` | Shipped | Passed full lifecycle |
 | Semi-Automatic Pistol | Sight | Semi-Automatic Wide Sight | `COMPONENT_PISTOL_SEMIAUTO_SIGHT_WIDE` | Shipped | Passed full lifecycle |
+| Mauser Pistol | Barrel | Mauser Long Barrel | `COMPONENT_PISTOL_MAUSER_BARREL_LONG` | Shipped | Passed full lifecycle |
+| Mauser Pistol | Sight | Mauser Wide Sight | `COMPONENT_PISTOL_MAUSER_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 
 ## Wide Sight acceptance matrix
 
@@ -120,3 +122,12 @@ Wide Sight installed independently, coexisted visibly, survived a Weapons
 resource restart, and removed selectively with exact item returns. Removing the
 Long Barrel restored the standard short barrel. The weapon identity, runtime
 lease, ammunition, and condition remained aligned.
+
+## Mauser live result
+
+The native Mauser baseline uses the short barrel. The Long Barrel and Wide Sight
+installed independently, coexisted visibly, survived a Weapons resource restart,
+and removed selectively with exact item returns. Removing the Long Barrel
+restored the standard short barrel while preserving the Wide Sight. The weapon
+identity, runtime lease, ammunition, and condition remained aligned throughout
+the lifecycle.

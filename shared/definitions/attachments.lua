@@ -194,5 +194,29 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "semiauto" }
+    },
+    mauser_long_barrel = {
+        id = "mauser_long_barrel",
+        kind = "attachment",
+        itemName = "mauser_long_barrel",
+        label = "Mauser Long Barrel",
+        slot = "barrel",
+        nativeComponentName = "COMPONENT_PISTOL_MAUSER_BARREL_LONG",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "mauser" }
+    },
+    mauser_wide_sight = {
+        id = "mauser_wide_sight",
+        kind = "attachment",
+        itemName = "mauser_wide_sight",
+        label = "Mauser Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_PISTOL_MAUSER_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "mauser" }
     }
 }
