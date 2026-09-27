@@ -446,5 +446,17 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "doublebarrel" }
+    },
+    sawedoff_wide_sight = {
+        id = "sawedoff_wide_sight",
+        kind = "attachment",
+        itemName = "sawedoff_wide_sight",
+        label = "Sawed-Off Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_SHOTGUN_SAWED_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "sawedoff" }
     }
 }
