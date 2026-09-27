@@ -398,5 +398,29 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "pump_shotgun" }
+    },
+    semiauto_shotgun_long_barrel = {
+        id = "semiauto_shotgun_long_barrel",
+        kind = "attachment",
+        itemName = "semiauto_shotgun_long_barrel",
+        label = "Semi-Auto Shotgun Long Barrel",
+        slot = "barrel",
+        nativeComponentName = "COMPONENT_SHOTGUN_SEMIAUTO_BARREL_LONG",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "semiauto_shotgun" }
+    },
+    semiauto_shotgun_wide_sight = {
+        id = "semiauto_shotgun_wide_sight",
+        kind = "attachment",
+        itemName = "semiauto_shotgun_wide_sight",
+        label = "Semi-Auto Shotgun Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_SHOTGUN_SEMIAUTO_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "semiauto_shotgun" }
     }
 }

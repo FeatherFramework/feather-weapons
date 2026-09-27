@@ -39,6 +39,8 @@ of scope until their representation and conflict rules are designed.
 | Repeating Shotgun | Sight | Repeating Shotgun Wide Sight | `COMPONENT_SHOTGUN_REPEATING_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 | Pump-Action Shotgun | Barrel | Pump-Action Long Barrel | `COMPONENT_SHOTGUN_PUMP_BARREL_LONG` | Shipped | Passed full lifecycle |
 | Pump-Action Shotgun | Sight | Pump-Action Wide Sight | `COMPONENT_SHOTGUN_PUMP_SIGHT_WIDE` | Shipped | Passed full lifecycle |
+| Semi-Automatic Shotgun | Barrel | Semi-Auto Shotgun Long Barrel | `COMPONENT_SHOTGUN_SEMIAUTO_BARREL_LONG` | Shipped | Passed full lifecycle |
+| Semi-Automatic Shotgun | Sight | Semi-Auto Shotgun Wide Sight | `COMPONENT_SHOTGUN_SEMIAUTO_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 
 ## Wide Sight acceptance matrix
 
@@ -235,6 +237,16 @@ The native Pump-Action Shotgun baseline uses the short barrel. The Long Barrel
 and Wide Sight installed independently, coexisted visibly in the shoulder slot,
 survived a Weapons resource restart, and removed selectively with exact item
 returns. Removing the Long Barrel restored the standard short barrel while
+preserving the Wide Sight. Removing the Wide Sight restored the standard narrow
+sight. The weapon identity, runtime lease, ammunition, and condition remained
+aligned throughout the lifecycle.
+
+## Semi-Automatic Shotgun live result
+
+The native Semi-Automatic Shotgun baseline uses the short barrel. The Long
+Barrel and Wide Sight installed independently, coexisted visibly in the shoulder
+slot, survived a Weapons resource restart, and removed selectively with exact
+item returns. Removing the Long Barrel restored the standard short barrel while
 preserving the Wide Sight. Removing the Wide Sight restored the standard narrow
 sight. The weapon identity, runtime lease, ammunition, and condition remained
 aligned throughout the lifecycle.
