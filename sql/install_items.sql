@@ -339,6 +339,16 @@ INSERT INTO `items`
 SELECT 'doubleaction_wide_sight', 'Double-Action Wide Sight', 'A wide sight made for the Double-Action Revolver.', 20, 10, 1, 0, 3, 'item_item', 'stack'
 WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'doubleaction_wide_sight');
 
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'm1899_long_barrel', 'M1899 Long Barrel', 'A long barrel made for the M1899 Pistol.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'm1899_long_barrel');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'm1899_wide_sight', 'M1899 Wide Sight', 'A wide sight made for the M1899 Pistol.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'm1899_wide_sight');
+
 UPDATE `items`
 SET `display_name` = 'Cattleman Revolver',
     `description` = 'A standard single-action revolver.',
@@ -429,3 +439,17 @@ SET `display_name` = 'Double-Action Wide Sight',
     `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
     `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
 WHERE `name` = 'doubleaction_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'M1899 Long Barrel',
+    `description` = 'A long barrel made for the M1899 Pistol.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'm1899_long_barrel';
+
+UPDATE `items`
+SET `display_name` = 'M1899 Wide Sight',
+    `description` = 'A wide sight made for the M1899 Pistol.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'm1899_wide_sight';

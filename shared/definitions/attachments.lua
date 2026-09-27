@@ -122,5 +122,29 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "doubleaction" }
+    },
+    m1899_long_barrel = {
+        id = "m1899_long_barrel",
+        kind = "attachment",
+        itemName = "m1899_long_barrel",
+        label = "M1899 Long Barrel",
+        slot = "barrel",
+        nativeComponentName = "COMPONENT_PISTOL_M1899_BARREL_LONG",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "m1899" }
+    },
+    m1899_wide_sight = {
+        id = "m1899_wide_sight",
+        kind = "attachment",
+        itemName = "m1899_wide_sight",
+        label = "M1899 Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_PISTOL_M1899_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "m1899" }
     }
 }

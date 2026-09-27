@@ -16,6 +16,8 @@ of scope until their representation and conflict rules are designed.
 | Navy Revolver | Sight | Navy Wide Sight | `COMPONENT_REVOLVER_NAVY_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 | Double-Action Revolver | Barrel | Double-Action Long Barrel | `COMPONENT_REVOLVER_DOUBLEACTION_BARREL_LONG` | Shipped | Passed full lifecycle |
 | Double-Action Revolver | Sight | Double-Action Wide Sight | `COMPONENT_REVOLVER_DOUBLEACTION_SIGHT_WIDE` | Shipped | Passed full lifecycle |
+| M1899 Pistol | Barrel | M1899 Long Barrel | `COMPONENT_PISTOL_M1899_BARREL_LONG` | Shipped | Passed full lifecycle |
+| M1899 Pistol | Sight | M1899 Wide Sight | `COMPONENT_PISTOL_M1899_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 
 ## Wide Sight acceptance matrix
 
@@ -90,3 +92,11 @@ Wide Sight installed independently, coexisted visibly, survived a Weapons
 resource restart, and removed selectively with exact item returns. Removing the
 Long Barrel restored the standard short barrel. The weapon identity, runtime
 lease, ammunition, and condition remained aligned.
+
+## M1899 live result
+
+The native M1899 baseline uses the short barrel. The Long Barrel and Wide Sight
+installed independently, coexisted visibly, survived a Weapons resource restart,
+and removed selectively with exact item returns. Removing the Long Barrel
+restored the standard short barrel. The weapon identity, runtime lease,
+ammunition, and condition remained aligned.
