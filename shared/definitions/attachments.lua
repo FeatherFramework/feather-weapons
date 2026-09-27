@@ -254,5 +254,17 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "litchfield" }
+    },
+    evans_wide_sight = {
+        id = "evans_wide_sight",
+        kind = "attachment",
+        itemName = "evans_wide_sight",
+        label = "Evans Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_REPEATER_EVANS_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "evans" }
     }
 }

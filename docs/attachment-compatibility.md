@@ -27,6 +27,7 @@ of scope until their representation and conflict rules are designed.
 | Carbine Repeater | Sight | Carbine Wide Sight | `COMPONENT_REPEATER_CARBINE_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 | Lancaster Repeater | Sight | Lancaster Wide Sight | `COMPONENT_REPEATER_WINCHESTER_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 | Litchfield Repeater | Sight | Litchfield Wide Sight | `COMPONENT_REPEATER_HENRY_SIGHT_WIDE` | Shipped | Passed full lifecycle |
+| Evans Repeater | Sight | Evans Wide Sight | `COMPONENT_REPEATER_EVANS_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 
 ## Wide Sight acceptance matrix
 
@@ -150,6 +151,13 @@ standard narrow sight. The weapon identity, runtime lease, ammunition, and
 condition remained aligned throughout the lifecycle.
 
 ## Litchfield Repeater live result
+
+The Wide Sight installed visibly in the shoulder slot, survived a Weapons
+resource restart, and removed with an exact item return. Removal restored the
+standard narrow sight. The weapon identity, runtime lease, ammunition, and
+condition remained aligned throughout the lifecycle.
+
+## Evans Repeater live result
 
 The Wide Sight installed visibly in the shoulder slot, survived a Weapons
 resource restart, and removed with an exact item return. Removal restored the
