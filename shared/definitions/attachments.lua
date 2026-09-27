@@ -170,5 +170,29 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "volcanic" }
+    },
+    semiauto_long_barrel = {
+        id = "semiauto_long_barrel",
+        kind = "attachment",
+        itemName = "semiauto_long_barrel",
+        label = "Semi-Automatic Long Barrel",
+        slot = "barrel",
+        nativeComponentName = "COMPONENT_PISTOL_SEMIAUTO_BARREL_LONG",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "semiauto" }
+    },
+    semiauto_wide_sight = {
+        id = "semiauto_wide_sight",
+        kind = "attachment",
+        itemName = "semiauto_wide_sight",
+        label = "Semi-Automatic Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_PISTOL_SEMIAUTO_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "semiauto" }
     }
 }

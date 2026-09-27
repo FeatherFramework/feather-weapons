@@ -20,6 +20,8 @@ of scope until their representation and conflict rules are designed.
 | M1899 Pistol | Sight | M1899 Wide Sight | `COMPONENT_PISTOL_M1899_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 | Volcanic Pistol | Barrel | Volcanic Long Barrel | `COMPONENT_PISTOL_VOLCANIC_BARREL_LONG` | Shipped | Passed full lifecycle |
 | Volcanic Pistol | Sight | Volcanic Wide Sight | `COMPONENT_PISTOL_VOLCANIC_SIGHT_WIDE` | Shipped | Passed full lifecycle |
+| Semi-Automatic Pistol | Barrel | Semi-Automatic Long Barrel | `COMPONENT_PISTOL_SEMIAUTO_BARREL_LONG` | Shipped | Passed full lifecycle |
+| Semi-Automatic Pistol | Sight | Semi-Automatic Wide Sight | `COMPONENT_PISTOL_SEMIAUTO_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 
 ## Wide Sight acceptance matrix
 
@@ -110,3 +112,11 @@ Sight installed independently, coexisted visibly, survived a Weapons resource
 restart, and removed selectively with exact item returns. Removing the Long
 Barrel restored the standard short barrel. The weapon identity, runtime lease,
 ammunition, and condition remained aligned.
+
+## Semi-Automatic live result
+
+The native Semi-Automatic baseline uses the short barrel. The Long Barrel and
+Wide Sight installed independently, coexisted visibly, survived a Weapons
+resource restart, and removed selectively with exact item returns. Removing the
+Long Barrel restored the standard short barrel. The weapon identity, runtime
+lease, ammunition, and condition remained aligned.
