@@ -302,5 +302,29 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "varmint" }
+    },
+    elephant_long_barrel = {
+        id = "elephant_long_barrel",
+        kind = "attachment",
+        itemName = "elephant_long_barrel",
+        label = "Elephant Long Barrel",
+        slot = "barrel",
+        nativeComponentName = "COMPONENT_RIFLE_ELEPHANT_BARREL_LONG",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "elephant" }
+    },
+    elephant_wide_sight = {
+        id = "elephant_wide_sight",
+        kind = "attachment",
+        itemName = "elephant_wide_sight",
+        label = "Elephant Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_RIFLE_ELEPHANT_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "elephant" }
     }
 }

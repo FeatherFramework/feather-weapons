@@ -414,6 +414,16 @@ INSERT INTO `items`
 SELECT 'varmint_wide_sight', 'Varmint Wide Sight', 'A wide sight made for the Varmint Rifle.', 20, 10, 1, 0, 3, 'item_item', 'stack'
 WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'varmint_wide_sight');
 
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'elephant_long_barrel', 'Elephant Long Barrel', 'A long barrel made for the Elephant Rifle.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'elephant_long_barrel');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'elephant_wide_sight', 'Elephant Wide Sight', 'A wide sight made for the Elephant Rifle.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'elephant_wide_sight');
+
 UPDATE `items`
 SET `display_name` = 'Cattleman Revolver',
     `description` = 'A standard single-action revolver.',
@@ -609,3 +619,17 @@ SET `display_name` = 'Varmint Wide Sight',
     `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
     `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
 WHERE `name` = 'varmint_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Elephant Long Barrel',
+    `description` = 'A long barrel made for the Elephant Rifle.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'elephant_long_barrel';
+
+UPDATE `items`
+SET `display_name` = 'Elephant Wide Sight',
+    `description` = 'A wide sight made for the Elephant Rifle.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'elephant_wide_sight';
