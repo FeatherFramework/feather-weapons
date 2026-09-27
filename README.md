@@ -412,8 +412,25 @@ are configured as `weapons.evidence.hold` and `weapons.evidence.release`.
 
 ## Known limitations
 
-- The Cattleman Long Barrel and Wide Sight are live-validated functional
-  attachment slices. Broader model compatibility remains unfinished.
+- The Cattleman Long Barrel and Wide Sight and the Schofield Short Barrel and
+  Wide Sight are live-validated functional attachment slices. Broader model
+  compatibility remains unfinished. The LeMat Long Barrel and Wide Sight are
+  also live-validated functional attachment slices. The Navy Long Barrel and
+  Wide Sight are live validated as well. The Double-Action Long Barrel and Wide
+  Sight are live validated as well. The M1899 Long Barrel and Wide Sight are
+  live validated as well. The Volcanic Long Barrel and Wide Sight are live
+  validated as well. The Semi-Automatic Long Barrel and Wide Sight are live
+  validated as well. The Mauser Long Barrel and Wide Sight are live validated
+  as well. The Carbine, Lancaster, and Litchfield Wide Sights are live
+  validated as well. The Evans, Springfield, and Bolt Action Wide Sights are
+  live validated as well. The Varmint Wide Sight is live validated as well. The
+  Elephant Long Barrel and Wide Sight are live validated as well. The Rolling
+  Block and Carcano Wide Sights are live validated as well. The Repeating
+  Shotgun Long Barrel and Wide Sight are live validated as well. The Pump-Action
+  Long Barrel and Wide Sight are live validated as well. The Semi-Auto Shotgun
+  Long Barrel and Wide Sight are live validated as well. The Double-Barreled
+  Shotgun Long Barrel and Wide Sight are live validated as well. The Sawed-Off
+  Shotgun Wide Sight is live validated as well.
 - Alternate ammunition, expanded provenance, evidence, licenses, shops, and crafting remain planned.
 
 ## Validation status

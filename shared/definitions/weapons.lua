@@ -22,7 +22,14 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            barrel = { "volcanic_long_barrel" },
+            sight = { "volcanic_wide_sight" }
+        },
+        attachmentDefaults = {
+            barrel = "Standard Short Barrel",
+            sight = "Standard Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -52,7 +59,14 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            barrel = { "m1899_long_barrel" },
+            sight = { "m1899_wide_sight" }
+        },
+        attachmentDefaults = {
+            barrel = "Standard Short Barrel",
+            sight = "Standard Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -82,7 +96,14 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            barrel = { "semiauto_long_barrel" },
+            sight = { "semiauto_wide_sight" }
+        },
+        attachmentDefaults = {
+            barrel = "Standard Short Barrel",
+            sight = "Standard Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -112,7 +133,14 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            barrel = { "mauser_long_barrel" },
+            sight = { "mauser_wide_sight" }
+        },
+        attachmentDefaults = {
+            barrel = "Standard Short Barrel",
+            sight = "Standard Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -181,7 +209,14 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            barrel = { "schofield_short_barrel" },
+            sight = { "schofield_wide_sight" }
+        },
+        attachmentDefaults = {
+            barrel = "Standard Long Barrel",
+            sight = "Standard Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -211,7 +246,14 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            barrel = { "doubleaction_long_barrel" },
+            sight = { "doubleaction_wide_sight" }
+        },
+        attachmentDefaults = {
+            barrel = "Standard Short Barrel",
+            sight = "Standard Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -241,7 +283,14 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            barrel = { "lemat_long_barrel" },
+            sight = { "lemat_wide_sight" }
+        },
+        attachmentDefaults = {
+            barrel = "Standard Barrel",
+            sight = "Standard Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -271,7 +320,14 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            barrel = { "navy_long_barrel" },
+            sight = { "navy_wide_sight" }
+        },
+        attachmentDefaults = {
+            barrel = "Standard Short Barrel",
+            sight = "Standard Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -302,7 +358,12 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            sight = { "carbine_wide_sight" }
+        },
+        attachmentDefaults = {
+            sight = "Standard Narrow Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -332,7 +393,12 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            sight = { "lancaster_wide_sight" }
+        },
+        attachmentDefaults = {
+            sight = "Standard Narrow Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -362,7 +428,12 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            sight = { "litchfield_wide_sight" }
+        },
+        attachmentDefaults = {
+            sight = "Standard Narrow Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -392,7 +463,12 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            sight = { "evans_wide_sight" }
+        },
+        attachmentDefaults = {
+            sight = "Standard Narrow Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -423,7 +499,12 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            sight = { "springfield_wide_sight" }
+        },
+        attachmentDefaults = {
+            sight = "Standard Narrow Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -453,7 +534,12 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            sight = { "boltaction_wide_sight" }
+        },
+        attachmentDefaults = {
+            sight = "Standard Narrow Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -483,7 +569,12 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            sight = { "varmint_wide_sight" }
+        },
+        attachmentDefaults = {
+            sight = "Standard Narrow Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -513,7 +604,12 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            sight = { "rollingblock_wide_sight" }
+        },
+        attachmentDefaults = {
+            sight = "Standard Narrow Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -543,7 +639,12 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            sight = { "carcano_wide_sight" }
+        },
+        attachmentDefaults = {
+            sight = "Standard Narrow Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -573,7 +674,14 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            barrel = { "elephant_long_barrel" },
+            sight = { "elephant_wide_sight" }
+        },
+        attachmentDefaults = {
+            barrel = "Standard Short Barrel",
+            sight = "Standard Narrow Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -604,7 +712,14 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            barrel = { "doublebarrel_long_barrel" },
+            sight = { "doublebarrel_wide_sight" }
+        },
+        attachmentDefaults = {
+            barrel = "Standard Short Barrel",
+            sight = "Standard Narrow Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -634,7 +749,12 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            sight = { "sawedoff_wide_sight" }
+        },
+        attachmentDefaults = {
+            sight = "Standard Narrow Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -664,7 +784,14 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            barrel = { "pump_shotgun_long_barrel" },
+            sight = { "pump_shotgun_wide_sight" }
+        },
+        attachmentDefaults = {
+            barrel = "Standard Short Barrel",
+            sight = "Standard Narrow Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -694,7 +821,14 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            barrel = { "semiauto_shotgun_long_barrel" },
+            sight = { "semiauto_shotgun_wide_sight" }
+        },
+        attachmentDefaults = {
+            barrel = "Standard Short Barrel",
+            sight = "Standard Narrow Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,
@@ -724,7 +858,14 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            barrel = { "repeating_shotgun_long_barrel" },
+            sight = { "repeating_shotgun_wide_sight" }
+        },
+        attachmentDefaults = {
+            barrel = "Standard Short Barrel",
+            sight = "Standard Narrow Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,

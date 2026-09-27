@@ -299,6 +299,186 @@ INSERT INTO `items`
 SELECT 'cattleman_wide_sight', 'Cattleman Wide Sight', 'A wide sight made for the Cattleman Revolver.', 20, 10, 1, 0, 3, 'item_item', 'stack'
 WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'cattleman_wide_sight');
 
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'schofield_short_barrel', 'Schofield Short Barrel', 'A short barrel made for the Schofield Revolver.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'schofield_short_barrel');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'schofield_wide_sight', 'Schofield Wide Sight', 'A wide sight made for the Schofield Revolver.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'schofield_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'lemat_long_barrel', 'LeMat Long Barrel', 'A long barrel made for the LeMat Revolver.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'lemat_long_barrel');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'lemat_wide_sight', 'LeMat Wide Sight', 'A wide sight made for the LeMat Revolver.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'lemat_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'navy_long_barrel', 'Navy Long Barrel', 'A long barrel made for the Navy Revolver.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'navy_long_barrel');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'navy_wide_sight', 'Navy Wide Sight', 'A wide sight made for the Navy Revolver.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'navy_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'doubleaction_long_barrel', 'Double-Action Long Barrel', 'A long barrel made for the Double-Action Revolver.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'doubleaction_long_barrel');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'doubleaction_wide_sight', 'Double-Action Wide Sight', 'A wide sight made for the Double-Action Revolver.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'doubleaction_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'm1899_long_barrel', 'M1899 Long Barrel', 'A long barrel made for the M1899 Pistol.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'm1899_long_barrel');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'm1899_wide_sight', 'M1899 Wide Sight', 'A wide sight made for the M1899 Pistol.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'm1899_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'volcanic_long_barrel', 'Volcanic Long Barrel', 'A long barrel made for the Volcanic Pistol.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'volcanic_long_barrel');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'volcanic_wide_sight', 'Volcanic Wide Sight', 'A wide sight made for the Volcanic Pistol.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'volcanic_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'semiauto_long_barrel', 'Semi-Automatic Long Barrel', 'A long barrel made for the Semi-Automatic Pistol.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'semiauto_long_barrel');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'semiauto_wide_sight', 'Semi-Automatic Wide Sight', 'A wide sight made for the Semi-Automatic Pistol.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'semiauto_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'mauser_long_barrel', 'Mauser Long Barrel', 'A long barrel made for the Mauser Pistol.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'mauser_long_barrel');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'mauser_wide_sight', 'Mauser Wide Sight', 'A wide sight made for the Mauser Pistol.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'mauser_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'carbine_wide_sight', 'Carbine Wide Sight', 'A wide sight made for the Carbine Repeater.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'carbine_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'lancaster_wide_sight', 'Lancaster Wide Sight', 'A wide sight made for the Lancaster Repeater.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'lancaster_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'litchfield_wide_sight', 'Litchfield Wide Sight', 'A wide sight made for the Litchfield Repeater.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'litchfield_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'evans_wide_sight', 'Evans Wide Sight', 'A wide sight made for the Evans Repeater.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'evans_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'springfield_wide_sight', 'Springfield Wide Sight', 'A wide sight made for the Springfield Rifle.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'springfield_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'boltaction_wide_sight', 'Bolt Action Wide Sight', 'A wide sight made for the Bolt Action Rifle.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'boltaction_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'varmint_wide_sight', 'Varmint Wide Sight', 'A wide sight made for the Varmint Rifle.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'varmint_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'elephant_long_barrel', 'Elephant Long Barrel', 'A long barrel made for the Elephant Rifle.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'elephant_long_barrel');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'elephant_wide_sight', 'Elephant Wide Sight', 'A wide sight made for the Elephant Rifle.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'elephant_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'rollingblock_wide_sight', 'Rolling Block Wide Sight', 'A wide sight made for the Rolling Block Rifle.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'rollingblock_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'carcano_wide_sight', 'Carcano Wide Sight', 'A wide sight made for the Carcano Rifle.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'carcano_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'repeating_shotgun_long_barrel', 'Repeating Shotgun Long Barrel', 'A long barrel made for the Repeating Shotgun.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'repeating_shotgun_long_barrel');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'repeating_shotgun_wide_sight', 'Repeating Shotgun Wide Sight', 'A wide sight made for the Repeating Shotgun.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'repeating_shotgun_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'pump_shotgun_long_barrel', 'Pump-Action Long Barrel', 'A long barrel made for the Pump-Action Shotgun.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'pump_shotgun_long_barrel');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'pump_shotgun_wide_sight', 'Pump-Action Wide Sight', 'A wide sight made for the Pump-Action Shotgun.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'pump_shotgun_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'semiauto_shotgun_long_barrel', 'Semi-Auto Shotgun Long Barrel', 'A long barrel made for the Semi-Auto Shotgun.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'semiauto_shotgun_long_barrel');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'semiauto_shotgun_wide_sight', 'Semi-Auto Shotgun Wide Sight', 'A wide sight made for the Semi-Auto Shotgun.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'semiauto_shotgun_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'doublebarrel_long_barrel', 'Double-Barreled Long Barrel', 'A long barrel made for the Double-Barreled Shotgun.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'doublebarrel_long_barrel');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'doublebarrel_wide_sight', 'Double-Barreled Wide Sight', 'A wide sight made for the Double-Barreled Shotgun.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'doublebarrel_wide_sight');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'sawedoff_wide_sight', 'Sawed-Off Wide Sight', 'A wide sight made for the Sawed-Off Shotgun.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'sawedoff_wide_sight');
+
 UPDATE `items`
 SET `display_name` = 'Cattleman Revolver',
     `description` = 'A standard single-action revolver.',
@@ -333,3 +513,255 @@ SET `display_name` = 'Cattleman Wide Sight',
     `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
     `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
 WHERE `name` = 'cattleman_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Schofield Short Barrel',
+    `description` = 'A short barrel made for the Schofield Revolver.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'schofield_short_barrel';
+
+UPDATE `items`
+SET `display_name` = 'Schofield Wide Sight',
+    `description` = 'A wide sight made for the Schofield Revolver.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'schofield_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'LeMat Long Barrel',
+    `description` = 'A long barrel made for the LeMat Revolver.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'lemat_long_barrel';
+
+UPDATE `items`
+SET `display_name` = 'LeMat Wide Sight',
+    `description` = 'A wide sight made for the LeMat Revolver.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'lemat_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Navy Long Barrel',
+    `description` = 'A long barrel made for the Navy Revolver.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'navy_long_barrel';
+
+UPDATE `items`
+SET `display_name` = 'Navy Wide Sight',
+    `description` = 'A wide sight made for the Navy Revolver.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'navy_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Double-Action Long Barrel',
+    `description` = 'A long barrel made for the Double-Action Revolver.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'doubleaction_long_barrel';
+
+UPDATE `items`
+SET `display_name` = 'Double-Action Wide Sight',
+    `description` = 'A wide sight made for the Double-Action Revolver.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'doubleaction_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'M1899 Long Barrel',
+    `description` = 'A long barrel made for the M1899 Pistol.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'm1899_long_barrel';
+
+UPDATE `items`
+SET `display_name` = 'M1899 Wide Sight',
+    `description` = 'A wide sight made for the M1899 Pistol.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'm1899_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Volcanic Long Barrel',
+    `description` = 'A long barrel made for the Volcanic Pistol.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'volcanic_long_barrel';
+
+UPDATE `items`
+SET `display_name` = 'Volcanic Wide Sight',
+    `description` = 'A wide sight made for the Volcanic Pistol.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'volcanic_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Semi-Automatic Long Barrel',
+    `description` = 'A long barrel made for the Semi-Automatic Pistol.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'semiauto_long_barrel';
+
+UPDATE `items`
+SET `display_name` = 'Semi-Automatic Wide Sight',
+    `description` = 'A wide sight made for the Semi-Automatic Pistol.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'semiauto_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Mauser Long Barrel',
+    `description` = 'A long barrel made for the Mauser Pistol.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'mauser_long_barrel';
+
+UPDATE `items`
+SET `display_name` = 'Mauser Wide Sight',
+    `description` = 'A wide sight made for the Mauser Pistol.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'mauser_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Carbine Wide Sight',
+    `description` = 'A wide sight made for the Carbine Repeater.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'carbine_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Lancaster Wide Sight',
+    `description` = 'A wide sight made for the Lancaster Repeater.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'lancaster_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Litchfield Wide Sight',
+    `description` = 'A wide sight made for the Litchfield Repeater.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'litchfield_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Evans Wide Sight',
+    `description` = 'A wide sight made for the Evans Repeater.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'evans_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Springfield Wide Sight',
+    `description` = 'A wide sight made for the Springfield Rifle.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'springfield_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Bolt Action Wide Sight',
+    `description` = 'A wide sight made for the Bolt Action Rifle.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'boltaction_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Varmint Wide Sight',
+    `description` = 'A wide sight made for the Varmint Rifle.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'varmint_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Elephant Long Barrel',
+    `description` = 'A long barrel made for the Elephant Rifle.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'elephant_long_barrel';
+
+UPDATE `items`
+SET `display_name` = 'Elephant Wide Sight',
+    `description` = 'A wide sight made for the Elephant Rifle.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'elephant_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Rolling Block Wide Sight',
+    `description` = 'A wide sight made for the Rolling Block Rifle.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'rollingblock_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Carcano Wide Sight',
+    `description` = 'A wide sight made for the Carcano Rifle.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'carcano_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Repeating Shotgun Long Barrel',
+    `description` = 'A long barrel made for the Repeating Shotgun.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'repeating_shotgun_long_barrel';
+
+UPDATE `items`
+SET `display_name` = 'Repeating Shotgun Wide Sight',
+    `description` = 'A wide sight made for the Repeating Shotgun.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'repeating_shotgun_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Pump-Action Long Barrel',
+    `description` = 'A long barrel made for the Pump-Action Shotgun.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'pump_shotgun_long_barrel';
+
+UPDATE `items`
+SET `display_name` = 'Pump-Action Wide Sight',
+    `description` = 'A wide sight made for the Pump-Action Shotgun.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'pump_shotgun_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Semi-Auto Shotgun Long Barrel',
+    `description` = 'A long barrel made for the Semi-Auto Shotgun.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'semiauto_shotgun_long_barrel';
+
+UPDATE `items`
+SET `display_name` = 'Semi-Auto Shotgun Wide Sight',
+    `description` = 'A wide sight made for the Semi-Auto Shotgun.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'semiauto_shotgun_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Double-Barreled Long Barrel',
+    `description` = 'A long barrel made for the Double-Barreled Shotgun.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'doublebarrel_long_barrel';
+
+UPDATE `items`
+SET `display_name` = 'Double-Barreled Wide Sight',
+    `description` = 'A wide sight made for the Double-Barreled Shotgun.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'doublebarrel_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Sawed-Off Wide Sight',
+    `description` = 'A wide sight made for the Sawed-Off Shotgun.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'sawedoff_wide_sight';
