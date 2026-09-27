@@ -434,6 +434,16 @@ INSERT INTO `items`
 SELECT 'carcano_wide_sight', 'Carcano Wide Sight', 'A wide sight made for the Carcano Rifle.', 20, 10, 1, 0, 3, 'item_item', 'stack'
 WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'carcano_wide_sight');
 
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'repeating_shotgun_long_barrel', 'Repeating Shotgun Long Barrel', 'A long barrel made for the Repeating Shotgun.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'repeating_shotgun_long_barrel');
+
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'repeating_shotgun_wide_sight', 'Repeating Shotgun Wide Sight', 'A wide sight made for the Repeating Shotgun.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'repeating_shotgun_wide_sight');
+
 UPDATE `items`
 SET `display_name` = 'Cattleman Revolver',
     `description` = 'A standard single-action revolver.',
@@ -657,3 +667,17 @@ SET `display_name` = 'Carcano Wide Sight',
     `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
     `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
 WHERE `name` = 'carcano_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Repeating Shotgun Long Barrel',
+    `description` = 'A long barrel made for the Repeating Shotgun.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'repeating_shotgun_long_barrel';
+
+UPDATE `items`
+SET `display_name` = 'Repeating Shotgun Wide Sight',
+    `description` = 'A wide sight made for the Repeating Shotgun.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'repeating_shotgun_wide_sight';

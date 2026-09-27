@@ -350,5 +350,29 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "carcano" }
+    },
+    repeating_shotgun_long_barrel = {
+        id = "repeating_shotgun_long_barrel",
+        kind = "attachment",
+        itemName = "repeating_shotgun_long_barrel",
+        label = "Repeating Shotgun Long Barrel",
+        slot = "barrel",
+        nativeComponentName = "COMPONENT_SHOTGUN_REPEATING_BARREL_LONG",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "repeating_shotgun" }
+    },
+    repeating_shotgun_wide_sight = {
+        id = "repeating_shotgun_wide_sight",
+        kind = "attachment",
+        itemName = "repeating_shotgun_wide_sight",
+        label = "Repeating Shotgun Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_SHOTGUN_REPEATING_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "repeating_shotgun" }
     }
 }
