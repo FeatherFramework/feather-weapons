@@ -290,5 +290,17 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "boltaction" }
+    },
+    varmint_wide_sight = {
+        id = "varmint_wide_sight",
+        kind = "attachment",
+        itemName = "varmint_wide_sight",
+        label = "Varmint Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_REPEATER_PUMPACTION_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "varmint" }
     }
 }
