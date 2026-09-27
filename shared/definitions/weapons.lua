@@ -712,7 +712,14 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            barrel = { "doublebarrel_long_barrel" },
+            sight = { "doublebarrel_wide_sight" }
+        },
+        attachmentDefaults = {
+            barrel = "Standard Short Barrel",
+            sight = "Standard Narrow Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,

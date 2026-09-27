@@ -422,5 +422,29 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "semiauto_shotgun" }
+    },
+    doublebarrel_long_barrel = {
+        id = "doublebarrel_long_barrel",
+        kind = "attachment",
+        itemName = "doublebarrel_long_barrel",
+        label = "Double-Barreled Long Barrel",
+        slot = "barrel",
+        nativeComponentName = "COMPONENT_SHOTGUN_DOUBLEBARREL_BARREL_LONG",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "doublebarrel" }
+    },
+    doublebarrel_wide_sight = {
+        id = "doublebarrel_wide_sight",
+        kind = "attachment",
+        itemName = "doublebarrel_wide_sight",
+        label = "Double-Barreled Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_SHOTGUN_DOUBLEBARREL_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "doublebarrel" }
     }
 }
