@@ -146,5 +146,29 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "m1899" }
+    },
+    volcanic_long_barrel = {
+        id = "volcanic_long_barrel",
+        kind = "attachment",
+        itemName = "volcanic_long_barrel",
+        label = "Volcanic Long Barrel",
+        slot = "barrel",
+        nativeComponentName = "COMPONENT_PISTOL_VOLCANIC_BARREL_LONG",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "volcanic" }
+    },
+    volcanic_wide_sight = {
+        id = "volcanic_wide_sight",
+        kind = "attachment",
+        itemName = "volcanic_wide_sight",
+        label = "Volcanic Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_PISTOL_VOLCANIC_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "volcanic" }
     }
 }

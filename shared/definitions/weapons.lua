@@ -22,7 +22,14 @@ WeaponDefinitionCatalog.weapons = {
                 restore = 25
             }
         },
-        attachmentSlots = {},
+        attachmentSlots = {
+            barrel = { "volcanic_long_barrel" },
+            sight = { "volcanic_wide_sight" }
+        },
+        attachmentDefaults = {
+            barrel = "Standard Short Barrel",
+            sight = "Standard Sight"
+        },
         policies = {
             transferable = true,
             droppable = true,

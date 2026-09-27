@@ -18,6 +18,8 @@ of scope until their representation and conflict rules are designed.
 | Double-Action Revolver | Sight | Double-Action Wide Sight | `COMPONENT_REVOLVER_DOUBLEACTION_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 | M1899 Pistol | Barrel | M1899 Long Barrel | `COMPONENT_PISTOL_M1899_BARREL_LONG` | Shipped | Passed full lifecycle |
 | M1899 Pistol | Sight | M1899 Wide Sight | `COMPONENT_PISTOL_M1899_SIGHT_WIDE` | Shipped | Passed full lifecycle |
+| Volcanic Pistol | Barrel | Volcanic Long Barrel | `COMPONENT_PISTOL_VOLCANIC_BARREL_LONG` | Shipped | Passed full lifecycle |
+| Volcanic Pistol | Sight | Volcanic Wide Sight | `COMPONENT_PISTOL_VOLCANIC_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 
 ## Wide Sight acceptance matrix
 
@@ -99,4 +101,12 @@ The native M1899 baseline uses the short barrel. The Long Barrel and Wide Sight
 installed independently, coexisted visibly, survived a Weapons resource restart,
 and removed selectively with exact item returns. Removing the Long Barrel
 restored the standard short barrel. The weapon identity, runtime lease,
+ammunition, and condition remained aligned.
+
+## Volcanic live result
+
+The native Volcanic baseline uses the short barrel. The Long Barrel and Wide
+Sight installed independently, coexisted visibly, survived a Weapons resource
+restart, and removed selectively with exact item returns. Removing the Long
+Barrel restored the standard short barrel. The weapon identity, runtime lease,
 ammunition, and condition remained aligned.

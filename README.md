@@ -418,7 +418,8 @@ are configured as `weapons.evidence.hold` and `weapons.evidence.release`.
   also live-validated functional attachment slices. The Navy Long Barrel and
   Wide Sight are live validated as well. The Double-Action Long Barrel and Wide
   Sight are live validated as well. The M1899 Long Barrel and Wide Sight are
-  live validated as well.
+  live validated as well. The Volcanic Long Barrel and Wide Sight are live
+  validated as well.
 - Alternate ammunition, expanded provenance, evidence, licenses, shops, and crafting remain planned.
 
 ## Validation status
