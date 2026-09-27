@@ -326,5 +326,17 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "elephant" }
+    },
+    rollingblock_wide_sight = {
+        id = "rollingblock_wide_sight",
+        kind = "attachment",
+        itemName = "rollingblock_wide_sight",
+        label = "Rolling Block Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_RIFLE_ROLLINGBLOCK_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "rollingblock" }
     }
 }

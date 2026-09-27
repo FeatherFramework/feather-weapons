@@ -33,6 +33,7 @@ of scope until their representation and conflict rules are designed.
 | Varmint Rifle | Sight | Varmint Wide Sight | `COMPONENT_REPEATER_PUMPACTION_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 | Elephant Rifle | Barrel | Elephant Long Barrel | `COMPONENT_RIFLE_ELEPHANT_BARREL_LONG` | Shipped | Passed full lifecycle |
 | Elephant Rifle | Sight | Elephant Wide Sight | `COMPONENT_RIFLE_ELEPHANT_SIGHT_WIDE` | Shipped | Passed full lifecycle |
+| Rolling Block Rifle | Sight | Rolling Block Wide Sight | `COMPONENT_RIFLE_ROLLINGBLOCK_SIGHT_WIDE` | Shipped | Passed full lifecycle |
 
 ## Wide Sight acceptance matrix
 
@@ -198,4 +199,11 @@ Wide Sight installed independently, coexisted visibly in the shoulder slot,
 survived a Weapons resource restart, and removed selectively with exact item
 returns. Removing the Long Barrel restored the standard short barrel while
 preserving the Wide Sight. The weapon identity, runtime lease, ammunition, and
+condition remained aligned throughout the lifecycle.
+
+## Rolling Block Rifle live result
+
+The Wide Sight was visibly present on the held scoped rifle, survived a Weapons
+resource restart, and removed with an exact item return. Removal restored the
+standard narrow sight. The weapon identity, runtime lease, ammunition, and
 condition remained aligned throughout the lifecycle.

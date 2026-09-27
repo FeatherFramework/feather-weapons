@@ -424,6 +424,11 @@ INSERT INTO `items`
 SELECT 'elephant_wide_sight', 'Elephant Wide Sight', 'A wide sight made for the Elephant Rifle.', 20, 10, 1, 0, 3, 'item_item', 'stack'
 WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'elephant_wide_sight');
 
+INSERT INTO `items`
+    (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'rollingblock_wide_sight', 'Rolling Block Wide Sight', 'A wide sight made for the Rolling Block Rifle.', 20, 10, 1, 0, 3, 'item_item', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'rollingblock_wide_sight');
+
 UPDATE `items`
 SET `display_name` = 'Cattleman Revolver',
     `description` = 'A standard single-action revolver.',
@@ -633,3 +638,10 @@ SET `display_name` = 'Elephant Wide Sight',
     `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
     `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
 WHERE `name` = 'elephant_wide_sight';
+
+UPDATE `items`
+SET `display_name` = 'Rolling Block Wide Sight',
+    `description` = 'A wide sight made for the Rolling Block Rifle.',
+    `max_quantity` = 20, `max_stack_size` = 10, `weight` = 1,
+    `usable` = 0, `type` = 'item_item', `instance_mode` = 'stack'
+WHERE `name` = 'rollingblock_wide_sight';
