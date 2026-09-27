@@ -374,5 +374,29 @@ WeaponDefinitionCatalog.attachments = {
         prerequisites = {},
         removable = true,
         tags = { "functional", "repeating_shotgun" }
+    },
+    pump_shotgun_long_barrel = {
+        id = "pump_shotgun_long_barrel",
+        kind = "attachment",
+        itemName = "pump_shotgun_long_barrel",
+        label = "Pump-Action Long Barrel",
+        slot = "barrel",
+        nativeComponentName = "COMPONENT_SHOTGUN_PUMP_BARREL_LONG",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "pump_shotgun" }
+    },
+    pump_shotgun_wide_sight = {
+        id = "pump_shotgun_wide_sight",
+        kind = "attachment",
+        itemName = "pump_shotgun_wide_sight",
+        label = "Pump-Action Wide Sight",
+        slot = "sight",
+        nativeComponentName = "COMPONENT_SHOTGUN_PUMP_SIGHT_WIDE",
+        conflicts = {},
+        prerequisites = {},
+        removable = true,
+        tags = { "functional", "pump_shotgun" }
     }
 }

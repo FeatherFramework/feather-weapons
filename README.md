@@ -426,7 +426,8 @@ are configured as `weapons.evidence.hold` and `weapons.evidence.release`.
   live validated as well. The Varmint Wide Sight is live validated as well. The
   Elephant Long Barrel and Wide Sight are live validated as well. The Rolling
   Block and Carcano Wide Sights are live validated as well. The Repeating
-  Shotgun Long Barrel and Wide Sight are live validated as well.
+  Shotgun Long Barrel and Wide Sight are live validated as well. The Pump-Action
+  Long Barrel and Wide Sight are live validated as well.
 - Alternate ammunition, expanded provenance, evidence, licenses, shops, and crafting remain planned.
 
 ## Validation status
