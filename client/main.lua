@@ -883,6 +883,17 @@ local function AwaitSingleNativeRestore(state)
             local clipOk, clipAmount = GetAmmoInClip(ped, weaponHash)
             local observedLoaded = math.max(0, math.floor(tonumber(clipAmount) or 0))
             local nativeTotal = math.max(0, math.floor(tonumber(GetPedAmmoByType(ped, ammoHash)) or 0))
+            if nativeTotal < state.ammo then
+                -- Re-equipping the same sidearm can leave RedM's wheel cache
+                -- exposing only its materialized clip. Restore only the
+                -- server-approved deficit; this cannot create ownership.
+                Citizen.InvokeNative(0x106A811C6D3035F3, ped, ammoHash,
+                    state.ammo - nativeTotal, joaat('ADD_REASON_DEFAULT')) -- GiveAmmoToPedByType
+                nativeTotal = math.max(0, math.floor(tonumber(GetPedAmmoByType(ped, ammoHash)) or 0))
+            elseif nativeTotal > state.ammo then
+                SetPedAmmoByType(ped, ammoHash, state.ammo)
+                nativeTotal = math.max(0, math.floor(tonumber(GetPedAmmoByType(ped, ammoHash)) or 0))
+            end
             if NativeTrue(clipOk) and observedLoaded == state.loaded
                 and nativeTotal == state.ammo then
                 singleNativeReady = true
@@ -1097,16 +1108,18 @@ local function ApplyApprovedWeapon(approved)
         )
     if not alreadyApplied then
         ClearNativeWeapon()
-        GiveApprovedNativeWeapon(approved.nativeWeaponName, approved.nativeAmmoName, approved.ammo, approved.loaded,
-            approved.attachments)
     end
+
+    -- Even when the same Inventory instance is still materialized, RedM can
+    -- rebuild its wheel entry from the clip alone during a holster/re-equip.
+    -- Re-grant the approved snapshot so the wheel cache includes reserve.
+    GiveApprovedNativeWeapon(approved.nativeWeaponName, approved.nativeAmmoName, approved.ammo, approved.loaded,
+        approved.attachments)
 
     equipped = ApprovedState(approved)
     desiredAmmo = equipped.ammo
     desiredLoaded = equipped.loaded
-    if not alreadyApplied then
-        AwaitSingleNativeRestore(equipped)
-    end
+    AwaitSingleNativeRestore(equipped)
 
     ScheduleMaintenanceRestore()
 end
