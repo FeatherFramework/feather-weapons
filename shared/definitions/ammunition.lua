@@ -53,6 +53,7 @@ WeaponDefinitionCatalog.ammunition = {
         itemName = "ammo_pistol_explosive",
         label = "Pistol Cartridges - Explosive",
         nativeAmmoName = "AMMO_PISTOL_EXPRESS_EXPLOSIVE",
+        maxTotal = 10,
         stackable = true,
         tags = { "pistol", "explosive", "craft" }
     },
@@ -99,6 +100,7 @@ WeaponDefinitionCatalog.ammunition = {
         itemName = "ammo_revolver_explosive",
         label = "Revolver Cartridges - Explosive",
         nativeAmmoName = "AMMO_REVOLVER_EXPRESS_EXPLOSIVE",
+        maxTotal = 10,
         stackable = true,
         tags = { "revolver", "explosive", "craft" }
     },
@@ -194,6 +196,9 @@ WeaponDefinitionCatalog.ammunition = {
         itemName = "ammo_rifle_explosive",
         label = "Rifle Cartridges - Explosive",
         nativeAmmoName = "AMMO_RIFLE_EXPRESS_EXPLOSIVE",
+        -- The target RedM build exposes at most ten rounds in this native
+        -- pool. Do not escrow cartridges that the game cannot represent.
+        maxTotal = 10,
         stackable = true,
         tags = { "rifle", "explosive", "craft" }
     },
