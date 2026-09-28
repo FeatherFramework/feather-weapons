@@ -119,6 +119,16 @@ check(AmmoService.SyncConsumption(1, context, {
 }).ok, 'Special ammo shot checkpoint')
 check(AmmoService.Unload(1, context).ok and stock.ammo_revolver_express == 19, 'Shot consumes one round')
 
+reset('repeater_lancaster')
+stock.ammo_repeater_explosive = 20
+local cappedExplosive = AmmoService.Escrow(1, context, 20, 'ammo_repeater_explosive')
+check(cappedExplosive.ok and cappedExplosive.value.total == 10
+    and cappedExplosive.value.loaded == 10 and cappedExplosive.value.reserve == 0
+    and stock.ammo_repeater_explosive == 10,
+    'Native-capped explosive load preserves excess inventory ammunition')
+check(AmmoService.Unload(1, context).ok and stock.ammo_repeater_explosive == 20,
+    'Native-capped explosive unload conserves ammunition')
+
 reset('revolver_cattleman', 'revolver_schofield')
 stock.ammo_revolver_regular = 50
 stock.ammo_revolver_express = 7

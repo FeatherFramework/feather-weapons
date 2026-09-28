@@ -145,6 +145,9 @@ WeaponDefinitionCatalog.ammunition = {
         itemName = "ammo_repeater_explosive",
         label = "Repeater Cartridges - Explosive",
         nativeAmmoName = "AMMO_REPEATER_EXPRESS_EXPLOSIVE",
+        -- The target RedM build clamps this native pool to ten. Keep any
+        -- excess in Inventory instead of allowing reconciliation to discard it.
+        maxTotal = 10,
         stackable = true,
         tags = { "repeater", "explosive", "craft" }
     },
