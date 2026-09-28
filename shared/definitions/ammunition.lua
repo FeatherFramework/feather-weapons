@@ -227,6 +227,8 @@ WeaponDefinitionCatalog.ammunition = {
         itemName = "ammo_shotgun_buckshot_incendiary",
         label = "Shotgun - Incendiary",
         nativeAmmoName = "AMMO_SHOTGUN_BUCKSHOT_INCENDIARY",
+        -- RedM exposes fourteen shells for this special native pool.
+        maxTotal = 14,
         stackable = true,
         tags = { "shotgun", "buckshot", "incendiary", "craft" }
     },
@@ -236,6 +238,8 @@ WeaponDefinitionCatalog.ammunition = {
         itemName = "ammo_shotgun_slug_explosive",
         label = "Shotgun - Explosive",
         nativeAmmoName = "AMMO_SHOTGUN_SLUG_EXPLOSIVE",
+        -- The target RedM build clamps explosive slugs to ten shells.
+        maxTotal = 10,
         stackable = true,
         tags = { "shotgun", "slug", "explosive", "craft" }
     },
