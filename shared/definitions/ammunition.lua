@@ -261,5 +261,18 @@ WeaponDefinitionCatalog.ammunition = {
         nativeAmmoName = "AMMO_22_TRANQUILIZER",
         stackable = true,
         tags = { "varmint", "tranquilizer", "purchase" }
+    },
+
+    ammo_arrow_regular = {
+        id = "ammo_arrow_regular",
+        kind = "ammunition",
+        itemName = "ammo_arrow_regular",
+        label = "Arrow - Regular",
+        nativeAmmoName = "AMMO_ARROW",
+        -- The standard RedM arrow pool is bounded independently from firearm
+        -- ammunition. Keep excess arrows in Inventory.
+        maxTotal = 40,
+        stackable = true,
+        tags = { "bow", "arrow", "regular", "purchase" }
     }
 }

@@ -1,9 +1,10 @@
-# Standard firearm catalog
+# Weapon catalog
 
-The catalog contains 24 standard models: four pistols, five revolvers,
+The catalog contains 24 standard firearms: four pistols, five revolvers,
 four repeaters, six rifles (including scoped rifles and the Elephant Rifle),
-and five shotguns. Named story-character and special cosmetic variants are
-not included in this standard-model expansion.
+and five shotguns. It also contains the standard Bow as the first
+ammunition-using special weapon. Named story-character and special cosmetic
+variants are not included.
 
 Inventory names use the weapon_ prefix. Catalog IDs remain independent;
 Lancaster maps to WEAPON_REPEATER_WINCHESTER and Litchfield to
@@ -13,11 +14,13 @@ All new entries inherit the existing condition policy: 100 maximum condition,
 native RedM maintenance determines wear, and one gun_oil restores up to 25
 condition without crossing the permanent-wear floor. New inventory rows use the
 existing weapon defaults (weight 2, maximum quantity 20).
-Configured attachment slots currently cover the live-validated sidearm models
-and Carbine Repeater Wide Sight.
+Configured attachment slots cover the live-validated standard firearm models.
+The Bow currently declares no functional attachment slots.
 
 The Varmint Rifle uses ammo_varmint. The Elephant Rifle uses
-ammo_rifle_elephant (AMMO_RIFLE_ELEPHANT), bringing ammunition definitions to 27.
+ammo_rifle_elephant (AMMO_RIFLE_ELEPHANT). The Bow uses
+ammo_arrow_regular (AMMO_ARROW), bringing ammunition definitions to 28.
+Regular arrows have a definition-level 40-arrow escrow ceiling.
 Nitro Express has a definition-level 20-round escrow ceiling, so loading from a
 larger Inventory stack moves at most 20 cartridges into the Elephant Rifle.
 Regular ammunition is the default. Each weapon also declares its supported
@@ -38,7 +41,7 @@ Existing installations using the old inventory names must first run
 sql/rename_weapon_item_names.sql as described in the README.
 
 Run WeaponReleaseContractSmokeTest 1; expected counts are
-weapon=24 ammunition=27 attachment=38.
+weapon=25 ammunition=28 attachment=38.
 
 Live-test each new model: grant, equip, refill, fire, reload, unload, repair,
 logout/rejoin, and verify native clip capacity against the configured capacity.

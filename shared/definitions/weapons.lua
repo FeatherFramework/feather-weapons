@@ -873,5 +873,36 @@ WeaponDefinitionCatalog.weapons = {
             serialRequired = true
         },
         tags = { "firearm", "longgun", "shotgun" }
+    },
+    bow = {
+        id = "bow",
+        kind = "weapon",
+        itemName = "weapon_bow",
+        label = "Bow",
+        nativeWeaponName = "WEAPON_BOW",
+        family = "bow",
+        slot = "longgun",
+        ammunitionType = "ammo_arrow_regular",
+        ammunitionTypes = { "ammo_arrow_regular" },
+        capacity = 1,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "ranged", "longgun", "bow" }
     }
 }

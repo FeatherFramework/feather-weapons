@@ -2499,6 +2499,8 @@ local function LoadedContainerLabel(weapon)
 
     if weapon.family == 'shotgun' then return 'Chamber/tube' end
 
+    if weapon.family == 'bow' then return 'Nocked' end
+
     return 'Magazine'
 end
 
