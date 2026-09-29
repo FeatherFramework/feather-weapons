@@ -119,6 +119,57 @@ check(AmmoService.SyncConsumption(1, context, {
 }).ok, 'Special ammo shot checkpoint')
 check(AmmoService.Unload(1, context).ok and stock.ammo_revolver_express == 19, 'Shot consumes one round')
 
+reset('repeater_lancaster')
+stock.ammo_repeater_explosive = 20
+local cappedExplosive = AmmoService.Escrow(1, context, 20, 'ammo_repeater_explosive')
+check(cappedExplosive.ok and cappedExplosive.value.total == 10
+    and cappedExplosive.value.loaded == 10 and cappedExplosive.value.reserve == 0
+    and stock.ammo_repeater_explosive == 10,
+    'Native-capped explosive load preserves excess inventory ammunition')
+check(AmmoService.Unload(1, context).ok and stock.ammo_repeater_explosive == 20,
+    'Native-capped explosive unload conserves ammunition')
+
+reset('rifle_springfield')
+stock.ammo_rifle_explosive = 20
+local cappedRifleExplosive = AmmoService.Escrow(1, context, 20, 'ammo_rifle_explosive')
+check(cappedRifleExplosive.ok and cappedRifleExplosive.value.total == 10
+    and cappedRifleExplosive.value.loaded == 1 and cappedRifleExplosive.value.reserve == 9
+    and stock.ammo_rifle_explosive == 10,
+    'Native-capped rifle explosive load preserves excess inventory ammunition')
+check(AmmoService.Unload(1, context).ok and stock.ammo_rifle_explosive == 20,
+    'Native-capped rifle explosive unload conserves ammunition')
+
+for _, cappedSidearm in ipairs({
+    { weapon = 'revolver_cattleman', ammunition = 'ammo_revolver_explosive' },
+    { weapon = 'pistol_volcanic', ammunition = 'ammo_pistol_explosive' }
+}) do
+    reset(cappedSidearm.weapon)
+    stock[cappedSidearm.ammunition] = 20
+    local cappedLoad = AmmoService.Escrow(1, context, 20, cappedSidearm.ammunition)
+    check(cappedLoad.ok and cappedLoad.value.total == 10
+        and stock[cappedSidearm.ammunition] == 10,
+        cappedSidearm.ammunition .. ' native cap preserves excess inventory ammunition')
+    check(AmmoService.Unload(1, context).ok and stock[cappedSidearm.ammunition] == 20,
+        cappedSidearm.ammunition .. ' native-capped unload conserves ammunition')
+end
+
+for _, cappedShotgunAmmo in ipairs({
+    { ammunition = 'ammo_shotgun_buckshot_incendiary', maximum = 14 },
+    { ammunition = 'ammo_shotgun_slug_explosive', maximum = 10 }
+}) do
+    reset('shotgun_pump')
+    stock[cappedShotgunAmmo.ammunition] = 20
+    local cappedLoad = AmmoService.Escrow(1, context, 20, cappedShotgunAmmo.ammunition)
+    local expectedLoaded = math.min(5, cappedShotgunAmmo.maximum)
+    check(cappedLoad.ok and cappedLoad.value.total == cappedShotgunAmmo.maximum
+        and cappedLoad.value.loaded == expectedLoaded
+        and cappedLoad.value.reserve == cappedShotgunAmmo.maximum - expectedLoaded
+        and stock[cappedShotgunAmmo.ammunition] == 20 - cappedShotgunAmmo.maximum,
+        cappedShotgunAmmo.ammunition .. ' native cap preserves excess inventory ammunition')
+    check(AmmoService.Unload(1, context).ok and stock[cappedShotgunAmmo.ammunition] == 20,
+        cappedShotgunAmmo.ammunition .. ' native-capped unload conserves ammunition')
+end
+
 reset('revolver_cattleman', 'revolver_schofield')
 stock.ammo_revolver_regular = 50
 stock.ammo_revolver_express = 7

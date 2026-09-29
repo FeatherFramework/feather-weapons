@@ -53,6 +53,7 @@ WeaponDefinitionCatalog.ammunition = {
         itemName = "ammo_pistol_explosive",
         label = "Pistol Cartridges - Explosive",
         nativeAmmoName = "AMMO_PISTOL_EXPRESS_EXPLOSIVE",
+        maxTotal = 10,
         stackable = true,
         tags = { "pistol", "explosive", "craft" }
     },
@@ -99,6 +100,7 @@ WeaponDefinitionCatalog.ammunition = {
         itemName = "ammo_revolver_explosive",
         label = "Revolver Cartridges - Explosive",
         nativeAmmoName = "AMMO_REVOLVER_EXPRESS_EXPLOSIVE",
+        maxTotal = 10,
         stackable = true,
         tags = { "revolver", "explosive", "craft" }
     },
@@ -145,6 +147,9 @@ WeaponDefinitionCatalog.ammunition = {
         itemName = "ammo_repeater_explosive",
         label = "Repeater Cartridges - Explosive",
         nativeAmmoName = "AMMO_REPEATER_EXPRESS_EXPLOSIVE",
+        -- The target RedM build clamps this native pool to ten. Keep any
+        -- excess in Inventory instead of allowing reconciliation to discard it.
+        maxTotal = 10,
         stackable = true,
         tags = { "repeater", "explosive", "craft" }
     },
@@ -191,6 +196,9 @@ WeaponDefinitionCatalog.ammunition = {
         itemName = "ammo_rifle_explosive",
         label = "Rifle Cartridges - Explosive",
         nativeAmmoName = "AMMO_RIFLE_EXPRESS_EXPLOSIVE",
+        -- The target RedM build exposes at most ten rounds in this native
+        -- pool. Do not escrow cartridges that the game cannot represent.
+        maxTotal = 10,
         stackable = true,
         tags = { "rifle", "explosive", "craft" }
     },
@@ -219,6 +227,8 @@ WeaponDefinitionCatalog.ammunition = {
         itemName = "ammo_shotgun_buckshot_incendiary",
         label = "Shotgun - Incendiary",
         nativeAmmoName = "AMMO_SHOTGUN_BUCKSHOT_INCENDIARY",
+        -- RedM exposes fourteen shells for this special native pool.
+        maxTotal = 14,
         stackable = true,
         tags = { "shotgun", "buckshot", "incendiary", "craft" }
     },
@@ -228,6 +238,8 @@ WeaponDefinitionCatalog.ammunition = {
         itemName = "ammo_shotgun_slug_explosive",
         label = "Shotgun - Explosive",
         nativeAmmoName = "AMMO_SHOTGUN_SLUG_EXPLOSIVE",
+        -- The target RedM build clamps explosive slugs to ten shells.
+        maxTotal = 10,
         stackable = true,
         tags = { "shotgun", "slug", "explosive", "craft" }
     },
