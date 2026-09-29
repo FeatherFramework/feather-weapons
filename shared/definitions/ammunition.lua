@@ -274,5 +274,15 @@ WeaponDefinitionCatalog.ammunition = {
         maxTotal = 40,
         stackable = true,
         tags = { "bow", "arrow", "regular", "purchase" }
+    },
+    ammo_arrow_small_game = {
+        id = "ammo_arrow_small_game",
+        kind = "ammunition",
+        itemName = "ammo_arrow_small_game",
+        label = "Arrow - Small Game",
+        nativeAmmoName = "AMMO_ARROW_SMALL_GAME",
+        maxTotal = 40,
+        stackable = true,
+        tags = { "bow", "arrow", "small_game", "craft" }
     }
 }

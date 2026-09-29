@@ -2450,6 +2450,13 @@ local function AmmunitionVariantLabel(definition, ammunitionId)
     return label:match('%s%-%s(.+)$') or label
 end
 
+local function AmmunitionUnitLabels(weapon)
+    local family = type(weapon) == 'table' and weapon.family or nil
+    if family == 'bow' then return 'arrow', 'arrows' end
+    if family == 'shotgun' then return 'shell', 'shells' end
+    return 'cartridge', 'cartridges'
+end
+
 local function RequestManagedAmmunition(route, request, action)
     FeatherWeaponsClient.Checkpoint(function(checkpoint)
         if not checkpoint or not checkpoint.ok then
@@ -2471,15 +2478,18 @@ local function RequestManagedAmmunition(route, request, action)
             local moved = tonumber(result.value and result.value.moved) or 0
             local weaponLabel = action and action.weaponLabel or SlotLabel(request.slot)
             local ammunitionLabel = action and action.ammunitionLabel or 'cartridges'
+            local ammunitionUnit = moved == 1
+                and (action and action.ammunitionUnitSingular or 'cartridge')
+                or (action and action.ammunitionUnitPlural or 'cartridges')
             if action and action.kind == 'unload' then
-                Notify(('Unloaded %d %s cartridge%s from %s.'):format(
-                    moved, ammunitionLabel, moved == 1 and '' or 's', weaponLabel))
+                Notify(('Unloaded %d %s %s from %s.'):format(
+                    moved, ammunitionLabel, ammunitionUnit, weaponLabel))
             elseif action and action.kind == 'switch' then
-                Notify(('Switched %s to %s; loaded %d cartridge%s.'):format(
-                    weaponLabel, ammunitionLabel, moved, moved == 1 and '' or 's'))
+                Notify(('Switched %s to %s; loaded %d %s.'):format(
+                    weaponLabel, ammunitionLabel, moved, ammunitionUnit))
             else
-                Notify(('Loaded %d %s cartridge%s into %s.'):format(
-                    moved, ammunitionLabel, moved == 1 and '' or 's', weaponLabel))
+                Notify(('Loaded %d %s %s into %s.'):format(
+                    moved, ammunitionLabel, ammunitionUnit, weaponLabel))
             end
 
             ClearNativeWeapon()
@@ -2531,6 +2541,7 @@ local function BuildAmmunitionPage(slot)
     local page = CreateWeaponPage(AmmunitionMenu, ('feather-weapons:ammunition:%s'):format(slot))
     local weapon = WeaponDefinitionCatalog.weapons[selected.definitionId] or {}
     local current = WeaponDefinitionCatalog.ammunition[selected.ammunitionType] or {}
+    local unitSingular, unitPlural = AmmunitionUnitLabels(weapon)
 
     AddWeaponElement(page, 'header', { value = 'Ammunition Management', slot = 'header' })
 
@@ -2563,8 +2574,8 @@ local function BuildAmmunitionPage(slot)
     if (tonumber(selected.ammo) or 0) > 0 then
         local unloadAmount = math.min(10, tonumber(selected.ammo) or 0)
         AddWeaponElement(page, 'button', {
-            label = ('Unload %d cartridge%s'):format(
-                unloadAmount, unloadAmount == 1 and '' or 's'),
+            label = ('Unload %d %s'):format(
+                unloadAmount, unloadAmount == 1 and unitSingular or unitPlural),
             slot = 'content'
         }, function()
             if not StartAmmunitionActivity(page, 'Unloading ammunition') then return end
@@ -2577,12 +2588,14 @@ local function BuildAmmunitionPage(slot)
                 kind = 'unload',
                 weaponLabel = weapon.label or selected.definitionId,
                 ammunitionLabel = AmmunitionVariantLabel(current, selected.ammunitionType),
+                ammunitionUnitSingular = unitSingular,
+                ammunitionUnitPlural = unitPlural,
                 returnPage = page
             })
         end)
 
         AddWeaponElement(page, 'button', {
-            label = 'Unload all cartridges', slot = 'content'
+            label = ('Unload all %s'):format(unitPlural), slot = 'content'
         }, function()
             if not StartAmmunitionActivity(page, 'Unloading ammunition') then return end
             RequestManagedAmmunition('feather-weapons:ammo:unload', {
@@ -2593,6 +2606,8 @@ local function BuildAmmunitionPage(slot)
                 kind = 'unload',
                 weaponLabel = weapon.label or selected.definitionId,
                 ammunitionLabel = AmmunitionVariantLabel(current, selected.ammunitionType),
+                ammunitionUnitSingular = unitSingular,
+                ammunitionUnitPlural = unitPlural,
                 returnPage = page
             })
         end)
@@ -2633,6 +2648,8 @@ local function BuildAmmunitionPage(slot)
                             kind = switching and 'switch' or 'load',
                             weaponLabel = weapon.label or selected.definitionId,
                             ammunitionLabel = AmmunitionVariantLabel(definition, ammunitionId),
+                            ammunitionUnitSingular = unitSingular,
+                            ammunitionUnitPlural = unitPlural,
                             returnPage = page
                         })
                 end)
