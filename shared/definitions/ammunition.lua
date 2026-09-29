@@ -284,5 +284,16 @@ WeaponDefinitionCatalog.ammunition = {
         maxTotal = 40,
         stackable = true,
         tags = { "bow", "arrow", "small_game", "craft" }
+    },
+    ammo_arrow_poison = {
+        id = "ammo_arrow_poison",
+        kind = "ammunition",
+        itemName = "ammo_arrow_poison",
+        label = "Arrow - Poison",
+        nativeAmmoName = "AMMO_ARROW_POISON",
+        -- Special arrows use the smaller native carrying pool.
+        maxTotal = 8,
+        stackable = true,
+        tags = { "bow", "arrow", "poison", "craft" }
     }
 }
