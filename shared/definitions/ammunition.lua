@@ -329,5 +329,17 @@ WeaponDefinitionCatalog.ammunition = {
         maxTotal = 8,
         stackable = true,
         tags = { "throwable", "throwing_knife", "regular", "purchase" }
+    },
+
+    ammo_tomahawk_regular = {
+        id = "ammo_tomahawk_regular",
+        kind = "ammunition",
+        itemName = "ammo_tomahawk_regular",
+        label = "Tomahawk - Regular",
+        nativeAmmoName = "AMMO_TOMAHAWK",
+        -- The target RedM build clamps regular tomahawks to three.
+        maxTotal = 3,
+        stackable = true,
+        tags = { "throwable", "tomahawk", "regular", "purchase" }
     }
 }

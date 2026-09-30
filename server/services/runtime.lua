@@ -15,14 +15,14 @@ local tokenCounter = 0
 local validSlots = {
     primary = true, offhand = true, shoulder = true, back = true,
     melee = true, melee_secondary = true, melee_tertiary = true, melee_quaternary = true,
-    throwable = true
+    throwable = true, throwable_secondary = true
 }
 
 local function EmptySlots()
     return {
         primary = nil, offhand = nil, shoulder = nil, back = nil,
         melee = nil, melee_secondary = nil, melee_tertiary = nil, melee_quaternary = nil,
-        throwable = nil
+        throwable = nil, throwable_secondary = nil
     }
 end
 
@@ -38,7 +38,7 @@ local function RefreshCompatibility(runtime)
             or runtime.slots.shoulder ~= nil or runtime.slots.back ~= nil
             or runtime.slots.melee ~= nil or runtime.slots.melee_secondary ~= nil
             or runtime.slots.melee_tertiary ~= nil or runtime.slots.melee_quaternary ~= nil
-            or runtime.slots.throwable ~= nil)
+            or runtime.slots.throwable ~= nil or runtime.slots.throwable_secondary ~= nil)
     runtime.state = runtime.pending and "equipping" or (occupied and "equipped" or "idle")
 end
 

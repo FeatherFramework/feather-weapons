@@ -34,6 +34,28 @@ character requires a server-owned projectile/pickup ledger that identifies the
 physical knife, consumes its entitlement exactly once, and credits the picker
 without leaving recovery credit available to the thrower.
 
+The standard Tomahawk is a completed throwable validation slice. Its unique
+carrier maps to `WEAPON_THROWN_TOMAHAWK`, and regular Inventory-backed
+tomahawks map to `AMMO_TOMAHAWK`. Live testing confirmed that the target RedM
+build accepts and preserves a three-Tomahawk native pool, with metadata and the
+ammunition-management UI reporting one readied and two in reserve. A second
+persistent throwable position allows the Tomahawk carrier and Throwing Knives
+carrier to coexist. Live testing confirmed both remain natively owned and can
+be selected by cycling within RedM's shared throwable-wheel category, while
+their distinct `AMMO_TOMAHAWK` and `AMMO_THROWING_KNIVES` pools remain
+independent. Metadata inspection passed with seven active persistent slots;
+runtime lease, release, and multi-slot contracts passed `5/5`, `9/9`, and
+`17/17` respectively.
+Subsequent metadata inspections confirmed that one Tomahawk throw persisted a
+reduction from three to two, and same-player pickup restored the total to
+three. Both checkpoints matched the active runtime; the co-equipped Throwing
+Knives carrier remained at six throughout. Manual validation confirmed exact
+return of three Tomahawks on unload, reload, and restoration of both carriers
+after a Weapons resource restart. Post-restart metadata and native pools agreed
+at three Tomahawks and six Throwing Knives, with runtime lease `5/5` and release
+contract `9/9` passing. Cross-player pickup transfer remains deferred for both
+families pending the server-owned projectile/pickup ledger described above.
+
 Inventory names use the weapon_ prefix. Catalog IDs remain independent;
 Lancaster maps to WEAPON_REPEATER_WINCHESTER and Litchfield to
 WEAPON_REPEATER_HENRY. Scoped rifles use the WEAPON_SNIPERRIFLE natives.
@@ -77,7 +99,7 @@ Existing installations using the old inventory names must first run
 sql/rename_weapon_item_names.sql as described in the README.
 
 Run WeaponReleaseContractSmokeTest 1; expected counts are
-weapon=30 ammunition=33 attachment=38.
+weapon=31 ammunition=34 attachment=38.
 
 Live-test each new model: grant, equip, refill, fire, reload, unload, repair,
 logout/rejoin, and verify native clip capacity against the configured capacity.

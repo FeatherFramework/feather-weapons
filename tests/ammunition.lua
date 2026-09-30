@@ -477,6 +477,29 @@ check(not AmmoService.SyncConsumption(1, context, {
     generation = throwableLease.generation, total = 9, loaded = 1
 }).ok, 'Throwable recovery cannot exceed its native cap or recovery credit')
 
+local tomahawkDefinition = DefinitionRegistry.Get('weapon', 'throwable_tomahawk').value
+local tomahawkAmmunition = DefinitionRegistry.Get('ammunition', 'ammo_tomahawk_regular').value
+local tomahawkMetadata = WeaponMetadata.Build(tomahawkDefinition,
+    { serialNumber = 'TEST-TOMAHAWK' })
+check(WeaponValidation.Definition(tomahawkDefinition, 'weapon')
+    and tomahawkAmmunition.nativeAmmoName == 'AMMO_TOMAHAWK'
+    and tomahawkAmmunition.maxTotal == 3,
+    'Standard Tomahawk carrier and native pool validate')
+check(tomahawkMetadata.ok and tomahawkMetadata.value.ammo.type == 'ammo_tomahawk_regular'
+    and tomahawkMetadata.value.ammo.loaded == 0
+    and tomahawkMetadata.value.ammo.reserve == 0,
+    'Tomahawk metadata starts with an empty regular-ammunition escrow')
+tomahawkMetadata.value.ammo.loaded = 1
+tomahawkMetadata.value.ammo.reserve = 2
+tomahawkMetadata.value.ammo.chambered = true
+items[10] = { id = 10, metadata = tomahawkMetadata.value, metadataRevision = 1 }
+local tomahawkRuntime = WeaponRuntime.RestoreEquipped(1, 'test', items[10],
+    tomahawkDefinition, 'test', 'throwable_secondary')
+check(tomahawkRuntime.ok and WeaponRuntime.Get(1).slots.throwable ~= nil
+    and WeaponRuntime.Get(1).slots.throwable_secondary ~= nil
+    and tomahawkRuntime.value.nativeAmmoName == 'AMMO_TOMAHAWK',
+    'Throwing Knives and Tomahawk coexist in persistent throwable positions')
+
 local originalAttachments = copy(WeaponDefinitionCatalog.attachments)
 WeaponDefinitionCatalog.attachments.cattleman_wide_sight.prerequisites = { 'cattleman_long_barrel' }
 check(DefinitionRegistry.Start().ok, 'Valid attachment prerequisite catalog accepted')

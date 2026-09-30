@@ -1031,6 +1031,37 @@ WeaponDefinitionCatalog.weapons = {
         },
         tags = { "throwable", "throwing_knife" }
     },
+    throwable_tomahawk = {
+        id = "throwable_tomahawk",
+        kind = "weapon",
+        itemName = "weapon_throwable_tomahawk",
+        label = "Tomahawk",
+        nativeWeaponName = "WEAPON_THROWN_TOMAHAWK",
+        family = "tomahawk",
+        slot = "throwable",
+        ammunitionType = "ammo_tomahawk_regular",
+        ammunitionTypes = { "ammo_tomahawk_regular" },
+        capacity = 1,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "throwable", "tomahawk" }
+    },
     bow = {
         id = "bow",
         kind = "weapon",
