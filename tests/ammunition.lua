@@ -383,6 +383,30 @@ cattlemanDefinition.attachmentDefaults.invalid = 'Invalid slot'
 check(not WeaponValidation.Definition(cattlemanDefinition, 'weapon'),
     'Attachment default rejects undeclared slot')
 
+local meleeDefinition = {
+    id = 'melee_knife', kind = 'weapon', itemName = 'weapon_melee_knife',
+    label = 'Knife', nativeWeaponName = 'WEAPON_MELEE_KNIFE', family = 'knife',
+    slot = 'melee', usesAmmunition = false, ammunitionTypes = {}, capacity = 0,
+    condition = { minimum = 0, maximum = 100, equipMinimum = 1,
+        repair = { itemDefinitionId = 'gun_oil', quantity = 1, restore = 25 } },
+    attachmentSlots = {}, attachmentDefaults = {},
+    policies = { transferable = true, droppable = true, destructible = true,
+        serialRequired = true },
+    tags = { 'melee', 'knife' }
+}
+check(WeaponValidation.Definition(meleeDefinition, 'weapon'),
+    'Ammunition-free melee definition validates')
+local meleeMetadata = WeaponMetadata.Build(meleeDefinition, { serialNumber = 'TEST-MELEE' })
+check(meleeMetadata.ok and meleeMetadata.value.ammo.loaded == 0
+    and meleeMetadata.value.ammo.reserve == 0,
+    'Ammunition-free melee metadata remains empty')
+items[5] = { id = 5, metadata = meleeMetadata.value, metadataRevision = 1 }
+local meleeRuntime = WeaponRuntime.RestoreEquipped(1, 'test', items[5], meleeDefinition,
+    'test', 'melee')
+check(meleeRuntime.ok and meleeRuntime.value.nativeAmmoName == nil
+    and meleeRuntime.value.ammo == 0,
+    'Ammunition-free melee runtime occupies its dedicated slot')
+
 local originalAttachments = copy(WeaponDefinitionCatalog.attachments)
 WeaponDefinitionCatalog.attachments.cattleman_wide_sight.prerequisites = { 'cattleman_long_barrel' }
 check(DefinitionRegistry.Start().ok, 'Valid attachment prerequisite catalog accepted')

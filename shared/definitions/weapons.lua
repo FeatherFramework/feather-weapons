@@ -874,6 +874,37 @@ WeaponDefinitionCatalog.weapons = {
         },
         tags = { "firearm", "longgun", "shotgun" }
     },
+    melee_knife = {
+        id = "melee_knife",
+        kind = "weapon",
+        itemName = "weapon_melee_knife",
+        label = "Knife",
+        nativeWeaponName = "WEAPON_MELEE_KNIFE",
+        family = "knife",
+        slot = "melee",
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "melee", "knife" }
+    },
     bow = {
         id = "bow",
         kind = "weapon",

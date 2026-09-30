@@ -3,7 +3,8 @@
 The catalog contains 24 standard firearms: four pistols, five revolvers,
 four repeaters, six rifles (including scoped rifles and the Elephant Rifle),
 and five shotguns. It also contains the standard Bow as the first
-ammunition-using special weapon. Named story-character and special cosmetic
+ammunition-using special weapon and the standard Knife as the first
+ammunition-free melee weapon. Named story-character and special cosmetic
 variants are not included.
 
 Inventory names use the weapon_ prefix. Catalog IDs remain independent;
@@ -49,7 +50,7 @@ Existing installations using the old inventory names must first run
 sql/rename_weapon_item_names.sql as described in the README.
 
 Run WeaponReleaseContractSmokeTest 1; expected counts are
-weapon=25 ammunition=32 attachment=38.
+weapon=26 ammunition=32 attachment=38.
 
 Live-test each new model: grant, equip, refill, fire, reload, unload, repair,
 logout/rejoin, and verify native clip capacity against the configured capacity.

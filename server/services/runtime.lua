@@ -12,10 +12,10 @@ local function MaintenanceSnapshot(metadata)
     }
 end
 local tokenCounter = 0
-local validSlots = { primary = true, offhand = true, shoulder = true, back = true }
+local validSlots = { primary = true, offhand = true, shoulder = true, back = true, melee = true }
 
 local function EmptySlots()
-    return { primary = nil, offhand = nil, shoulder = nil, back = nil }
+    return { primary = nil, offhand = nil, shoulder = nil, back = nil, melee = nil }
 end
 
 function WeaponRuntime.NormalizeSlot(slot)
@@ -27,7 +27,8 @@ local function RefreshCompatibility(runtime)
     runtime.equipped = runtime.slots and runtime.slots.primary or nil
     local occupied = runtime.slots
         and (runtime.slots.primary ~= nil or runtime.slots.offhand ~= nil
-            or runtime.slots.shoulder ~= nil or runtime.slots.back ~= nil)
+            or runtime.slots.shoulder ~= nil or runtime.slots.back ~= nil
+            or runtime.slots.melee ~= nil)
     runtime.state = runtime.pending and "equipping" or (occupied and "equipped" or "idle")
 end
 
@@ -43,6 +44,7 @@ local function NextGeneration(runtime)
 end
 
 local function NativeAmmoName(definition, metadata)
+    if definition.usesAmmunition == false then return nil end
     local result = DefinitionRegistry.Get("ammunition", metadata.ammo.type or definition.ammunitionType)
     return result.ok and result.value.nativeAmmoName or nil
 end
@@ -74,7 +76,7 @@ end
 
 function WeaponRuntime.FindLeaseByItem(itemInstanceId)
     for source, runtime in pairs(sessions) do
-        for _, slot in ipairs({ "primary", "offhand", "shoulder", "back" }) do
+        for _, slot in ipairs(WeaponConstants.LoadoutSlots) do
             local equipped = runtime.slots and runtime.slots[slot] or nil
             if equipped and tostring(equipped.itemInstanceId) == tostring(itemInstanceId) then
                 return source, slot, equipped, runtime
@@ -85,6 +87,7 @@ function WeaponRuntime.FindLeaseByItem(itemInstanceId)
 end
 
 local function AmmoSnapshot(metadata, definition)
+    if definition.usesAmmunition == false then return 0, 0, 0 end
     local loaded = math.max(0, math.min(definition.capacity,
         math.floor(tonumber(metadata.ammo and metadata.ammo.loaded) or 0)))
     local reserve = math.max(0, math.floor(tonumber(metadata.ammo and metadata.ammo.reserve) or 0))
@@ -299,6 +302,10 @@ function WeaponRuntime.SetSlotAmmo(source, sessionId, slot, total, loaded, corre
     end
     local definitionResult = DefinitionRegistry.Get("weapon", equipped.definitionId)
     if not definitionResult.ok then return definitionResult end
+    if definitionResult.value.usesAmmunition == false then
+        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+            "This weapon does not use ammunition", { slot = slot }, correlationId)
+    end
     total = math.floor(tonumber(total) or -1)
     loaded = math.floor(tonumber(loaded) or -1)
     local maxTotal = WeaponValidation.EscrowMaximum(

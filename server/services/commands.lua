@@ -70,7 +70,7 @@ RegisterCommand("WeaponRuntimeLeaseSmokeTest", function(source, args)
         end
         local runtime = targetSource and WeaponRuntime.Get(targetSource) or nil
         local activeSlot, equipped = nil, nil
-        for _, slot in ipairs({ "primary", "offhand", "shoulder", "back" }) do
+        for _, slot in ipairs(WeaponConstants.LoadoutSlots) do
             local candidate = runtime and runtime.slots and runtime.slots[slot] or nil
             if candidate then
                 activeSlot, equipped = slot, candidate
@@ -140,7 +140,7 @@ RegisterCommand("WeaponAttachmentContractSmokeTest", function(source, args)
             end
         end
 
-        for _, slot in ipairs({ "primary", "offhand", "shoulder", "back" }) do
+        for _, slot in ipairs(WeaponConstants.LoadoutSlots) do
             local equipped = runtime and runtime.slots and runtime.slots[slot] or nil
             if equipped then
                 activeSlots = activeSlots + 1
@@ -495,6 +495,10 @@ RegisterCommand("WeaponDualSlotContractSmokeTest", function(source, args)
                     and Config.Inventory.equipmentSlots.offhand ~= Config.Inventory.equipmentSlots.primary
                     and Config.Inventory.equipmentSlots.shoulder ~= Config.Inventory.equipmentSlots.primary
                     and Config.Inventory.equipmentSlots.back ~= Config.Inventory.equipmentSlots.shoulder
+                    and Config.Inventory.equipmentSlots.melee ~= Config.Inventory.equipmentSlots.primary
+                    and Config.Inventory.equipmentSlots.melee ~= Config.Inventory.equipmentSlots.offhand
+                    and Config.Inventory.equipmentSlots.melee ~= Config.Inventory.equipmentSlots.shoulder
+                    and Config.Inventory.equipmentSlots.melee ~= Config.Inventory.equipmentSlots.back
             },
             {
                 name = "slot runtime initialized",
@@ -942,7 +946,7 @@ RegisterCommand("WeaponReleaseContractSmokeTest", function(source, args)
             and type(metadata.value) == "table" and type(metadata.value.slots) == "table"
         local activeSlotCount = 0
         if activeMetadataValid then
-            for _, slot in ipairs({ "primary", "offhand", "shoulder", "back" }) do
+            for _, slot in ipairs(WeaponConstants.LoadoutSlots) do
                 local entry = metadata.value.slots[slot]
                 if entry ~= nil then
                     activeSlotCount = activeSlotCount + 1
@@ -957,7 +961,7 @@ RegisterCommand("WeaponReleaseContractSmokeTest", function(source, args)
             {
                 name = "definitions ready",
                 passed = capabilities.ready == true
-                    and capabilities.definitions.weapon == 25
+                    and capabilities.definitions.weapon == 26
                     and capabilities.definitions.ammunition == 32
                     and capabilities.definitions.attachment == 38,
                 detail = ("weapon=%s ammunition=%s attachment=%s"):format(

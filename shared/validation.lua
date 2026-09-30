@@ -72,14 +72,27 @@ function WeaponValidation.Definition(definition, expectedKind)
         if definition.matchingPairSupported ~= nil then
             AddError(errors, "matchingPairSupported", "is no longer supported")
         end
-        if not IsNonEmptyString(definition.ammunitionType) then AddError(errors, "ammunitionType",
-                "must reference ammunition") end
-        ValidateStringArray(errors, "ammunitionTypes", definition.ammunitionTypes)
-        if not WeaponValidation.AcceptsAmmunition(definition, definition.ammunitionType) then
-            AddError(errors, "ammunitionTypes", "must include the default ammunitionType")
-        end
-        if type(definition.capacity) ~= "number" or definition.capacity < 1 or definition.capacity % 1 ~= 0 then
-            AddError(errors, "capacity", "must be a positive integer")
+        local usesAmmunition = definition.usesAmmunition ~= false
+        if usesAmmunition then
+            if not IsNonEmptyString(definition.ammunitionType) then AddError(errors, "ammunitionType",
+                    "must reference ammunition") end
+            ValidateStringArray(errors, "ammunitionTypes", definition.ammunitionTypes)
+            if not WeaponValidation.AcceptsAmmunition(definition, definition.ammunitionType) then
+                AddError(errors, "ammunitionTypes", "must include the default ammunitionType")
+            end
+            if type(definition.capacity) ~= "number" or definition.capacity < 1 or definition.capacity % 1 ~= 0 then
+                AddError(errors, "capacity", "must be a positive integer")
+            end
+        else
+            if definition.ammunitionType ~= nil then
+                AddError(errors, "ammunitionType", "must be absent when ammunition is disabled")
+            end
+            if type(definition.ammunitionTypes) ~= "table" or #definition.ammunitionTypes ~= 0 then
+                AddError(errors, "ammunitionTypes", "must be empty when ammunition is disabled")
+            end
+            if definition.capacity ~= 0 then
+                AddError(errors, "capacity", "must be zero when ammunition is disabled")
+            end
         end
         if type(definition.condition) ~= "table"
             or type(definition.condition.minimum) ~= "number"
@@ -182,16 +195,20 @@ function WeaponValidation.Metadata(metadata, definition)
     if type(metadata.ammo) ~= "table" then
         AddError(errors, "ammo", "must be a table")
     else
-        if not WeaponValidation.AcceptsAmmunition(definition, metadata.ammo.type or definition.ammunitionType) then
+        local usesAmmunition = definition.usesAmmunition ~= false
+        if usesAmmunition
+            and not WeaponValidation.AcceptsAmmunition(definition, metadata.ammo.type or definition.ammunitionType) then
             AddError(errors, "ammo.type", "must be compatible with this weapon")
+        elseif not usesAmmunition and metadata.ammo.type ~= nil then
+            AddError(errors, "ammo.type", "must be absent for an ammunition-free weapon")
         end
         local loaded = tonumber(metadata.ammo.loaded)
-        if not loaded or loaded < 0 or loaded > definition.capacity or loaded % 1 ~= 0 then
+        if not loaded or loaded < 0 or loaded > (tonumber(definition.capacity) or 0) or loaded % 1 ~= 0 then
             AddError(errors, "ammo.loaded", "must be an integer within weapon capacity")
         end
         local reserve = tonumber(metadata.ammo.reserve or 0)
-        local maxTotal = WeaponValidation.EscrowMaximum(
-            definition, metadata.ammo.type or definition.ammunitionType)
+        local maxTotal = usesAmmunition and WeaponValidation.EscrowMaximum(
+            definition, metadata.ammo.type or definition.ammunitionType) or 0
         if not reserve or reserve < 0 or reserve % 1 ~= 0 or (loaded or 0) + reserve > maxTotal then
             AddError(errors, "ammo.reserve", "must be a non-negative integer within the escrow limit")
         end
