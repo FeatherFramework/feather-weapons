@@ -24,6 +24,10 @@ Poison Arrows (AMMO_ARROW_POISON), and Fire Arrows (AMMO_ARROW_FIRE), bringing
 ammunition definitions to 31.
 Regular and Small Game Arrows have a definition-level 40-arrow escrow ceiling;
 Poison and Fire Arrows use the native eight-arrow special-ammunition ceiling.
+Improved Arrows are intentionally excluded: live testing with the standard Bow
+accepted the Inventory transfer but the native `AMMO_ARROW_IMPROVED` pool
+remained at zero, so exposing that route would consume Inventory without making
+the arrows usable.
 Nitro Express has a definition-level 20-round escrow ceiling, so loading from a
 larger Inventory stack moves at most 20 cartridges into the Elephant Rifle.
 Regular ammunition is the default. Each weapon also declares its supported
