@@ -6,10 +6,13 @@ WeaponConstants = {
         ammunition = true,
         attachment = true
     },
-    LoadoutSlots = { "primary", "offhand", "shoulder", "back", "melee", "melee_secondary" },
+    LoadoutSlots = {
+        "primary", "offhand", "shoulder", "back",
+        "melee", "melee_secondary", "melee_tertiary"
+    },
     SidearmSlots = { primary = true, offhand = true },
     LonggunSlots = { shoulder = true, back = true },
-    MeleeSlots = { melee = true, melee_secondary = true },
+    MeleeSlots = { melee = true, melee_secondary = true, melee_tertiary = true },
     WeaponSlots = {
         melee = true,
         sidearm = true,

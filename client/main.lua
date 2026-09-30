@@ -1,11 +1,16 @@
 FeatherWeaponsClient = {}
 local clientContract = 4
 local equipped, offhand, pendingToken, pendingNativeWeaponName = nil, nil, nil, nil
-local extraSlotNames = { 'shoulder', 'back', 'melee', 'melee_secondary' }
-local extraSlots = { shoulder = nil, back = nil, melee = nil, melee_secondary = nil }
-local extraObserved = { shoulder = nil, back = nil, melee = nil, melee_secondary = nil }
+local extraSlotNames = { 'shoulder', 'back', 'melee', 'melee_secondary', 'melee_tertiary' }
+local extraSlots = {
+    shoulder = nil, back = nil, melee = nil, melee_secondary = nil, melee_tertiary = nil
+}
+local extraObserved = {
+    shoulder = nil, back = nil, melee = nil, melee_secondary = nil, melee_tertiary = nil
+}
 local extraSyncInFlight = {
-    shoulder = false, back = false, melee = false, melee_secondary = false
+    shoulder = false, back = false, melee = false,
+    melee_secondary = false, melee_tertiary = false
 }
 local longgunReloadInFlight = false
 local syncInFlight, desiredAmmo, desiredLoaded = false, nil, nil
@@ -370,6 +375,15 @@ local function ScheduleAttachmentReconciliation(nativeWeaponName, attachments)
     end
 end
 
+local function NativeGrantAmount(nativeWeaponName)
+    for _, definition in pairs(WeaponDefinitionCatalog.weapons or {}) do
+        if definition.nativeWeaponName == nativeWeaponName then
+            return math.max(0, math.floor(tonumber(definition.nativeGrantAmount) or 0))
+        end
+    end
+    return 0
+end
+
 local function GiveApprovedNativeWeapon(nativeWeaponName, nativeAmmoName, amount, loaded, attachments, attachPoint)
     local ped = PlayerPedId()
     local ammoHash = nativeAmmoName and joaat(nativeAmmoName) or nil
@@ -382,7 +396,7 @@ local function GiveApprovedNativeWeapon(nativeWeaponName, nativeAmmoName, amount
     GiveWeaponToPed(
         ped,
         weaponHash,
-        0,
+        NativeGrantAmount(nativeWeaponName),
         false,
         true,
         math.floor(tonumber(attachPoint) or 0),
@@ -755,10 +769,15 @@ local function ClearNativeWeapon()
     RemoveOffhandEntitlements()
 
     equipped, offhand, pendingToken, pendingNativeWeaponName, desiredAmmo, desiredLoaded, syncInFlight = nil, nil, nil, nil, nil, nil, false
-    extraSlots = { shoulder = nil, back = nil, melee = nil, melee_secondary = nil }
-    extraObserved = { shoulder = nil, back = nil, melee = nil, melee_secondary = nil }
+    extraSlots = {
+        shoulder = nil, back = nil, melee = nil, melee_secondary = nil, melee_tertiary = nil
+    }
+    extraObserved = {
+        shoulder = nil, back = nil, melee = nil, melee_secondary = nil, melee_tertiary = nil
+    }
     extraSyncInFlight = {
-        shoulder = false, back = false, melee = false, melee_secondary = false
+        shoulder = false, back = false, melee = false,
+        melee_secondary = false, melee_tertiary = false
     }
     pairSyncInFlight, pairCheckpointPending, pairObserved = false, false, nil
     pairConsumed = { primary = 0, offhand = 0 }
@@ -782,7 +801,7 @@ end
 local function SlotLabel(slot)
     return ({
         primary = 'Primary', offhand = 'Offhand', shoulder = 'Shoulder', back = 'Back',
-        melee = 'Melee', melee_secondary = 'Second Melee'
+        melee = 'Melee', melee_secondary = 'Second Melee', melee_tertiary = 'Third Melee'
     })[slot] or slot
 end
 
@@ -939,6 +958,7 @@ local function ScheduleMaintenanceRestore()
             ApplySlotMaintenance('back', extraSlots.back)
             ApplySlotMaintenance('melee', extraSlots.melee)
             ApplySlotMaintenance('melee_secondary', extraSlots.melee_secondary)
+            ApplySlotMaintenance('melee_tertiary', extraSlots.melee_tertiary)
         end)
     end
 end
@@ -1624,7 +1644,8 @@ function FeatherWeaponsClient.Reconcile(callback, options)
             end
         elseif slots.primary then
             ApplyApprovedWeapon(slots.primary)
-        elseif slots.shoulder or slots.back or slots.melee or slots.melee_secondary then
+        elseif slots.shoulder or slots.back or slots.melee or slots.melee_secondary
+            or slots.melee_tertiary then
             ClearSidearmsPreservingLongguns()
         else
             ClearNativeWeapon()
@@ -1664,7 +1685,7 @@ function FeatherWeaponsClient.Reconcile(callback, options)
         RefreshSharedLonggunPools()
         ScheduleMaintenanceRestore()
         if options.holster == true and (equipped or offhand or extraSlots.shoulder or extraSlots.back
-            or extraSlots.melee or extraSlots.melee_secondary) then
+            or extraSlots.melee or extraSlots.melee_secondary or extraSlots.melee_tertiary) then
             ScheduleRestoredWeaponsHolster()
         end
 
@@ -1809,7 +1830,8 @@ end
 -- replace or mutate an Inventory-authorized weapon.
 function FeatherWeaponsClient.GetDiagnosticState()
     if not equipped and not offhand and not extraSlots.shoulder and not extraSlots.back
-        and not extraSlots.melee and not extraSlots.melee_secondary then
+        and not extraSlots.melee and not extraSlots.melee_secondary
+        and not extraSlots.melee_tertiary then
         return { equipped = false }
     end
 
@@ -1830,7 +1852,8 @@ function FeatherWeaponsClient.GetDiagnosticState()
         shoulder = extraSlots.shoulder,
         back = extraSlots.back,
         melee = extraSlots.melee,
-        melee_secondary = extraSlots.melee_secondary
+        melee_secondary = extraSlots.melee_secondary,
+        melee_tertiary = extraSlots.melee_tertiary
     }
 end
 
@@ -1860,7 +1883,8 @@ BeginUnload = function()
     if unloadInFlight then return end
 
     if not equipped and not offhand and not extraSlots.shoulder and not extraSlots.back
-        and not extraSlots.melee and not extraSlots.melee_secondary then
+        and not extraSlots.melee and not extraSlots.melee_secondary
+        and not extraSlots.melee_tertiary then
         Notify('No weapon is equipped.')
         return
     end
@@ -2010,7 +2034,8 @@ RegisterNetEvent('feather-weapons:client:useInventoryWeapon', function(itemInsta
         -- remains authoritative. Recover the toggle using the returned slot
         -- rather than treating an already-equipped item as a new equip request.
         if not equipped and not offhand and not extraSlots.shoulder and not extraSlots.back
-            and not extraSlots.melee and not extraSlots.melee_secondary then
+            and not extraSlots.melee and not extraSlots.melee_secondary
+            and not extraSlots.melee_tertiary then
             for slot, approved in pairs(result.value and result.value.slots or {}) do
                 if SameInstance(approved.itemInstanceId, itemInstanceId) then
                     FeatherWeaponsClient.Unequip(function(removed, error)
@@ -2183,7 +2208,8 @@ local BuildModificationPage
 
 BuildModificationMenu = function(preferredSlot)
     if not equipped and not offhand and not extraSlots.shoulder and not extraSlots.back
-        and not extraSlots.melee and not extraSlots.melee_secondary then
+        and not extraSlots.melee and not extraSlots.melee_secondary
+        and not extraSlots.melee_tertiary then
         Notify('Equip a weapon before modifying it.')
         return
     end
@@ -2823,7 +2849,7 @@ local function BuildRepairMenu(selectionSlots)
         local selected = choice
         local location = ({
             primary = true, offhand = true, shoulder = true, back = true,
-            melee = true, melee_secondary = true
+            melee = true, melee_secondary = true, melee_tertiary = true
         })[choice.location]
             and SlotLabel(choice.location) or tostring(choice.location or 'Inventory')
         AddWeaponElement(RepairPage, 'button', { label = ('%s: %s (%s%%)'):format(location,
@@ -2860,7 +2886,7 @@ RegisterNetEvent('feather-weapons:client:inventoryAmmoResult', function(result)
     end
 
     if result and result.ok and (equipped or offhand or extraSlots.shoulder or extraSlots.back
-        or extraSlots.melee or extraSlots.melee_secondary) then
+        or extraSlots.melee or extraSlots.melee_secondary or extraSlots.melee_tertiary) then
         local slot = result.value.slot or 'primary'
         local state = SlotState(slot)
         if not state then
@@ -3496,10 +3522,11 @@ exports('CheckpointBeforeLogout', function()
     local deadline = GetGameTimer() + 2000
     while (longgunReloadInFlight or syncInFlight or pairSyncInFlight
             or extraSyncInFlight.shoulder or extraSyncInFlight.back or extraSyncInFlight.melee
-            or extraSyncInFlight.melee_secondary
+            or extraSyncInFlight.melee_secondary or extraSyncInFlight.melee_tertiary
             or maintenanceSyncInFlight.primary or maintenanceSyncInFlight.offhand
             or maintenanceSyncInFlight.shoulder or maintenanceSyncInFlight.back
-            or maintenanceSyncInFlight.melee or maintenanceSyncInFlight.melee_secondary)
+            or maintenanceSyncInFlight.melee or maintenanceSyncInFlight.melee_secondary
+            or maintenanceSyncInFlight.melee_tertiary)
         and GetGameTimer() < deadline do
         Wait(25)
     end
@@ -3621,10 +3648,12 @@ if Config.DevMode then
                     clipOk, loaded = GetAmmoInClip(ped, joaat(state.nativeWeaponName))
                 end
 
-                print(('[feather-weapons] runtime local %s item=%s generation=%s total=%s loaded=%s reserve=%s nativeLoaded=%s clipOk=%s')
+                local nativeOwned = NativeTrue(Citizen.InvokeNative(
+                    0x8DECB02F88F428BC, ped, joaat(state.nativeWeaponName), 0, false)) -- HasPedGotWeapon
+                print(('[feather-weapons] runtime local %s item=%s generation=%s total=%s loaded=%s reserve=%s nativeLoaded=%s clipOk=%s nativeOwned=%s')
                     :format(slot, tostring(state.itemInstanceId), tostring(state.generation),
                         tostring(state.ammo), tostring(state.loaded), tostring(state.reserve),
-                        tostring(loaded), tostring(clipOk)))
+                        tostring(loaded), tostring(clipOk), tostring(nativeOwned)))
             end
         end
 

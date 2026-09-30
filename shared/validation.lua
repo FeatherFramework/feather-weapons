@@ -69,6 +69,10 @@ function WeaponValidation.Definition(definition, expectedKind)
         if not IsNonEmptyString(definition.nativeWeaponName) then AddError(errors, "nativeWeaponName",
                 "must be a non-empty string") end
         if not WeaponConstants.WeaponSlots[definition.slot] then AddError(errors, "slot", "is not supported") end
+        if definition.nativeGrantAmount ~= nil and (type(definition.nativeGrantAmount) ~= "number"
+            or definition.nativeGrantAmount < 0 or definition.nativeGrantAmount % 1 ~= 0) then
+            AddError(errors, "nativeGrantAmount", "must be a non-negative integer")
+        end
         if definition.matchingPairSupported ~= nil then
             AddError(errors, "matchingPairSupported", "is no longer supported")
         end

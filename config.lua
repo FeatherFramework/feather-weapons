@@ -13,7 +13,8 @@ Config = {
             shoulder = "weapon_shoulder",
             back = "weapon_back",
             melee = "weapon_melee",
-            melee_secondary = "weapon_melee_secondary"
+            melee_secondary = "weapon_melee_secondary",
+            melee_tertiary = "weapon_melee_tertiary"
         }
     },
     Runtime = {
@@ -70,7 +71,7 @@ Config = {
         -- definitions marked longgun fill shoulder/back.
         sidearmSlots = { "primary", "offhand" },
         longgunSlots = { "shoulder", "back" },
-        meleeSlots = { "melee", "melee_secondary" },
+        meleeSlots = { "melee", "melee_secondary", "melee_tertiary" },
         -- RedM's two weapon-wheel long-gun positions. These are the native
         -- RIFLE and RIFLE_ALTERNATE attach points, not cosmetic body bones.
         -- In-game layout: point 10 is the shoulder carry and point 9 is the

@@ -6,7 +6,8 @@ local preferredPoints = {
     shoulder = { 10, 9 },
     back = { 9, 10 },
     melee = { 0, 1, 2, 3 },
-    melee_secondary = { 0, 1, 2, 3 }
+    melee_secondary = { 0, 1, 2, 3 },
+    melee_tertiary = { 0, 1, 2, 3 }
 }
 
 local function NativeTrue(value)

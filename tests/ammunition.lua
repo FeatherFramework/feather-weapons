@@ -396,6 +396,10 @@ local meleeDefinition = {
 }
 check(WeaponValidation.Definition(meleeDefinition, 'weapon'),
     'Ammunition-free melee definition validates')
+meleeDefinition.nativeGrantAmount = -1
+check(not WeaponValidation.Definition(meleeDefinition, 'weapon'),
+    'Negative native grant amount is rejected')
+meleeDefinition.nativeGrantAmount = nil
 local meleeMetadata = WeaponMetadata.Build(meleeDefinition, { serialNumber = 'TEST-MELEE' })
 check(meleeMetadata.ok and meleeMetadata.value.ammo.loaded == 0
     and meleeMetadata.value.ammo.reserve == 0,
@@ -417,6 +421,18 @@ local secondMeleeRuntime = WeaponRuntime.RestoreEquipped(1, 'test', items[6],
 check(secondMeleeRuntime.ok and WeaponRuntime.Get(1).slots.melee ~= nil
     and WeaponRuntime.Get(1).slots.melee_secondary ~= nil,
     'Distinct melee models coexist in two persistent slots')
+local thirdMeleeDefinition = copy(meleeDefinition)
+thirdMeleeDefinition.id = 'melee_cleaver'
+thirdMeleeDefinition.nativeWeaponName = 'WEAPON_MELEE_CLEAVER'
+local thirdMeleeMetadata = WeaponMetadata.Build(thirdMeleeDefinition,
+    { serialNumber = 'TEST-MELEE-TERTIARY' })
+items[7] = { id = 7, metadata = thirdMeleeMetadata.value, metadataRevision = 1 }
+local thirdMeleeRuntime = WeaponRuntime.RestoreEquipped(1, 'test', items[7],
+    thirdMeleeDefinition, 'test', 'melee_tertiary')
+check(thirdMeleeRuntime.ok and WeaponRuntime.Get(1).slots.melee ~= nil
+    and WeaponRuntime.Get(1).slots.melee_secondary ~= nil
+    and WeaponRuntime.Get(1).slots.melee_tertiary ~= nil,
+    'Distinct melee models coexist in three persistent slots')
 
 local originalAttachments = copy(WeaponDefinitionCatalog.attachments)
 WeaponDefinitionCatalog.attachments.cattleman_wide_sight.prerequisites = { 'cattleman_long_barrel' }

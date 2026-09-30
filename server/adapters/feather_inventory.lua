@@ -227,7 +227,9 @@ function FeatherInventoryProvider.GetEquippedSlotsForCharacter(context)
         back = result.value and result.value[configured.back or "weapon_back"] or nil,
         melee = result.value and result.value[configured.melee or "weapon_melee"] or nil,
         melee_secondary = result.value
-            and result.value[configured.melee_secondary or "weapon_melee_secondary"] or nil
+            and result.value[configured.melee_secondary or "weapon_melee_secondary"] or nil,
+        melee_tertiary = result.value
+            and result.value[configured.melee_tertiary or "weapon_melee_tertiary"] or nil
     }, context.correlationId)
 end
 
