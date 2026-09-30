@@ -19,10 +19,11 @@ The Bow currently declares no functional attachment slots.
 
 The Varmint Rifle uses ammo_varmint. The Elephant Rifle uses
 ammo_rifle_elephant (AMMO_RIFLE_ELEPHANT). The Bow uses
-ammo_arrow_regular (AMMO_ARROW), Small Game Arrows (AMMO_ARROW_SMALL_GAME), and
-Poison Arrows (AMMO_ARROW_POISON), bringing ammunition definitions to 30.
+ammo_arrow_regular (AMMO_ARROW), Small Game Arrows (AMMO_ARROW_SMALL_GAME),
+Poison Arrows (AMMO_ARROW_POISON), and Fire Arrows (AMMO_ARROW_FIRE), bringing
+ammunition definitions to 31.
 Regular and Small Game Arrows have a definition-level 40-arrow escrow ceiling;
-Poison Arrows use the native eight-arrow special-ammunition ceiling.
+Poison and Fire Arrows use the native eight-arrow special-ammunition ceiling.
 Nitro Express has a definition-level 20-round escrow ceiling, so loading from a
 larger Inventory stack moves at most 20 cartridges into the Elephant Rifle.
 Regular ammunition is the default. Each weapon also declares its supported
@@ -43,7 +44,7 @@ Existing installations using the old inventory names must first run
 sql/rename_weapon_item_names.sql as described in the README.
 
 Run WeaponReleaseContractSmokeTest 1; expected counts are
-weapon=25 ammunition=30 attachment=38.
+weapon=25 ammunition=31 attachment=38.
 
 Live-test each new model: grant, equip, refill, fire, reload, unload, repair,
 logout/rejoin, and verify native clip capacity against the configured capacity.
