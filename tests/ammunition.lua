@@ -406,6 +406,17 @@ local meleeRuntime = WeaponRuntime.RestoreEquipped(1, 'test', items[5], meleeDef
 check(meleeRuntime.ok and meleeRuntime.value.nativeAmmoName == nil
     and meleeRuntime.value.ammo == 0,
     'Ammunition-free melee runtime occupies its dedicated slot')
+local secondMeleeDefinition = copy(meleeDefinition)
+secondMeleeDefinition.id = 'melee_machete'
+secondMeleeDefinition.nativeWeaponName = 'WEAPON_MELEE_MACHETE'
+local secondMeleeMetadata = WeaponMetadata.Build(secondMeleeDefinition,
+    { serialNumber = 'TEST-MELEE-SECONDARY' })
+items[6] = { id = 6, metadata = secondMeleeMetadata.value, metadataRevision = 1 }
+local secondMeleeRuntime = WeaponRuntime.RestoreEquipped(1, 'test', items[6],
+    secondMeleeDefinition, 'test', 'melee_secondary')
+check(secondMeleeRuntime.ok and WeaponRuntime.Get(1).slots.melee ~= nil
+    and WeaponRuntime.Get(1).slots.melee_secondary ~= nil,
+    'Distinct melee models coexist in two persistent slots')
 
 local originalAttachments = copy(WeaponDefinitionCatalog.attachments)
 WeaponDefinitionCatalog.attachments.cattleman_wide_sight.prerequisites = { 'cattleman_long_barrel' }

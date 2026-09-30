@@ -12,10 +12,16 @@ local function MaintenanceSnapshot(metadata)
     }
 end
 local tokenCounter = 0
-local validSlots = { primary = true, offhand = true, shoulder = true, back = true, melee = true }
+local validSlots = {
+    primary = true, offhand = true, shoulder = true, back = true,
+    melee = true, melee_secondary = true
+}
 
 local function EmptySlots()
-    return { primary = nil, offhand = nil, shoulder = nil, back = nil, melee = nil }
+    return {
+        primary = nil, offhand = nil, shoulder = nil, back = nil,
+        melee = nil, melee_secondary = nil
+    }
 end
 
 function WeaponRuntime.NormalizeSlot(slot)
@@ -28,7 +34,7 @@ local function RefreshCompatibility(runtime)
     local occupied = runtime.slots
         and (runtime.slots.primary ~= nil or runtime.slots.offhand ~= nil
             or runtime.slots.shoulder ~= nil or runtime.slots.back ~= nil
-            or runtime.slots.melee ~= nil)
+            or runtime.slots.melee ~= nil or runtime.slots.melee_secondary ~= nil)
     runtime.state = runtime.pending and "equipping" or (occupied and "equipped" or "idle")
 end
 

@@ -905,6 +905,37 @@ WeaponDefinitionCatalog.weapons = {
         },
         tags = { "melee", "knife" }
     },
+    melee_machete = {
+        id = "melee_machete",
+        kind = "weapon",
+        itemName = "weapon_melee_machete",
+        label = "Machete",
+        nativeWeaponName = "WEAPON_MELEE_MACHETE",
+        family = "machete",
+        slot = "melee",
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "melee", "machete" }
+    },
     bow = {
         id = "bow",
         kind = "weapon",

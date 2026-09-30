@@ -499,6 +499,11 @@ RegisterCommand("WeaponDualSlotContractSmokeTest", function(source, args)
                     and Config.Inventory.equipmentSlots.melee ~= Config.Inventory.equipmentSlots.offhand
                     and Config.Inventory.equipmentSlots.melee ~= Config.Inventory.equipmentSlots.shoulder
                     and Config.Inventory.equipmentSlots.melee ~= Config.Inventory.equipmentSlots.back
+                    and Config.Inventory.equipmentSlots.melee_secondary ~= Config.Inventory.equipmentSlots.melee
+                    and Config.Inventory.equipmentSlots.melee_secondary ~= Config.Inventory.equipmentSlots.primary
+                    and Config.Inventory.equipmentSlots.melee_secondary ~= Config.Inventory.equipmentSlots.offhand
+                    and Config.Inventory.equipmentSlots.melee_secondary ~= Config.Inventory.equipmentSlots.shoulder
+                    and Config.Inventory.equipmentSlots.melee_secondary ~= Config.Inventory.equipmentSlots.back
             },
             {
                 name = "slot runtime initialized",
@@ -961,7 +966,7 @@ RegisterCommand("WeaponReleaseContractSmokeTest", function(source, args)
             {
                 name = "definitions ready",
                 passed = capabilities.ready == true
-                    and capabilities.definitions.weapon == 26
+                    and capabilities.definitions.weapon == 27
                     and capabilities.definitions.ammunition == 32
                     and capabilities.definitions.attachment == 38,
                 detail = ("weapon=%s ammunition=%s attachment=%s"):format(
