@@ -887,7 +887,8 @@ WeaponDefinitionCatalog.weapons = {
             "ammo_arrow_regular",
             "ammo_arrow_small_game",
             "ammo_arrow_poison",
-            "ammo_arrow_fire"
+            "ammo_arrow_fire",
+            "ammo_arrow_dynamite"
         },
         capacity = 1,
         condition = {

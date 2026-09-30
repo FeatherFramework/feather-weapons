@@ -20,10 +20,11 @@ The Bow currently declares no functional attachment slots.
 The Varmint Rifle uses ammo_varmint. The Elephant Rifle uses
 ammo_rifle_elephant (AMMO_RIFLE_ELEPHANT). The Bow uses
 ammo_arrow_regular (AMMO_ARROW), Small Game Arrows (AMMO_ARROW_SMALL_GAME),
-Poison Arrows (AMMO_ARROW_POISON), and Fire Arrows (AMMO_ARROW_FIRE), bringing
-ammunition definitions to 31.
+Poison Arrows (AMMO_ARROW_POISON), Fire Arrows (AMMO_ARROW_FIRE), and Dynamite
+Arrows (AMMO_ARROW_DYNAMITE), bringing ammunition definitions to 32.
 Regular and Small Game Arrows have a definition-level 40-arrow escrow ceiling;
-Poison and Fire Arrows use the native eight-arrow special-ammunition ceiling.
+Poison, Fire, and Dynamite Arrows use the native eight-arrow
+special-ammunition ceiling.
 Improved Arrows are intentionally excluded: live testing with the standard Bow
 accepted the Inventory transfer but the native `AMMO_ARROW_IMPROVED` pool
 remained at zero, so exposing that route would consume Inventory without making
@@ -48,7 +49,7 @@ Existing installations using the old inventory names must first run
 sql/rename_weapon_item_names.sql as described in the README.
 
 Run WeaponReleaseContractSmokeTest 1; expected counts are
-weapon=25 ammunition=31 attachment=38.
+weapon=25 ammunition=32 attachment=38.
 
 Live-test each new model: grant, equip, refill, fire, reload, unload, repair,
 logout/rejoin, and verify native clip capacity against the configured capacity.

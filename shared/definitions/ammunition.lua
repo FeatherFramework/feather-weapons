@@ -306,5 +306,16 @@ WeaponDefinitionCatalog.ammunition = {
         maxTotal = 8,
         stackable = true,
         tags = { "bow", "arrow", "fire", "craft" }
+    },
+    ammo_arrow_dynamite = {
+        id = "ammo_arrow_dynamite",
+        kind = "ammunition",
+        itemName = "ammo_arrow_dynamite",
+        label = "Arrow - Dynamite",
+        nativeAmmoName = "AMMO_ARROW_DYNAMITE",
+        -- Crafted special arrows use the smaller native carrying pool.
+        maxTotal = 8,
+        stackable = true,
+        tags = { "bow", "arrow", "dynamite", "craft" }
     }
 }

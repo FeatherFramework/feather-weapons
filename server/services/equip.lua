@@ -34,46 +34,6 @@ function EquipService.ValidateOwnedItem(context, itemInstanceId)
     if not definitionResult.ok then return definitionResult end
     local definition = definitionResult.value
 
-    -- Improved Arrows were briefly exposed during live validation, but the
-    -- standard Bow's native pool remained at zero. Repair only the empty
-    -- metadata produced by that retired route so affected Bow instances can
-    -- equip again. Ammunition recovery remains an explicit Inventory action.
-    local ammo = type(metadata.ammo) == "table" and metadata.ammo or nil
-    local retiredEmptyImprovedArrow = definition.id == "bow"
-        and ammo and ammo.type == "ammo_arrow_improved"
-        and math.max(0, math.floor(tonumber(ammo.loaded) or 0)) == 0
-        and math.max(0, math.floor(tonumber(ammo.reserve) or 0)) == 0
-    if retiredEmptyImprovedArrow then
-        local normalized = InventoryAdapter.Transaction(context, function(tx)
-            local current = tx:GetItemForUpdate(itemInstanceId)
-            local currentAmmo = current and type(current.metadata) == "table"
-                and type(current.metadata.ammo) == "table" and current.metadata.ammo or nil
-            if not current or not currentAmmo
-                or currentAmmo.type ~= "ammo_arrow_improved"
-                or math.max(0, math.floor(tonumber(currentAmmo.loaded) or 0)) ~= 0
-                or math.max(0, math.floor(tonumber(currentAmmo.reserve) or 0)) ~= 0 then
-                return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
-                    "Weapon metadata changed during retired ammunition recovery", nil,
-                    context.correlationId)
-            end
-            currentAmmo.type = definition.ammunitionType
-            currentAmmo.loaded = 0
-            currentAmmo.reserve = 0
-            currentAmmo.chambered = false
-            if not tx:SetMetadata(current.id, current.metadata, current.metadataRevision) then
-                return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
-                    "Weapon metadata changed during retired ammunition recovery", nil,
-                    context.correlationId)
-            end
-            return true
-        end)
-        if not normalized.ok then return normalized end
-        itemResult = InventoryAdapter.GetItemForCharacter(context, itemInstanceId)
-        if not itemResult.ok then return itemResult end
-        item = itemResult.value
-        metadata = item.metadata
-    end
-
     if item.itemName ~= definition.itemName then
         return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Item definition does not match weapon metadata", {
             itemName = item.itemName,
