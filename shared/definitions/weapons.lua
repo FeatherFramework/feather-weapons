@@ -968,6 +968,38 @@ WeaponDefinitionCatalog.weapons = {
         },
         tags = { "melee", "cleaver" }
     },
+    melee_hatchet = {
+        id = "melee_hatchet",
+        kind = "weapon",
+        itemName = "weapon_melee_hatchet",
+        label = "Hatchet",
+        nativeWeaponName = "WEAPON_MELEE_HATCHET",
+        family = "hatchet",
+        slot = "melee",
+        nativeGrantAmount = 1,
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "melee", "hatchet" }
+    },
     bow = {
         id = "bow",
         kind = "weapon",

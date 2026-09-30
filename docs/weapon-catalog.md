@@ -3,9 +3,9 @@
 The catalog contains 24 standard firearms: four pistols, five revolvers,
 four repeaters, six rifles (including scoped rifles and the Elephant Rifle),
 and five shotguns. It also contains the standard Bow as the first
-ammunition-using special weapon plus the standard Knife, Machete, and Cleaver as
-ammunition-free melee weapons. Named story-character and special cosmetic
-variants are not included.
+ammunition-using special weapon plus the standard Knife, Machete, Cleaver, and
+Hatchet as ammunition-free melee weapons. Named story-character and special
+cosmetic variants are not included.
 
 Melee weapons use distinct persistent logical positions while sharing RedM's
 single melee-wheel category. Live testing confirmed that the Knife and Machete
@@ -14,7 +14,10 @@ visible while holstered. The Machete becomes visible only when selected and uses
 its native cross-draw presentation. The Cleaver also coexists in that category,
 cycles normally, and remains usable. Although its metadata is ammunition-free,
 RedM requires one native grant unit to materialize this recoverable throwable
-weapon in the wheel.
+weapon in the wheel. The Hatchet is the fourth coexistence slice and uses the
+same bounded native-grant rule. Live testing confirmed all four models remain
+native-owned and selectable together; the Hatchet uses the same native draw
+presentation as the Machete and Cleaver.
 
 Inventory names use the weapon_ prefix. Catalog IDs remain independent;
 Lancaster maps to WEAPON_REPEATER_WINCHESTER and Litchfield to
@@ -59,7 +62,7 @@ Existing installations using the old inventory names must first run
 sql/rename_weapon_item_names.sql as described in the README.
 
 Run WeaponReleaseContractSmokeTest 1; expected counts are
-weapon=28 ammunition=32 attachment=38.
+weapon=29 ammunition=32 attachment=38.
 
 Live-test each new model: grant, equip, refill, fire, reload, unload, repair,
 logout/rejoin, and verify native clip capacity against the configured capacity.

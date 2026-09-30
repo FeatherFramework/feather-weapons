@@ -433,6 +433,20 @@ check(thirdMeleeRuntime.ok and WeaponRuntime.Get(1).slots.melee ~= nil
     and WeaponRuntime.Get(1).slots.melee_secondary ~= nil
     and WeaponRuntime.Get(1).slots.melee_tertiary ~= nil,
     'Distinct melee models coexist in three persistent slots')
+local fourthMeleeDefinition = copy(meleeDefinition)
+fourthMeleeDefinition.id = 'melee_hatchet'
+fourthMeleeDefinition.nativeWeaponName = 'WEAPON_MELEE_HATCHET'
+fourthMeleeDefinition.nativeGrantAmount = 1
+local fourthMeleeMetadata = WeaponMetadata.Build(fourthMeleeDefinition,
+    { serialNumber = 'TEST-MELEE-QUATERNARY' })
+items[8] = { id = 8, metadata = fourthMeleeMetadata.value, metadataRevision = 1 }
+local fourthMeleeRuntime = WeaponRuntime.RestoreEquipped(1, 'test', items[8],
+    fourthMeleeDefinition, 'test', 'melee_quaternary')
+check(fourthMeleeRuntime.ok and WeaponRuntime.Get(1).slots.melee ~= nil
+    and WeaponRuntime.Get(1).slots.melee_secondary ~= nil
+    and WeaponRuntime.Get(1).slots.melee_tertiary ~= nil
+    and WeaponRuntime.Get(1).slots.melee_quaternary ~= nil,
+    'Distinct melee models coexist in four persistent slots')
 
 local originalAttachments = copy(WeaponDefinitionCatalog.attachments)
 WeaponDefinitionCatalog.attachments.cattleman_wide_sight.prerequisites = { 'cattleman_long_barrel' }
