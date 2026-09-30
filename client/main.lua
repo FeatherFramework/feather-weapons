@@ -1712,6 +1712,30 @@ function FeatherWeaponsClient.Reconcile(callback, options)
     end)
 end
 
+local function ThrowablePoolReady(slot, state, observed)
+    if not WeaponConstants.ThrowableSlots[slot] then return true end
+    if observed.nativePoolReady then return true end
+    local approvedTotal = math.max(0, math.floor(tonumber(state.ammo) or 0))
+    local nativeTotal = type(state.nativeAmmoName) == 'string' and math.max(0,
+        math.floor(tonumber(GetPedAmmoByType(PlayerPedId(), joaat(state.nativeAmmoName))) or 0)) or 0
+    if Config.DevMode and observed.simulatePoolFailure == true then
+        nativeTotal = 0
+    end
+    if nativeTotal == approvedTotal then
+        observed.nativePoolReady = true
+        return true
+    end
+    -- A pool that never accepted the approved balance is not evidence of a
+    -- throw. Preserve escrow so the owner can unload the exact selected type.
+    if not observed.nativePoolWarning then
+        observed.nativePoolWarning = true
+        Notify('Throwable ammunition could not be verified in the native pool. Saved ammunition is preserved; unload it before changing types.')
+        print(('[feather-weapons] throwable pool unverified slot=%s ammo=%s approved=%s native=%s')
+            :format(slot, tostring(state.nativeAmmoName), tostring(approvedTotal), tostring(nativeTotal)))
+    end
+    return false
+end
+
 FlushExtraSlot = function(slot, callback)
     if maintenanceSyncInFlight[slot] then
         SetTimeout(50, function() FlushExtraSlot(slot, callback) end)
@@ -1722,6 +1746,11 @@ FlushExtraSlot = function(slot, callback)
     local observed = extraObserved[slot]
     if not state or not observed or extraSyncInFlight[slot] then
         if callback then callback({ ok = true, value = { skipped = true } }) end
+        return
+    end
+
+    if not ThrowablePoolReady(slot, state, observed) then
+        if callback then callback({ ok = true, value = state }) end
         return
     end
 
@@ -3234,7 +3263,8 @@ CreateThread(function()
         for _, slot in ipairs({ 'shoulder', 'back', 'throwable', 'throwable_secondary' }) do
             local state = extraSlots[slot]
             local observed = extraObserved[slot]
-            if state and observed and not logoutCheckpointInFlight then
+            if state and observed and not logoutCheckpointInFlight
+                and ThrowablePoolReady(slot, state, observed) then
                 active = true
                 local weaponHash = joaat(state.nativeWeaponName)
                 local clipOk, clipAmount = GetAmmoInClip(ped, weaponHash)
@@ -3674,6 +3704,29 @@ if Config.DevMode then
         end
     end, false)
 
+    RegisterCommand('weaponthrowablepoolfailure', function(_, args)
+        local slot = args and args[1] or 'throwable'
+        local state = extraSlots[slot]
+        if not WeaponConstants.ThrowableSlots[slot] or not state
+            or not state.nativeAmmoName or (tonumber(state.ammo) or 0) < 1
+            or extraSyncInFlight[slot] or inventoryWeaponInFlight
+            or logoutCheckpointInFlight then
+            Notify('Load a throwable and wait for pending operations before testing native pool failure.')
+            return
+        end
+        -- Simulate a fresh application that never accepted its approved pool.
+        -- Override only the verification read. Native setters may immediately
+        -- restore the real pool, so zeroing them is not a reliable fault test.
+        -- A new observation on unload/reconcile clears this lease-local fault.
+        extraObserved[slot] = {
+            loaded = state.loaded, consumed = 0, recovered = 0,
+            simulatePoolFailure = true
+        }
+        ThrowablePoolReady(slot, state, extraObserved[slot])
+        print(('[feather-weapons] simulated throwable application failure slot=%s item=%s approved=%s; inspect metadata, then unload to verify conservation')
+            :format(slot, tostring(state.itemInstanceId), tostring(state.ammo)))
+    end, false)
+
     -- Read-only native snapshot that can capture a broken wheel/holster
     -- presentation without repairing or replacing coordinator-owned GUIDs.
     RegisterCommand('weaponruntime', function()
@@ -3724,6 +3777,12 @@ if Config.DevMode then
                     :format(slot, tostring(state.itemInstanceId), tostring(state.generation),
                         tostring(state.ammo), tostring(state.loaded), tostring(state.reserve),
                         tostring(loaded), tostring(clipOk), tostring(nativeOwned)))
+                if WeaponConstants.ThrowableSlots[slot] then
+                    local observed = extraObserved[slot]
+                    print(('[feather-weapons] runtime throwable verification slot=%s ready=%s simulatedFailure=%s')
+                        :format(slot, tostring(observed and observed.nativePoolReady == true),
+                            tostring(Config.DevMode and observed and observed.simulatePoolFailure == true)))
+                end
             end
         end
 

@@ -56,6 +56,58 @@ at three Tomahawks and six Throwing Knives, with runtime lease `5/5` and release
 contract `9/9` passing. Cross-player pickup transfer remains deferred for both
 families pending the server-owned projectile/pickup ledger described above.
 
+Improved Tomahawk ammunition failed live validation on the target build.
+After loading it into the standard carrier, the weapon disappeared from the
+wheel and `AMMO_TOMAHAWK_IMPROVED` remained at zero. Runtime synchronization
+persisted a zero ammunition total despite no successful throw. Lease and
+release smoke tests still passed; those checks do not establish native ammo
+support. Switching the test carrier back to Regular restored agreement at
+three Tomahawks in metadata and the native pool, while co-equipped Throwing
+Knives remained at six. The experimental definition, carrier compatibility,
+and recipe seed were removed. Improved Tomahawks are excluded from release
+on this build.
+After removing the route and restarting Weapons, metadata inspection confirmed
+both carriers restored at three regular Tomahawks and six Throwing Knives with
+runtime matches. Runtime lease passed `5/5` and release contract passed `9/9`
+with `weapon=31 ammunition=34 attachment=38`, completing rollback validation.
+
+Homing Tomahawk ammunition also failed live validation through the standard
+carrier on the target build. The wheel behavior matched the Improved test,
+`AMMO_TOMAHAWK_HOMING` stayed at zero, and runtime synchronization persisted
+zero ammunition without a successful throw. Co-equipped Throwing Knives stayed
+at six; lease and release smoke tests passed `5/5` and `9/9`. This route is not
+accepted for release. Returning to Regular restored metadata/native agreement
+at three Tomahawks while Throwing Knives remained at six. The Homing definition,
+carrier compatibility, and recipe seed were removed after that recovery.
+Post-removal Weapons restart restored both carriers at those same totals with
+all seven equipped slots matching runtime. Runtime lease passed `5/5` and
+release contract passed `9/9` with `weapon=31 ammunition=34 attachment=38`,
+completing Homing rollback validation.
+
+Throwable consumption tracking now waits for the selected native pool to match
+the approved escrow balance after restore or ammunition application. Until
+that initial verification succeeds, checkpoints preserve the saved balance and
+the owner can unload the exact selected ammunition type. A diagnostic identifies
+the mismatch. This guard does not make
+the excluded Improved or Homing routes supported. Regular Tomahawk regression
+passed throw, self-recovery, and exact unload checks, with a final zero escrow
+and unchanged six-knife balance. Lease and release checks passed `5/5` and `9/9`.
+The DevMode-only `weaponthrowablepoolfailure <slot>` command simulates a fresh
+native application by overriding the verification read to zero while preserving
+the approved escrow and the real native pool. The fault belongs to the current
+local observation and clears on unload/reconciliation or resource restart.
+Do not throw while the fault is active. `weaponruntime` reports the real pool
+separately from `simulatedFailure` and verification readiness.
+Live fault-injection validation produced `approved=3 native=0` at the guard,
+with `ready=false simulatedFailure=true`. Metadata inspection retained all
+three escrowed Tomahawks while the simulated mismatch was active. Subsequent
+unload left the carrier at zero; Throwing Knives remained at six throughout.
+Runtime lease and release contract passed `5/5` and `9/9`. The real native pool
+remained three during this synthetic test, so this proves handling of the
+injected verification mismatch rather than native support for excluded types.
+Manual confirmation verified that exactly three regular Tomahawks returned to
+Inventory on unload, completing the injected-failure conservation check.
+
 Inventory names use the weapon_ prefix. Catalog IDs remain independent;
 Lancaster maps to WEAPON_REPEATER_WINCHESTER and Litchfield to
 WEAPON_REPEATER_HENRY. Scoped rifles use the WEAPON_SNIPERRIFLE natives.
