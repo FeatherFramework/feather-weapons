@@ -19,6 +19,21 @@ same bounded native-grant rule. Live testing confirmed all four models remain
 native-owned and selectable together; the Hatchet uses the same native draw
 presentation as the Machete and Cleaver.
 
+Throwing Knives begin the dedicated throwable catalog. The unique carrier uses
+its own persistent throwable position while regular knives are Inventory-backed
+ammunition mapped to `AMMO_THROWING_KNIVES`. Each native throw must reduce the
+approved escrow rather than the unique carrier item. The target RedM build
+clamps the native pool to eight, so excess knives remain in Inventory. Live
+testing confirmed that two throws commit a reduction from eight to six. Picking
+up those same world objects spends the recovery credit created by the committed
+throws, restores the carrier escrow, and keeps the wheel and later unload in
+agreement. Recovery cannot exceed the number previously thrown by that active
+runtime lease, so unrelated native pickups cannot mint authoritative ownership.
+Cross-player recovery is deferred: transferring a thrown knife to another
+character requires a server-owned projectile/pickup ledger that identifies the
+physical knife, consumes its entitlement exactly once, and credits the picker
+without leaving recovery credit available to the thrower.
+
 Inventory names use the weapon_ prefix. Catalog IDs remain independent;
 Lancaster maps to WEAPON_REPEATER_WINCHESTER and Litchfield to
 WEAPON_REPEATER_HENRY. Scoped rifles use the WEAPON_SNIPERRIFLE natives.
@@ -62,7 +77,7 @@ Existing installations using the old inventory names must first run
 sql/rename_weapon_item_names.sql as described in the README.
 
 Run WeaponReleaseContractSmokeTest 1; expected counts are
-weapon=29 ammunition=32 attachment=38.
+weapon=30 ammunition=33 attachment=38.
 
 Live-test each new model: grant, equip, refill, fire, reload, unload, repair,
 logout/rejoin, and verify native clip capacity against the configured capacity.

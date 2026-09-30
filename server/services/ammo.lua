@@ -1,5 +1,20 @@
 AmmoService = {}
 
+-- A throwable may be recovered from the world only after this runtime lease
+-- has committed an equal number as consumed. Credits are intentionally
+-- ephemeral: a resource/session restart discards them instead of allowing an
+-- unverifiable ammunition increase.
+local throwableRecoveryCredits = {}
+
+local function RecoveryCreditKey(source, rpcContext, equipped)
+    return table.concat({
+        tostring(source),
+        tostring(rpcContext.sessionId),
+        tostring(equipped.itemInstanceId),
+        tostring(equipped.generation)
+    }, ':')
+end
+
 local function Context(source, rpcContext, reason)
     return {
         actorSource = source,
@@ -740,8 +755,13 @@ function AmmoService.SyncConsumption(source, rpcContext, params)
     local definitionResult = DefinitionRegistry.Get('weapon', equipped.definitionId)
     if not definitionResult.ok then return definitionResult end
 
-    if reportedTotal < 0 or reportedTotal > equipped.ammo or reportedLoaded < 0
-        or reportedLoaded > definitionResult.value.capacity or reportedLoaded > reportedTotal then
+    local definition = definitionResult.value
+    local recoveryKey = RecoveryCreditKey(source, rpcContext, equipped)
+    local recoveryCredit = math.max(0, math.floor(tonumber(throwableRecoveryCredits[recoveryKey]) or 0))
+    local maxTotal = WeaponValidation.EscrowMaximum(definition, equipped.ammunitionType)
+
+    if reportedTotal < 0 or reportedTotal > maxTotal or reportedLoaded < 0
+        or reportedLoaded > definition.capacity or reportedLoaded > reportedTotal then
         return WeaponResult.Error(WeaponErrors.ITEM_INVALID, 'Reported ammunition is outside the approved range', nil, rpcContext.correlationId)
     end
 
@@ -755,11 +775,16 @@ function AmmoService.SyncConsumption(source, rpcContext, params)
         local current = tonumber(item.metadata.ammo.loaded) or 0
         local currentReserve = tonumber(item.metadata.ammo.reserve) or 0
         local currentTotal = current + currentReserve
-        if reportedTotal > currentTotal then
-            return WeaponResult.Error(WeaponErrors.ITEM_INVALID, 'Ammunition increases are not accepted from the client', nil, context.correlationId)
+        local recovered = math.max(0, reportedTotal - currentTotal)
+        if recovered > 0 and (definition.slot ~= 'throwable' or recovered > recoveryCredit) then
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+                'Ammunition recovery exceeds the committed throwable recovery credit', {
+                    requested = recovered,
+                    available = definition.slot == 'throwable' and recoveryCredit or 0
+                }, context.correlationId)
         end
 
-        local consumed = currentTotal - reportedTotal
+        local consumed = math.max(0, currentTotal - reportedTotal)
         item.metadata.ammo.loaded = reportedLoaded
         item.metadata.ammo.reserve = reportedTotal - reportedLoaded
         item.metadata.ammo.chambered = reportedLoaded > 0
@@ -773,12 +798,18 @@ function AmmoService.SyncConsumption(source, rpcContext, params)
             loaded = reportedLoaded,
             reserve = reportedTotal - reportedLoaded,
             consumed = consumed,
+            recovered = recovered,
             condition = item.metadata.condition,
             broken = false
         }
     end)
 
     if not transactionResult.ok then return transactionResult end
+
+    if definition.slot == 'throwable' then
+        throwableRecoveryCredits[recoveryKey] = math.max(0,
+            recoveryCredit + transactionResult.value.consumed - transactionResult.value.recovered)
+    end
 
     WeaponRuntime.SetSlotAmmo(source, rpcContext.sessionId, slot, reportedTotal, reportedLoaded, rpcContext.correlationId)
     WeaponRuntime.SetSlotCondition(source, rpcContext.sessionId, slot, transactionResult.value.condition, rpcContext.correlationId)

@@ -317,5 +317,17 @@ WeaponDefinitionCatalog.ammunition = {
         maxTotal = 8,
         stackable = true,
         tags = { "bow", "arrow", "dynamite", "craft" }
+    },
+
+    ammo_throwing_knives_regular = {
+        id = "ammo_throwing_knives_regular",
+        kind = "ammunition",
+        itemName = "ammo_throwing_knives_regular",
+        label = "Throwing Knife - Regular",
+        nativeAmmoName = "AMMO_THROWING_KNIVES",
+        -- The target RedM build clamps regular throwing knives to eight.
+        maxTotal = 8,
+        stackable = true,
+        tags = { "throwable", "throwing_knife", "regular", "purchase" }
     }
 }

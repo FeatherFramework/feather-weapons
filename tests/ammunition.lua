@@ -447,6 +447,35 @@ check(fourthMeleeRuntime.ok and WeaponRuntime.Get(1).slots.melee ~= nil
     and WeaponRuntime.Get(1).slots.melee_tertiary ~= nil
     and WeaponRuntime.Get(1).slots.melee_quaternary ~= nil,
     'Distinct melee models coexist in four persistent slots')
+local throwableDefinition = DefinitionRegistry.Get('weapon', 'throwable_throwing_knives').value
+local throwableMetadata = WeaponMetadata.Build(throwableDefinition,
+    { serialNumber = 'TEST-THROWABLE' })
+throwableMetadata.value.ammo.loaded = 1
+throwableMetadata.value.ammo.reserve = 7
+throwableMetadata.value.ammo.chambered = true
+items[9] = { id = 9, metadata = throwableMetadata.value, metadataRevision = 1 }
+local throwableRuntime = WeaponRuntime.RestoreEquipped(1, 'test', items[9],
+    throwableDefinition, 'test', 'throwable')
+check(throwableRuntime.ok and WeaponRuntime.Get(1).slots.throwable ~= nil
+    and throwableRuntime.value.nativeAmmoName == 'AMMO_THROWING_KNIVES',
+    'Throwable weapon occupies its dedicated persistent slot')
+local throwableLease = copy(throwableRuntime.value)
+local throwableConsumed = AmmoService.SyncConsumption(1, context, {
+    slot = 'throwable', itemInstanceId = throwableLease.itemInstanceId,
+    generation = throwableLease.generation, total = 6, loaded = 1
+})
+check(throwableConsumed.ok and throwableConsumed.value.consumed == 2,
+    'Throwable throws create bounded recovery credit')
+local throwableRecovered = AmmoService.SyncConsumption(1, context, {
+    slot = 'throwable', itemInstanceId = throwableLease.itemInstanceId,
+    generation = throwableLease.generation, total = 8, loaded = 1
+})
+check(throwableRecovered.ok and throwableRecovered.value.recovered == 2,
+    'Picked-up throwables restore escrow against recovery credit')
+check(not AmmoService.SyncConsumption(1, context, {
+    slot = 'throwable', itemInstanceId = throwableLease.itemInstanceId,
+    generation = throwableLease.generation, total = 9, loaded = 1
+}).ok, 'Throwable recovery cannot exceed its native cap or recovery credit')
 
 local originalAttachments = copy(WeaponDefinitionCatalog.attachments)
 WeaponDefinitionCatalog.attachments.cattleman_wide_sight.prerequisites = { 'cattleman_long_barrel' }

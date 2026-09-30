@@ -1000,6 +1000,37 @@ WeaponDefinitionCatalog.weapons = {
         },
         tags = { "melee", "hatchet" }
     },
+    throwable_throwing_knives = {
+        id = "throwable_throwing_knives",
+        kind = "weapon",
+        itemName = "weapon_throwable_throwing_knives",
+        label = "Throwing Knives",
+        nativeWeaponName = "WEAPON_THROWN_THROWING_KNIVES",
+        family = "throwing_knife",
+        slot = "throwable",
+        ammunitionType = "ammo_throwing_knives_regular",
+        ammunitionTypes = { "ammo_throwing_knives_regular" },
+        capacity = 1,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "throwable", "throwing_knife" }
+    },
     bow = {
         id = "bow",
         kind = "weapon",

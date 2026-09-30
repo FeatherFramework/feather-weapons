@@ -8,7 +8,8 @@ local preferredPoints = {
     melee = { 0, 1, 2, 3 },
     melee_secondary = { 0, 1, 2, 3 },
     melee_tertiary = { 0, 1, 2, 3 },
-    melee_quaternary = { 0, 1, 2, 3 }
+    melee_quaternary = { 0, 1, 2, 3 },
+    throwable = { 0, 1, 2, 3 }
 }
 
 local function NativeTrue(value)

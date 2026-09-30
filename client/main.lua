@@ -2,19 +2,21 @@ FeatherWeaponsClient = {}
 local clientContract = 4
 local equipped, offhand, pendingToken, pendingNativeWeaponName = nil, nil, nil, nil
 local extraSlotNames = {
-    'shoulder', 'back', 'melee', 'melee_secondary', 'melee_tertiary', 'melee_quaternary'
+    'shoulder', 'back', 'melee', 'melee_secondary', 'melee_tertiary', 'melee_quaternary',
+    'throwable'
 }
 local extraSlots = {
     shoulder = nil, back = nil, melee = nil, melee_secondary = nil,
-    melee_tertiary = nil, melee_quaternary = nil
+    melee_tertiary = nil, melee_quaternary = nil, throwable = nil
 }
 local extraObserved = {
     shoulder = nil, back = nil, melee = nil, melee_secondary = nil,
-    melee_tertiary = nil, melee_quaternary = nil
+    melee_tertiary = nil, melee_quaternary = nil, throwable = nil
 }
 local extraSyncInFlight = {
     shoulder = false, back = false, melee = false,
-    melee_secondary = false, melee_tertiary = false, melee_quaternary = false
+    melee_secondary = false, melee_tertiary = false, melee_quaternary = false,
+    throwable = false
 }
 local longgunReloadInFlight = false
 local syncInFlight, desiredAmmo, desiredLoaded = false, nil, nil
@@ -775,15 +777,16 @@ local function ClearNativeWeapon()
     equipped, offhand, pendingToken, pendingNativeWeaponName, desiredAmmo, desiredLoaded, syncInFlight = nil, nil, nil, nil, nil, nil, false
     extraSlots = {
         shoulder = nil, back = nil, melee = nil, melee_secondary = nil,
-        melee_tertiary = nil, melee_quaternary = nil
+        melee_tertiary = nil, melee_quaternary = nil, throwable = nil
     }
     extraObserved = {
         shoulder = nil, back = nil, melee = nil, melee_secondary = nil,
-        melee_tertiary = nil, melee_quaternary = nil
+        melee_tertiary = nil, melee_quaternary = nil, throwable = nil
     }
     extraSyncInFlight = {
         shoulder = false, back = false, melee = false,
-        melee_secondary = false, melee_tertiary = false, melee_quaternary = false
+        melee_secondary = false, melee_tertiary = false, melee_quaternary = false,
+        throwable = false
     }
     pairSyncInFlight, pairCheckpointPending, pairObserved = false, false, nil
     pairConsumed = { primary = 0, offhand = 0 }
@@ -808,7 +811,7 @@ local function SlotLabel(slot)
     return ({
         primary = 'Primary', offhand = 'Offhand', shoulder = 'Shoulder', back = 'Back',
         melee = 'Melee', melee_secondary = 'Second Melee', melee_tertiary = 'Third Melee',
-        melee_quaternary = 'Fourth Melee'
+        melee_quaternary = 'Fourth Melee', throwable = 'Throwable'
     })[slot] or slot
 end
 
@@ -967,6 +970,7 @@ local function ScheduleMaintenanceRestore()
             ApplySlotMaintenance('melee_secondary', extraSlots.melee_secondary)
             ApplySlotMaintenance('melee_tertiary', extraSlots.melee_tertiary)
             ApplySlotMaintenance('melee_quaternary', extraSlots.melee_quaternary)
+            ApplySlotMaintenance('throwable', extraSlots.throwable)
         end)
     end
 end
@@ -1486,7 +1490,7 @@ function FeatherWeaponsClient.Checkpoint(callback, skipExtras)
     callback = type(callback) == 'function' and callback or function(_result) end
 
     local extras = {}
-    for _, slot in ipairs({ 'shoulder', 'back' }) do
+    for _, slot in ipairs({ 'shoulder', 'back', 'throwable' }) do
         if extraSlots[slot] then extras[#extras + 1] = slot end
     end
     if not skipExtras and #extras > 0 then
@@ -1653,7 +1657,7 @@ function FeatherWeaponsClient.Reconcile(callback, options)
         elseif slots.primary then
             ApplyApprovedWeapon(slots.primary)
         elseif slots.shoulder or slots.back or slots.melee or slots.melee_secondary
-            or slots.melee_tertiary or slots.melee_quaternary then
+            or slots.melee_tertiary or slots.melee_quaternary or slots.throwable then
             ClearSidearmsPreservingLongguns()
         else
             ClearNativeWeapon()
@@ -1665,7 +1669,7 @@ function FeatherWeaponsClient.Reconcile(callback, options)
                 local state = ApprovedState(approved)
                 local previous = extraSlots[slot]
                 extraSlots[slot] = state
-                extraObserved[slot] = { loaded = state.loaded, consumed = 0 }
+                extraObserved[slot] = { loaded = state.loaded, consumed = 0, recovered = 0 }
                 if not previous
                     or not SameInstance(previous.itemInstanceId, state.itemInstanceId)
                     or previous.generation ~= state.generation then
@@ -1694,7 +1698,7 @@ function FeatherWeaponsClient.Reconcile(callback, options)
         ScheduleMaintenanceRestore()
         if options.holster == true and (equipped or offhand or extraSlots.shoulder or extraSlots.back
             or extraSlots.melee or extraSlots.melee_secondary or extraSlots.melee_tertiary
-            or extraSlots.melee_quaternary) then
+            or extraSlots.melee_quaternary or extraSlots.throwable) then
             ScheduleRestoredWeaponsHolster()
         end
 
@@ -1717,8 +1721,10 @@ FlushExtraSlot = function(slot, callback)
         return
     end
 
-    local total = math.max(0, state.ammo - observed.consumed)
-    if observed.consumed == 0 and observed.loaded == state.loaded then
+    local total = math.max(0, state.ammo - observed.consumed
+        + math.floor(tonumber(observed.recovered) or 0))
+    if observed.consumed == 0 and (tonumber(observed.recovered) or 0) == 0
+        and observed.loaded == state.loaded then
         if callback then callback({ ok = true, value = state }) end
         return
     end
@@ -1726,6 +1732,7 @@ FlushExtraSlot = function(slot, callback)
     extraSyncInFlight[slot] = true
     local itemInstanceId, generation = state.itemInstanceId, state.generation
     local submittedConsumed = observed.consumed
+    local submittedRecovered = math.max(0, math.floor(tonumber(observed.recovered) or 0))
     FeatherCore.RPC.Call('feather-weapons:ammo:sync', {
         slot = slot,
         total = total,
@@ -1746,6 +1753,8 @@ FlushExtraSlot = function(slot, callback)
             current.reserve = tonumber(result.value.reserve) or (current.ammo - current.loaded)
             current.condition = tonumber(result.value.condition) or current.condition
             observed.consumed = math.max(0, observed.consumed - submittedConsumed)
+            observed.recovered = math.max(0,
+                math.floor(tonumber(observed.recovered) or 0) - submittedRecovered)
             if result.value.broken then
                 ClearNativeWeapon()
                 FeatherWeaponsClient.Reconcile()
@@ -1840,7 +1849,8 @@ end
 function FeatherWeaponsClient.GetDiagnosticState()
     if not equipped and not offhand and not extraSlots.shoulder and not extraSlots.back
         and not extraSlots.melee and not extraSlots.melee_secondary
-        and not extraSlots.melee_tertiary and not extraSlots.melee_quaternary then
+        and not extraSlots.melee_tertiary and not extraSlots.melee_quaternary
+        and not extraSlots.throwable then
         return { equipped = false }
     end
 
@@ -1863,7 +1873,8 @@ function FeatherWeaponsClient.GetDiagnosticState()
         melee = extraSlots.melee,
         melee_secondary = extraSlots.melee_secondary,
         melee_tertiary = extraSlots.melee_tertiary,
-        melee_quaternary = extraSlots.melee_quaternary
+        melee_quaternary = extraSlots.melee_quaternary,
+        throwable = extraSlots.throwable
     }
 end
 
@@ -1894,7 +1905,8 @@ BeginUnload = function()
 
     if not equipped and not offhand and not extraSlots.shoulder and not extraSlots.back
         and not extraSlots.melee and not extraSlots.melee_secondary
-        and not extraSlots.melee_tertiary and not extraSlots.melee_quaternary then
+        and not extraSlots.melee_tertiary and not extraSlots.melee_quaternary
+        and not extraSlots.throwable then
         Notify('No weapon is equipped.')
         return
     end
@@ -2045,7 +2057,8 @@ RegisterNetEvent('feather-weapons:client:useInventoryWeapon', function(itemInsta
         -- rather than treating an already-equipped item as a new equip request.
         if not equipped and not offhand and not extraSlots.shoulder and not extraSlots.back
             and not extraSlots.melee and not extraSlots.melee_secondary
-            and not extraSlots.melee_tertiary and not extraSlots.melee_quaternary then
+            and not extraSlots.melee_tertiary and not extraSlots.melee_quaternary
+            and not extraSlots.throwable then
             for slot, approved in pairs(result.value and result.value.slots or {}) do
                 if SameInstance(approved.itemInstanceId, itemInstanceId) then
                     FeatherWeaponsClient.Unequip(function(removed, error)
@@ -2219,7 +2232,8 @@ local BuildModificationPage
 BuildModificationMenu = function(preferredSlot)
     if not equipped and not offhand and not extraSlots.shoulder and not extraSlots.back
         and not extraSlots.melee and not extraSlots.melee_secondary
-        and not extraSlots.melee_tertiary and not extraSlots.melee_quaternary then
+        and not extraSlots.melee_tertiary and not extraSlots.melee_quaternary
+        and not extraSlots.throwable then
         Notify('Equip a weapon before modifying it.')
         return
     end
@@ -2507,6 +2521,7 @@ local function AmmunitionUnitLabels(weapon)
     local family = type(weapon) == 'table' and weapon.family or nil
     if family == 'bow' then return 'arrow', 'arrows' end
     if family == 'shotgun' then return 'shell', 'shells' end
+    if family == 'throwing_knife' then return 'knife', 'knives' end
     return 'cartridge', 'cartridges'
 end
 
@@ -2563,6 +2578,8 @@ local function LoadedContainerLabel(weapon)
     if weapon.family == 'shotgun' then return 'Chamber/tube' end
 
     if weapon.family == 'bow' then return 'Nocked' end
+
+    if weapon.family == 'throwing_knife' then return 'Readied' end
 
     return 'Magazine'
 end
@@ -2859,7 +2876,8 @@ local function BuildRepairMenu(selectionSlots)
         local selected = choice
         local location = ({
             primary = true, offhand = true, shoulder = true, back = true,
-            melee = true, melee_secondary = true, melee_tertiary = true, melee_quaternary = true
+            melee = true, melee_secondary = true, melee_tertiary = true, melee_quaternary = true,
+            throwable = true
         })[choice.location]
             and SlotLabel(choice.location) or tostring(choice.location or 'Inventory')
         AddWeaponElement(RepairPage, 'button', { label = ('%s: %s (%s%%)'):format(location,
@@ -2897,7 +2915,7 @@ RegisterNetEvent('feather-weapons:client:inventoryAmmoResult', function(result)
 
     if result and result.ok and (equipped or offhand or extraSlots.shoulder or extraSlots.back
         or extraSlots.melee or extraSlots.melee_secondary or extraSlots.melee_tertiary
-        or extraSlots.melee_quaternary) then
+        or extraSlots.melee_quaternary or extraSlots.throwable) then
         local slot = result.value.slot or 'primary'
         local state = SlotState(slot)
         if not state then
@@ -2962,7 +2980,7 @@ RegisterNetEvent('feather-weapons:client:inventoryAmmoResult', function(result)
                     primary.ammo, primary.nativeWeaponName, primary.loaded)
             end
         else
-            extraObserved[slot] = { loaded = state.loaded, consumed = 0 }
+            extraObserved[slot] = { loaded = state.loaded, consumed = 0, recovered = 0 }
             SetNativeAmmo(state.nativeAmmoName, state.ammo,
                 state.nativeWeaponName, state.loaded)
         end
@@ -3204,13 +3222,33 @@ CreateThread(function()
         end
         wasShooting = shooting
 
-        for _, slot in ipairs({ 'shoulder', 'back' }) do
+        for _, slot in ipairs({ 'shoulder', 'back', 'throwable' }) do
             local state = extraSlots[slot]
             local observed = extraObserved[slot]
             if state and observed and not logoutCheckpointInFlight then
                 active = true
                 local weaponHash = joaat(state.nativeWeaponName)
                 local clipOk, clipAmount = GetAmmoInClip(ped, weaponHash)
+                local poolRecovery = 0
+                if slot == 'throwable' and type(state.nativeAmmoName) == 'string' then
+                    -- Throwable inventory is represented by the ammo-type pool.
+                    -- Some builds do not expose a firearm-style clip surface,
+                    -- so synthesize the one readied item from the owned pool.
+                    local authorized = math.max(0, math.floor(tonumber(state.ammo) or 0)
+                        - math.floor(tonumber(observed.consumed) or 0)
+                        + math.floor(tonumber(observed.recovered) or 0))
+                    local nativeTotal = math.max(0, math.floor(tonumber(
+                        GetPedAmmoByType(ped, joaat(state.nativeAmmoName))) or 0))
+                    if nativeTotal > authorized then
+                        -- The server accepts this increase only against recovery
+                        -- credit created by previously committed throws.
+                        poolRecovery = nativeTotal - authorized
+                        observed.recovered = math.floor(tonumber(observed.recovered) or 0)
+                            + poolRecovery
+                    end
+                    clipAmount = math.min(1, nativeTotal)
+                    clipOk = true
+                end
                 if NativeTrue(clipOk) then
                     local loaded = math.max(0, math.floor(tonumber(clipAmount) or 0))
                     local clipDecrease = math.max(0, observed.loaded - loaded)
@@ -3221,7 +3259,8 @@ CreateThread(function()
                     local poolDecrease = 0
                     if isolatedAmmoPool and state.nativeAmmoName then
                         local authorized = math.max(0,
-                            (tonumber(state.ammo) or 0) - observed.consumed)
+                            (tonumber(state.ammo) or 0) - observed.consumed
+                                + math.floor(tonumber(observed.recovered) or 0))
                         local nativeTotal = math.max(0, math.floor(tonumber(
                             GetPedAmmoByType(ped, joaat(state.nativeAmmoName))) or 0))
                         poolDecrease = math.max(0, authorized - nativeTotal)
@@ -3249,7 +3288,8 @@ CreateThread(function()
                         if sharedShot then attributedShotSequence = shotSequence end
                     end
 
-                    local changed = loaded ~= observed.loaded or poolDecrease > 0 or sharedShot
+                    local changed = loaded ~= observed.loaded or poolDecrease > 0
+                        or poolRecovery > 0 or sharedShot
                     observed.loaded = loaded
                     if changed then
                         local itemInstanceId, generation = state.itemInstanceId, state.generation
@@ -3356,7 +3396,7 @@ CreateThread(function()
                             if state and state.nativeAmmoName == nativeAmmoName then
                                 local loaded = math.max(0, math.floor(tonumber(intendedClips[slot]) or state.loaded or 0))
                                 SetAmmoInClip(ped, joaat(state.nativeWeaponName), loaded)
-                                extraObserved[slot] = { loaded = loaded, consumed = 0 }
+                                extraObserved[slot] = { loaded = loaded, consumed = 0, recovered = 0 }
                                 clipTotal = clipTotal + loaded
                             end
                         end
@@ -3534,11 +3574,12 @@ exports('CheckpointBeforeLogout', function()
     while (longgunReloadInFlight or syncInFlight or pairSyncInFlight
             or extraSyncInFlight.shoulder or extraSyncInFlight.back or extraSyncInFlight.melee
             or extraSyncInFlight.melee_secondary or extraSyncInFlight.melee_tertiary
-            or extraSyncInFlight.melee_quaternary
+            or extraSyncInFlight.melee_quaternary or extraSyncInFlight.throwable
             or maintenanceSyncInFlight.primary or maintenanceSyncInFlight.offhand
             or maintenanceSyncInFlight.shoulder or maintenanceSyncInFlight.back
             or maintenanceSyncInFlight.melee or maintenanceSyncInFlight.melee_secondary
-            or maintenanceSyncInFlight.melee_tertiary or maintenanceSyncInFlight.melee_quaternary)
+            or maintenanceSyncInFlight.melee_tertiary or maintenanceSyncInFlight.melee_quaternary
+            or maintenanceSyncInFlight.throwable)
         and GetGameTimer() < deadline do
         Wait(25)
     end
