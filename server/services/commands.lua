@@ -534,6 +534,17 @@ RegisterCommand("WeaponDualSlotContractSmokeTest", function(source, args)
                     and Config.Inventory.equipmentSlots.throwable_secondary ~= Config.Inventory.equipmentSlots.offhand
                     and Config.Inventory.equipmentSlots.throwable_secondary ~= Config.Inventory.equipmentSlots.shoulder
                     and Config.Inventory.equipmentSlots.throwable_secondary ~= Config.Inventory.equipmentSlots.back
+                    and type(Config.Inventory.equipmentSlots.throwable_tertiary) == 'string'
+                    and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.throwable
+                    and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.throwable_secondary
+                    and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.melee
+                    and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.melee_secondary
+                    and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.melee_tertiary
+                    and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.melee_quaternary
+                    and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.primary
+                    and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.offhand
+                    and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.shoulder
+                    and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.back
             },
             {
                 name = "slot runtime initialized",
@@ -996,8 +1007,8 @@ RegisterCommand("WeaponReleaseContractSmokeTest", function(source, args)
             {
                 name = "definitions ready",
                 passed = capabilities.ready == true
-                    and capabilities.definitions.weapon == 31
-                    and capabilities.definitions.ammunition == 34
+                    and capabilities.definitions.weapon == 32
+                    and capabilities.definitions.ammunition == 35
                     and capabilities.definitions.attachment == 38,
                 detail = ("weapon=%s ammunition=%s attachment=%s"):format(
                     tostring(capabilities.definitions.weapon),

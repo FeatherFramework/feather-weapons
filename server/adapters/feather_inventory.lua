@@ -235,7 +235,9 @@ function FeatherInventoryProvider.GetEquippedSlotsForCharacter(context)
         throwable = result.value
             and result.value[configured.throwable or "weapon_throwable"] or nil,
         throwable_secondary = result.value
-            and result.value[configured.throwable_secondary or "weapon_throwable_secondary"] or nil
+            and result.value[configured.throwable_secondary or "weapon_throwable_secondary"] or nil,
+        throwable_tertiary = result.value
+            and result.value[configured.throwable_tertiary or "weapon_throwable_tertiary"] or nil
     }, context.correlationId)
 end
 

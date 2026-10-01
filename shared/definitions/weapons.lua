@@ -1062,6 +1062,37 @@ WeaponDefinitionCatalog.weapons = {
         },
         tags = { "throwable", "tomahawk" }
     },
+    throwable_tomahawk_ancient = {
+        id = "throwable_tomahawk_ancient",
+        kind = "weapon",
+        itemName = "weapon_throwable_tomahawk_ancient",
+        label = "Ancient Tomahawk",
+        nativeWeaponName = "WEAPON_THROWN_TOMAHAWK_ANCIENT",
+        family = "tomahawk",
+        slot = "throwable",
+        ammunitionType = "ammo_tomahawk_ancient",
+        ammunitionTypes = { "ammo_tomahawk_ancient" },
+        capacity = 1,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "throwable", "tomahawk", "ancient" }
+    },
     bow = {
         id = "bow",
         kind = "weapon",

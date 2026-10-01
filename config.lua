@@ -17,7 +17,8 @@ Config = {
             melee_tertiary = "weapon_melee_tertiary",
             melee_quaternary = "weapon_melee_quaternary",
             throwable = "weapon_throwable",
-            throwable_secondary = "weapon_throwable_secondary"
+            throwable_secondary = "weapon_throwable_secondary",
+            throwable_tertiary = "weapon_throwable_tertiary"
         }
     },
     Runtime = {
@@ -75,7 +76,7 @@ Config = {
         sidearmSlots = { "primary", "offhand" },
         longgunSlots = { "shoulder", "back" },
         meleeSlots = { "melee", "melee_secondary", "melee_tertiary", "melee_quaternary" },
-        throwableSlots = { "throwable", "throwable_secondary" },
+        throwableSlots = { "throwable", "throwable_secondary", "throwable_tertiary" },
         -- RedM's two weapon-wheel long-gun positions. These are the native
         -- RIFLE and RIFLE_ALTERNATE attach points, not cosmetic body bones.
         -- In-game layout: point 10 is the shoulder carry and point 9 is the

@@ -341,5 +341,16 @@ WeaponDefinitionCatalog.ammunition = {
         maxTotal = 3,
         stackable = true,
         tags = { "throwable", "tomahawk", "regular", "purchase" }
+    },
+    ammo_tomahawk_ancient = {
+        id = "ammo_tomahawk_ancient",
+        kind = "ammunition",
+        itemName = "ammo_tomahawk_ancient",
+        label = "Tomahawk - Ancient",
+        nativeAmmoName = "AMMO_TOMAHAWK_ANCIENT",
+        -- Target-build GetMaxAmmo reports one; one-item lifecycle passed live testing.
+        maxTotal = 1,
+        stackable = true,
+        tags = { "throwable", "tomahawk", "ancient" }
     }
 }

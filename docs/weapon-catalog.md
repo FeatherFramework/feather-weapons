@@ -108,6 +108,33 @@ injected verification mismatch rather than native support for excluded types.
 Manual confirmation verified that exactly three regular Tomahawks returned to
 Inventory on unload, completing the injected-failure conservation check.
 
+Ancient Tomahawk is a completed live-test slice with a separate unique carrier
+and `WEAPON_THROWN_TOMAHAWK_ANCIENT` / `AMMO_TOMAHAWK_ANCIENT` mapping. Its
+one-item escrow ceiling matches the target-build native carrying limit.
+It uses the existing throwable category with a third persistent position,
+`throwable_tertiary`, allowing all three distinct carriers to coexist.
+Native usability, recovery, conservation, and resource-restart restoration
+passed live validation.
+Initial live testing confirmed native ownership and wheel cycling with standard
+Tomahawk and Throwing Knives in all three throwable positions. Ancient metadata
+and `AMMO_TOMAHAWK_ANCIENT` both reported one, with verification ready; standard
+Tomahawk and Throwing Knives retained three and six respectively. All eight
+equipped slots matched runtime. Lease, release, and multi-slot contracts passed
+`5/5`, `9/9`, and `17/17` with `weapon=32 ammunition=35 attachment=38`.
+One loaded Ancient Tomahawk proves usability at one, not the maximum native pool.
+The one-item lifecycle manual checks passed: throwing removed Ancient from the
+wheel, same-player pickup restored one, unloading returned one item, and reload
+plus Weapons restart restored all three carriers. Final metadata and native
+pools agreed at one Ancient Tomahawk, three standard Tomahawks, and six Throwing
+Knives, with eight runtime-matching slots, lease `5/5`, and release `9/9`.
+Subsequent post-throw metadata inspection confirmed Ancient persisted
+`total=0 loaded=0 reserve=0` with a runtime match, while standard Tomahawk and
+Throwing Knives remained at three and six. The one-item consumption checkpoint
+is accepted. The read-only `weaponthrowablecapacity` query subsequently reported
+successful `GetMaxAmmo` results of one Ancient Tomahawk, three standard
+Tomahawks, and eight Throwing Knives. The latter two match prior live pool
+tests, confirming the configured one-item Ancient ceiling on the target build.
+
 Inventory names use the weapon_ prefix. Catalog IDs remain independent;
 Lancaster maps to WEAPON_REPEATER_WINCHESTER and Litchfield to
 WEAPON_REPEATER_HENRY. Scoped rifles use the WEAPON_SNIPERRIFLE natives.
@@ -151,7 +178,7 @@ Existing installations using the old inventory names must first run
 sql/rename_weapon_item_names.sql as described in the README.
 
 Run WeaponReleaseContractSmokeTest 1; expected counts are
-weapon=31 ammunition=34 attachment=38.
+weapon=32 ammunition=35 attachment=38.
 
 Live-test each new model: grant, equip, refill, fire, reload, unload, repair,
 logout/rejoin, and verify native clip capacity against the configured capacity.
