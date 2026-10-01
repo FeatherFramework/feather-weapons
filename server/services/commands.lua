@@ -545,6 +545,15 @@ RegisterCommand("WeaponDualSlotContractSmokeTest", function(source, args)
                     and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.offhand
                     and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.shoulder
                     and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.back
+                    and (function()
+                        local seen = {}
+                        for _, slot in ipairs(WeaponConstants.LoadoutSlots) do
+                            local mapped = Config.Inventory.equipmentSlots[slot]
+                            if type(mapped) ~= 'string' or mapped == '' or seen[mapped] then return false end
+                            seen[mapped] = true
+                        end
+                        return true
+                    end)()
             },
             {
                 name = "slot runtime initialized",
@@ -729,6 +738,12 @@ RegisterCommand("WeaponMetadataInspect", function(source, args)
             tostring(item and item.loaded), tostring(item and item.reserve),
             tostring(item and item.condition), tostring(item and #(item.attachments or {})),
             tostring(item and item.runtimeMatches or false)))
+        if item and item.ammoPools then
+            for id, total in pairs(item.ammoPools) do
+                print(('[WeaponMetadataInspect] pool slot=%s type=%s total=%s runtimeMatch=%s')
+                    :format(slot, id, tostring(total), tostring(item.runtimeMatches)))
+            end
+        end
     end
 end, true)
 
@@ -1007,8 +1022,8 @@ RegisterCommand("WeaponReleaseContractSmokeTest", function(source, args)
             {
                 name = "definitions ready",
                 passed = capabilities.ready == true
-                    and capabilities.definitions.weapon == 32
-                    and capabilities.definitions.ammunition == 35
+                    and capabilities.definitions.weapon == 34
+                    and capabilities.definitions.ammunition == 38
                     and capabilities.definitions.attachment == 38,
                 detail = ("weapon=%s ammunition=%s attachment=%s"):format(
                     tostring(capabilities.definitions.weapon),
@@ -1039,6 +1054,7 @@ RegisterCommand("WeaponReleaseContractSmokeTest", function(source, args)
                 name = "runtime routes present",
                 passed = routes["feather-weapons:equip:request"] == true
                     and routes["feather-weapons:ammo:sync"] == true
+                    and routes["feather-weapons:ammo:syncPools"] == true
                     and routes["feather-weapons:ammo:pairSync"] == true
                     and routes["feather-weapons:ammo:unload"] == true
                     and routes["feather-weapons:ammo:loadSlot"] == true

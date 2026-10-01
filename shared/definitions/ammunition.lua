@@ -331,6 +331,17 @@ WeaponDefinitionCatalog.ammunition = {
         tags = { "throwable", "throwing_knife", "regular", "purchase" }
     },
 
+    ammo_throwing_knives_poison = {
+        id = "ammo_throwing_knives_poison",
+        kind = "ammunition",
+        itemName = "ammo_throwing_knives_poison",
+        label = "Throwing Knife - Poison",
+        nativeAmmoName = "AMMO_THROWING_KNIVES_POISON",
+        -- Eight-item load, restart, consumption and exact unload passed live testing.
+        maxTotal = 8,
+        stackable = true,
+        tags = { "throwable", "throwing_knife", "poison", "craft" }
+    },
     ammo_tomahawk_regular = {
         id = "ammo_tomahawk_regular",
         kind = "ammunition",
@@ -341,6 +352,28 @@ WeaponDefinitionCatalog.ammunition = {
         maxTotal = 3,
         stackable = true,
         tags = { "throwable", "tomahawk", "regular", "purchase" }
+    },
+    ammo_bolas_regular = {
+        id = "ammo_bolas_regular",
+        kind = "ammunition",
+        itemName = "ammo_bolas_regular",
+        label = "Bolas - Regular",
+        nativeAmmoName = "AMMO_BOLAS",
+        -- Candidate ceiling; target-build capacity/lifecycle verification pending.
+        maxTotal = 3,
+        stackable = true,
+        tags = { "throwable", "bolas", "regular", "purchase" }
+    },
+    ammo_bolas_hawkmoth = {
+        id = "ammo_bolas_hawkmoth",
+        kind = "ammunition",
+        itemName = "ammo_bolas_hawkmoth",
+        label = "Bolas - Hawkmoth",
+        nativeAmmoName = "AMMO_BOLAS_HAWKMOTH",
+        -- Candidate ceiling; target-build capacity/lifecycle verification pending.
+        maxTotal = 3,
+        stackable = true,
+        tags = { "throwable", "bolas", "regular", "purchase" }
     },
     ammo_tomahawk_ancient = {
         id = "ammo_tomahawk_ancient",

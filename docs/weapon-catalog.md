@@ -178,12 +178,37 @@ Existing installations using the old inventory names must first run
 sql/rename_weapon_item_names.sql as described in the README.
 
 Run WeaponReleaseContractSmokeTest 1; expected counts are
-weapon=32 ammunition=35 attachment=38.
+weapon=32 ammunition=36 attachment=38.
 
 Live-test each new model: grant, equip, refill, fire, reload, unload, repair,
 logout/rejoin, and verify native clip capacity against the configured capacity.
 The catalog expansion itself does not establish that all native behaviors have
 passed those tests. In particular, check LeMat mode changes and longgun holstering.
+
+Poison Throwing Knife ammunition is a pending live-test route using the
+existing carrier and `AMMO_THROWING_KNIVES_POISON`. Its initial one-item ceiling
+was conservative. Live testing showed Poison available in the native wheel and
+usable for a throw. After same-player pickup, the wheel displayed Regular while
+the selected Poison metadata and native pool remained zero. This does not
+establish authoritative Regular recovery. Follow-up diagnostics confirmed
+`AMMO_THROWING_KNIVES_POISON=0` and unselected `AMMO_THROWING_KNIVES=1`
+after pickup, with the carrier's selected Poison escrow still zero. Native
+pickup therefore supplies Regular ammunition through this tested path;
+Feather does not credit it as Poison or mint Regular ownership. Poison pickup
+recovery, maximum capacity, and full lifecycle acceptance remain open.
+The carrier now opts into separate Regular and Poison escrow pools. Simultaneous
+load/select/unload, independent native-pool consumption, and restart restoration
+passed the reported six-Regular/one-Poison manual checks, including independent
+consumption and exact unload conservation. Poison now has an eight-item test
+ceiling whose reported capacity/lifecycle checks passed, followed by metadata,
+lease 5/5 and release 9/9. Improved Throwing Knife ammunition is excluded:
+its one-item test left saved ownership at one but native count at zero and
+verification false, with no wheel entry. Regular5/Poison8 remained intact;
+post-unload metadata showed Improved0 and Regular selected. Only this retired
+zero key is normalized away; nonzero retired ownership is never erased.
+Pickup recovery is disabled for this multi-type carrier:
+native increases are not credited to either saved pool. Standard and Ancient
+Tomahawk single-type recovery is unchanged. See throwing-knife-multi-ammo.md.
 
 Native identifiers were cross-checked against:
 - https://github.com/femga/rdr3_discoveries/blob/master/weapons/weapons.lua

@@ -11,13 +11,15 @@ GetGameTimer = function() return 100 end
 vector3 = function(x, y, z) return { x = x, y = y, z = z } end
 SetTimeout = function(_delay, _callback) end
 AddEventHandler = function(_eventName, _callback) end
+RegisterNetEvent = function(_eventName, _callback) end
 TriggerClientEvent = function(_eventName, _target, ...) end
 FeatherCore = { RPC = { Register = function(_route, _callback, _options) end } }
 for _, file in ipairs({ 'config.lua', 'shared/constants.lua', 'shared/errors.lua',
     'shared/definitions/ammunition.lua', 'shared/definitions/attachments.lua',
     'shared/definitions/weapons.lua', 'shared/validation.lua',
     'server/services/definition_registry.lua', 'server/services/metadata.lua',
-    'server/services/runtime.lua', 'server/services/equip.lua', 'server/services/ammo.lua' }) do
+    'server/services/runtime.lua', 'server/services/equip.lua', 'server/services/ammo.lua',
+    'server/services/reconciliation.lua' }) do
     dofile(file)
 end
 Config.DevMode = false
@@ -90,6 +92,20 @@ local function check(value, message)
 end
 
 -- Every catalog combination loads, persists its native type and unloads the
+for _, slot in ipairs({ 'throwable_quaternary', 'throwable_quinary' }) do
+    check(WeaponRuntime.NormalizeSlot(slot) == slot and WeaponConstants.ThrowableSlots[slot],
+        'New throwable position is recognized: ' .. slot)
+    check(Config.Inventory.equipmentSlots[slot] == 'weapon_' .. slot,
+        'New throwable Inventory mapping: ' .. slot)
+end
+local slotMappings = {}
+for _, slot in ipairs(WeaponConstants.LoadoutSlots) do
+    local mapped = Config.Inventory.equipmentSlots[slot]
+    check(type(mapped) == 'string' and not slotMappings[mapped], 'Unique equipment mapping: ' .. slot)
+    slotMappings[mapped] = true
+end
+
+-- Every catalog combination loads, persists its native type and unloads the
 -- exact inventory item. Native rendering/firing still needs in-game testing.
 for _, definition in ipairs(DefinitionRegistry.List('weapon').value) do
     for _, ammoId in ipairs(definition.ammunitionTypes) do
@@ -105,6 +121,17 @@ for _, definition in ipairs(DefinitionRegistry.List('weapon').value) do
         check(AmmoService.Unload(1, context).ok and stock[ammo.itemName] == 10, 'Exact unload')
     end
 end
+
+reset('throwable_bolas')
+stock.ammo_bolas_regular = 5
+local bolasLoad = AmmoService.Escrow(1, context, 5, 'ammo_bolas_regular')
+check(bolasLoad.ok and bolasLoad.value.total == 3
+    and bolasLoad.value.loaded == 1 and bolasLoad.value.reserve == 2
+    and stock.ammo_bolas_regular == 2, 'Bolas candidate cap preserves excess stock')
+check(not AmmoService.Escrow(1, context, 1, 'ammo_tomahawk_regular').ok,
+    'Bolas rejects foreign-family ammunition')
+check(AmmoService.Unload(1, context).ok and stock.ammo_bolas_regular == 5,
+    'Bolas unload returns exact ammo definition')
 
 reset('revolver_cattleman')
 stock.ammo_revolver_express = 20
@@ -447,6 +474,10 @@ check(fourthMeleeRuntime.ok and WeaponRuntime.Get(1).slots.melee ~= nil
     and WeaponRuntime.Get(1).slots.melee_tertiary ~= nil
     and WeaponRuntime.Get(1).slots.melee_quaternary ~= nil,
     'Distinct melee models coexist in four persistent slots')
+-- Retain coverage for the legacy single-pool recovery service. The shipped
+-- multi-type carrier uses the separate consumption-only pool checkpoint.
+WeaponDefinitionCatalog.weapons.throwable_throwing_knives.multiTypeAmmunition = false
+assert(DefinitionRegistry.Start().ok)
 local throwableDefinition = DefinitionRegistry.Get('weapon', 'throwable_throwing_knives').value
 local throwableMetadata = WeaponMetadata.Build(throwableDefinition,
     { serialNumber = 'TEST-THROWABLE' })
@@ -476,6 +507,8 @@ check(not AmmoService.SyncConsumption(1, context, {
     slot = 'throwable', itemInstanceId = throwableLease.itemInstanceId,
     generation = throwableLease.generation, total = 9, loaded = 1
 }).ok, 'Throwable recovery cannot exceed its native cap or recovery credit')
+WeaponDefinitionCatalog.weapons.throwable_throwing_knives.multiTypeAmmunition = true
+assert(DefinitionRegistry.Start().ok)
 
 local tomahawkDefinition = DefinitionRegistry.Get('weapon', 'throwable_tomahawk').value
 local tomahawkAmmunition = DefinitionRegistry.Get('ammunition', 'ammo_tomahawk_regular').value
@@ -501,6 +534,183 @@ check(tomahawkRuntime.ok and WeaponRuntime.Get(1).slots.throwable ~= nil
     'Throwing Knives and Tomahawk coexist in persistent throwable positions')
 
 local originalAttachments = copy(WeaponDefinitionCatalog.attachments)
+local multiKnife = copy(WeaponDefinitionCatalog.weapons.throwable_throwing_knives)
+multiKnife.multiTypeAmmunition = true
+multiKnife.ammunitionTypes = { 'ammo_throwing_knives_regular', 'ammo_throwing_knives_poison' }
+local multiMetadata = WeaponMetadata.Build(multiKnife, { serialNumber = 'TEST-MULTI',
+    loadedAmmo = 1, reserveAmmo = 5, chambered = true }).value
+check(multiMetadata.ammo.pools.ammo_throwing_knives_regular == 6,
+    'Multi-type carrier imports the existing selected balance once')
+multiMetadata.ammo.pools.ammo_throwing_knives_poison = 1
+WeaponMetadata.ProjectAmmunitionPool(multiMetadata, multiKnife, 'ammo_throwing_knives_poison')
+check(WeaponValidation.Metadata(multiMetadata, multiKnife)
+    and multiMetadata.ammo.pools.ammo_throwing_knives_regular == 6,
+    'Selecting Poison preserves the separately owned Regular pool')
+multiMetadata.ammo.loaded = 0
+multiMetadata.ammo.reserve = 0
+WeaponMetadata.SaveSelectedAmmunitionPool(multiMetadata, multiKnife)
+check(multiMetadata.ammo.pools.ammo_throwing_knives_poison == 0
+    and multiMetadata.ammo.pools.ammo_throwing_knives_regular == 6,
+    'Selected-pool consumption preserves other ammunition ownership')
+multiMetadata.ammo.pools.ammo_throwing_knives_poison = 1
+check(not WeaponValidation.Metadata(multiMetadata, multiKnife),
+    'Selected projection mismatch is rejected')
+multiMetadata.ammo.pools.ammo_throwing_knives_poison = 0
+multiMetadata.ammo.pools.ammo_tomahawk_regular = 1
+check(not WeaponValidation.Metadata(multiMetadata, multiKnife),
+    'Multi-type carrier rejects incompatible pool ownership')
+local originalKnife = WeaponDefinitionCatalog.weapons.throwable_throwing_knives
+WeaponDefinitionCatalog.weapons.throwable_throwing_knives = multiKnife
+assert(DefinitionRegistry.Start().ok)
+items, stock, rejectTransaction = {}, { ammo_throwing_knives_poison = 1 }, false
+WeaponRuntime.Begin({ source = 1, characterId = 1, sessionId = 'test' })
+local ownedKnife = WeaponMetadata.Build(multiKnife, { serialNumber = 'TEST-MULTI-TX',
+    loadedAmmo = 1, reserveAmmo = 5, chambered = true }).value
+items[11] = { id = 11, metadata = ownedKnife, metadataRevision = 1 }
+local multiLease = WeaponRuntime.RestoreEquipped(1, 'test', items[11], multiKnife,
+    'test', 'throwable').value
+multiLease.ammoPools.ammo_throwing_knives_regular = 5
+check(items[11].metadata.ammo.pools.ammo_throwing_knives_regular == 6,
+    'Runtime pool snapshot does not alias persistent metadata')
+multiLease.ammoPools.ammo_throwing_knives_regular = 6
+local loadedPoison = AmmoService.LoadSlot(1, context, {
+    slot = 'throwable', ammunitionType = 'ammo_throwing_knives_poison', amount = 1,
+    itemInstanceId = 11, generation = multiLease.generation
+})
+check(loadedPoison.ok and stock.ammo_throwing_knives_poison == 0
+    and items[11].metadata.ammo.pools.ammo_throwing_knives_regular == 6
+    and items[11].metadata.ammo.pools.ammo_throwing_knives_poison == 1,
+    'Loading a second pool conserves the first pool without returning it')
+multiLease = WeaponRuntime.Get(1).slots.throwable
+local poolSnapshot = ReconciliationService.Snapshot(1, 'test', 'test')
+check(poolSnapshot.ok
+    and poolSnapshot.value.slots.throwable.ammoPools.ammo_throwing_knives_regular == 6
+    and poolSnapshot.value.slots.throwable.ammoPools.ammo_throwing_knives_poison == 1,
+    'Client reconciliation response includes both authoritative ammo pools')
+poolSnapshot.value.slots.throwable.ammoPools.ammo_throwing_knives_regular = 0
+check(multiLease.ammoPools.ammo_throwing_knives_regular == 6,
+    'Client reconciliation pool snapshot cannot mutate runtime ownership')
+local selectedRegular = AmmoService.SwitchSlot(1, context, {
+    slot = 'throwable', ammunitionType = 'ammo_throwing_knives_regular',
+    itemInstanceId = 11, generation = multiLease.generation
+})
+check(selectedRegular.ok and selectedRegular.value.moved == 0
+    and items[11].metadata.ammo.pools.ammo_throwing_knives_poison == 1,
+    'Selection uses existing ownership without an Inventory grant or removal')
+local unloadedRegular = AmmoService.Unload(1, context, nil, 'throwable')
+check(unloadedRegular.ok and stock.ammo_throwing_knives_regular == 6
+    and items[11].metadata.ammo.pools.ammo_throwing_knives_regular == 0
+    and items[11].metadata.ammo.pools.ammo_throwing_knives_poison == 1,
+    'Selected-type unload returns exact ownership and preserves the other pool')
+multiLease = WeaponRuntime.Get(1).slots.throwable
+check(AmmoService.LoadSlot(1, context, { slot = 'throwable',
+    ammunitionType = 'ammo_throwing_knives_regular', amount = 2,
+    itemInstanceId = 11, generation = multiLease.generation }).ok,
+    'Reload Regular beside the preserved Poison pool')
+multiLease = WeaponRuntime.Get(1).slots.throwable
+local unloadLease = { slot = 'throwable', itemInstanceId = 11,
+    generation = multiLease.generation, allTypes = true }
+rejectTransaction = true
+check(not AmmoService.Unload(1, context, nil, 'throwable', unloadLease).ok
+    and stock.ammo_throwing_knives_regular == 4 and stock.ammo_throwing_knives_poison == 0
+    and items[11].metadata.ammo.pools.ammo_throwing_knives_regular == 2
+    and items[11].metadata.ammo.pools.ammo_throwing_knives_poison == 1
+    and multiLease.ammoPools.ammo_throwing_knives_regular == 2
+    and multiLease.ammoPools.ammo_throwing_knives_poison == 1,
+    'Failed all-pool commit preserves Inventory, metadata and runtime ownership')
+rejectTransaction = false
+local unloadedAll = AmmoService.Unload(1, context, nil, 'throwable', unloadLease)
+check(unloadedAll.ok and unloadedAll.value.moved == 3
+    and unloadedAll.value.returnedPools.ammo_throwing_knives_regular == 2
+    and unloadedAll.value.returnedPools.ammo_throwing_knives_poison == 1
+    and stock.ammo_throwing_knives_regular == 6 and stock.ammo_throwing_knives_poison == 1
+    and items[11].metadata.ammo.pools.ammo_throwing_knives_regular == 0
+    and items[11].metadata.ammo.pools.ammo_throwing_knives_poison == 0
+    and multiLease.ammoPools.ammo_throwing_knives_regular == 0
+    and multiLease.ammoPools.ammo_throwing_knives_poison == 0,
+    'All-pool unload returns each exact definition and clears all ownership once')
+check(not AmmoService.Unload(1, context, nil, 'throwable', unloadLease).ok
+    and stock.ammo_throwing_knives_regular == 6 and stock.ammo_throwing_knives_poison == 1,
+    'Repeated all-pool unload cannot duplicate returned ammunition')
+WeaponDefinitionCatalog.weapons.throwable_throwing_knives = originalKnife
+-- Both native pools are independently conserved and no pickup may mint ammo.
+multiLease = WeaponRuntime.Get(1).slots.throwable
+check(AmmoService.LoadSlot(1, context, { slot = 'throwable', ammunitionType = 'ammo_throwing_knives_regular',
+    amount = 2, itemInstanceId = 11, generation = multiLease.generation }).ok, 'Reload multi-pool checkpoint fixture')
+multiLease = WeaponRuntime.Get(1).slots.throwable
+check(AmmoService.LoadSlot(1, context, { slot = 'throwable', ammunitionType = 'ammo_throwing_knives_poison',
+    amount = 1, itemInstanceId = 11, generation = multiLease.generation }).ok, 'Load Poison beside checkpoint fixture')
+multiLease = WeaponRuntime.Get(1).slots.throwable
+local checkpoint = { slot = 'throwable', itemInstanceId = 11, generation = multiLease.generation,
+    ammunitionType = 'ammo_throwing_knives_poison',
+    pools = { ammo_throwing_knives_regular = 2, ammo_throwing_knives_poison = 0 } }
+rejectTransaction = true
+check(not AmmoService.SyncPools(1, context, checkpoint).ok
+    and items[11].metadata.ammo.pools.ammo_throwing_knives_poison == 1
+    and multiLease.ammoPools.ammo_throwing_knives_poison == 1, 'Pool checkpoint failure preserves both authoritative states')
+rejectTransaction = false
+check(AmmoService.SyncPools(1, context, checkpoint).ok
+    and items[11].metadata.ammo.pools.ammo_throwing_knives_regular == 2
+    and items[11].metadata.ammo.pools.ammo_throwing_knives_poison == 0, 'Poison consumption leaves Regular untouched')
+local inflated = copy(checkpoint)
+inflated.pools.ammo_throwing_knives_regular = 3
+check(not AmmoService.SyncPools(1, context, inflated).ok, 'Unowned Regular pickup cannot increase an owned pool')
+local stale = copy(checkpoint)
+stale.generation = stale.generation - 1
+check(not AmmoService.SyncPools(1, context, stale).ok, 'Multi-pool checkpoint rejects stale lease')
+local foreign = copy(checkpoint)
+foreign.itemInstanceId = 999
+check(not AmmoService.SyncPools(1, context, foreign).ok, 'Multi-pool checkpoint rejects foreign item')
+local omitted = copy(checkpoint)
+omitted.pools.ammo_throwing_knives_regular = nil
+check(not AmmoService.SyncPools(1, context, omitted).ok, 'Multi-pool checkpoint rejects omitted ownership')
+checkpoint.ammunitionType = 'ammo_throwing_knives_regular'
+check(AmmoService.SyncPools(1, context, checkpoint).ok
+    and items[11].metadata.ammo.loaded == 1 and items[11].metadata.ammo.reserve == 1
+    and multiLease.generation == checkpoint.generation, 'Wheel selection projects owned pool without renewing the lease')
+assert(DefinitionRegistry.Start().ok)
+stock.ammo_throwing_knives_poison = 16
+multiLease = WeaponRuntime.Get(1).slots.throwable
+local fullPoison = AmmoService.LoadSlot(1, context, { slot = 'throwable',
+    ammunitionType = 'ammo_throwing_knives_poison', amount = 16,
+    itemInstanceId = 11, generation = multiLease.generation })
+check(fullPoison.ok and fullPoison.value.moved == 8
+    and stock.ammo_throwing_knives_poison == 8
+    and items[11].metadata.ammo.pools.ammo_throwing_knives_poison == 8
+    and items[11].metadata.ammo.pools.ammo_throwing_knives_regular == 2,
+    'Eight-item Poison candidate cap preserves excess Inventory and Regular ownership')
+local overCap = copy(items[11].metadata)
+overCap.ammo.pools.ammo_throwing_knives_poison = 9
+overCap.ammo.reserve = 8
+check(not WeaponValidation.Metadata(overCap, originalKnife), 'Poison metadata rejects nine-item pool')
+multiLease = WeaponRuntime.Get(1).slots.throwable
+local capacityCheckpoint = { slot = 'throwable', itemInstanceId = 11,
+    generation = multiLease.generation, ammunitionType = 'ammo_throwing_knives_poison',
+    pools = { ammo_throwing_knives_regular = 2, ammo_throwing_knives_poison = 9 } }
+check(not AmmoService.SyncPools(1, context, capacityCheckpoint).ok,
+    'Poison checkpoint rejects a pool above its candidate capacity')
+capacityCheckpoint.pools.ammo_throwing_knives_poison = 7
+check(AmmoService.SyncPools(1, context, capacityCheckpoint).ok
+    and items[11].metadata.ammo.pools.ammo_throwing_knives_regular == 2,
+    'Full Poison pool consumes independently of Regular')
+local capacityUnload = AmmoService.Unload(1, context, nil, 'throwable', {
+    slot = 'throwable', itemInstanceId = 11, generation = multiLease.generation })
+check(capacityUnload.ok and capacityUnload.value.moved == 7
+    and stock.ammo_throwing_knives_poison == 15
+    and items[11].metadata.ammo.pools.ammo_throwing_knives_regular == 2,
+    'Poison unload returns seven exact items after one consumed from the full pool')
+local retiredMetadata = copy(items[11].metadata)
+retiredMetadata.ammo.type = 'ammo_throwing_knives_regular'
+WeaponMetadata.ProjectAmmunitionPool(retiredMetadata, originalKnife, 'ammo_throwing_knives_regular')
+retiredMetadata.ammo.pools.ammo_throwing_knives_improved = 0
+check(WeaponMetadata.Validate(retiredMetadata, originalKnife, 'test').ok
+    and retiredMetadata.ammo.pools.ammo_throwing_knives_improved == nil
+    and retiredMetadata.ammo.pools.ammo_throwing_knives_regular == 2,
+    'Retired empty Improved key normalizes without erasing supported ownership')
+retiredMetadata.ammo.pools.ammo_throwing_knives_improved = 1
+check(not WeaponMetadata.Validate(retiredMetadata, originalKnife, 'test').ok
+    and retiredMetadata.ammo.pools.ammo_throwing_knives_improved == 1,
+    'Nonzero retired Improved ownership is rejected, never silently discarded')
 WeaponDefinitionCatalog.attachments.cattleman_wide_sight.prerequisites = { 'cattleman_long_barrel' }
 check(DefinitionRegistry.Start().ok, 'Valid attachment prerequisite catalog accepted')
 local prerequisiteMissing = DefinitionRegistry.ValidateAttachmentSet('revolver_cattleman', {

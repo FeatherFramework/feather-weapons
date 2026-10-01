@@ -1007,9 +1007,10 @@ WeaponDefinitionCatalog.weapons = {
         label = "Throwing Knives",
         nativeWeaponName = "WEAPON_THROWN_THROWING_KNIVES",
         family = "throwing_knife",
+        multiTypeAmmunition = true,
         slot = "throwable",
         ammunitionType = "ammo_throwing_knives_regular",
-        ammunitionTypes = { "ammo_throwing_knives_regular" },
+        ammunitionTypes = { "ammo_throwing_knives_regular", "ammo_throwing_knives_poison" },
         capacity = 1,
         condition = {
             minimum = 0,
@@ -1092,6 +1093,68 @@ WeaponDefinitionCatalog.weapons = {
             serialRequired = true
         },
         tags = { "throwable", "tomahawk", "ancient" }
+    },
+    throwable_bolas = {
+        id = "throwable_bolas",
+        kind = "weapon",
+        itemName = "weapon_throwable_bolas",
+        label = "Bolas",
+        nativeWeaponName = "WEAPON_THROWN_BOLAS",
+        family = "bolas",
+        slot = "throwable",
+        ammunitionType = "ammo_bolas_regular",
+        ammunitionTypes = { "ammo_bolas_regular" },
+        capacity = 1,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "throwable", "bolas", "regular" }
+    },
+    throwable_bolas_hawkmoth = {
+        id = "throwable_bolas_hawkmoth",
+        kind = "weapon",
+        itemName = "weapon_throwable_bolas_hawkmoth",
+        label = "Hawkmoth Bolas",
+        nativeWeaponName = "WEAPON_THROWN_BOLAS_HAWKMOTH",
+        family = "bolas",
+        slot = "throwable",
+        ammunitionType = "ammo_bolas_hawkmoth",
+        ammunitionTypes = { "ammo_bolas_hawkmoth" },
+        capacity = 1,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "throwable", "bolas", "regular" }
     },
     bow = {
         id = "bow",

@@ -66,6 +66,10 @@ function WeaponValidation.Definition(definition, expectedKind)
     if not IsNonEmptyString(definition.label) then AddError(errors, "label", "must be a non-empty string") end
 
     if expectedKind == "weapon" then
+        if definition.multiTypeAmmunition ~= nil and (type(definition.multiTypeAmmunition) ~= 'boolean'
+            or (definition.multiTypeAmmunition and definition.family ~= 'throwing_knife')) then
+            AddError(errors, 'multiTypeAmmunition', 'must be boolean and is supported only for throwing knives')
+        end
         if not IsNonEmptyString(definition.nativeWeaponName) then AddError(errors, "nativeWeaponName",
                 "must be a non-empty string") end
         if not WeaponConstants.WeaponSlots[definition.slot] then AddError(errors, "slot", "is not supported") end
@@ -218,6 +222,24 @@ function WeaponValidation.Metadata(metadata, definition)
         end
         if type(metadata.ammo.chambered) ~= "boolean" then
             AddError(errors, "ammo.chambered", "must be boolean")
+        end
+        if metadata.ammo.pools ~= nil then
+            if definition.multiTypeAmmunition ~= true or type(metadata.ammo.pools) ~= "table" then
+                AddError(errors, "ammo.pools", "requires an opted-in multi-type carrier")
+            else
+                for id, total in pairs(metadata.ammo.pools) do
+                    if not WeaponValidation.AcceptsAmmunition(definition, id)
+                        or type(total) ~= "number" or total ~= total or total < 0
+                        or total % 1 ~= 0
+                        or total > WeaponValidation.EscrowMaximum(definition, id) then
+                        AddError(errors, "ammo.pools", "contains incompatible or out-of-range ammunition")
+                    end
+                end
+                local selected = metadata.ammo.type or definition.ammunitionType
+                if metadata.ammo.pools[selected] ~= (loaded or 0) + (reserve or 0) then
+                    AddError(errors, "ammo.pools", "selected pool must match loaded plus reserve")
+                end
+            end
         end
     end
 

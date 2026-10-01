@@ -11,7 +11,9 @@ local preferredPoints = {
     melee_quaternary = { 0, 1, 2, 3 },
     throwable = { 0, 1, 2, 3 },
     throwable_secondary = { 0, 1, 2, 3 },
-    throwable_tertiary = { 0, 1, 2, 3 }
+    throwable_tertiary = { 0, 1, 2, 3 },
+    throwable_quaternary = { 0, 1, 2, 3 },
+    throwable_quinary = { 0, 1, 2, 3 }
 }
 
 local function NativeTrue(value)

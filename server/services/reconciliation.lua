@@ -1,5 +1,12 @@
 ReconciliationService = {}
 
+local function CopyPools(pools)
+    if type(pools) ~= 'table' then return nil end
+    local snapshot = {}
+    for id, total in pairs(pools) do snapshot[id] = total end
+    return snapshot
+end
+
 local function ContextForSession(session, correlationId)
     return {
         actorSource = session.source,
@@ -63,6 +70,7 @@ function ReconciliationService.Snapshot(source, sessionId, correlationId)
             nativeWeaponName = runtime.equipped.nativeWeaponName,
             ammunitionType = runtime.equipped.ammunitionType,
             nativeAmmoName = runtime.equipped.nativeAmmoName,
+            ammoPools = CopyPools(runtime.equipped.ammoPools),
             ammo = runtime.equipped.ammo,
             loaded = runtime.equipped.loaded,
             reserve = runtime.equipped.reserve,
@@ -86,6 +94,7 @@ function ReconciliationService.Snapshot(source, sessionId, correlationId)
                 nativeWeaponName = value.nativeWeaponName,
                 ammunitionType = value.ammunitionType,
                 nativeAmmoName = value.nativeAmmoName,
+                ammoPools = CopyPools(value.ammoPools),
                 ammo = value.ammo,
                 loaded = value.loaded,
                 reserve = value.reserve,
@@ -124,6 +133,15 @@ function ReconciliationService.InspectMetadata(source)
                 item.metadata, definitionResult.value, context.correlationId)
             if not validation.ok then return validation end
             local runtimeItem = runtime and runtime.slots and runtime.slots[slot]
+            local poolsMatch = true
+            if item.metadata.ammo.pools then
+                for _, id in ipairs(definitionResult.value.ammunitionTypes) do
+                    if not runtimeItem or not runtimeItem.ammoPools
+                        or (runtimeItem.ammoPools[id] or 0) ~= (item.metadata.ammo.pools[id] or 0) then
+                        poolsMatch = false
+                    end
+                end
+            end
             slots[slot] = {
                 slot = slot,
                 itemInstanceId = item.id,
@@ -133,9 +151,11 @@ function ReconciliationService.InspectMetadata(source)
                 maintenance = item.metadata.maintenance,
                 ammunitionType = item.metadata.ammo.type or definitionResult.value.ammunitionType,
                 loaded = item.metadata.ammo.loaded,
+                ammoPools = item.metadata.ammo.pools,
                 reserve = item.metadata.ammo.reserve,
                 attachments = item.metadata.attachments or {},
                 runtimeMatches = runtimeItem ~= nil
+                    and poolsMatch
                     and tostring(runtimeItem.itemInstanceId) == tostring(item.id)
                     and runtimeItem.ammunitionType == (item.metadata.ammo.type or definitionResult.value.ammunitionType),
                 generation = runtimeItem and runtimeItem.generation or nil
