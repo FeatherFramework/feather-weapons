@@ -261,5 +261,129 @@ WeaponDefinitionCatalog.ammunition = {
         nativeAmmoName = "AMMO_22_TRANQUILIZER",
         stackable = true,
         tags = { "varmint", "tranquilizer", "purchase" }
+    },
+
+    ammo_arrow_regular = {
+        id = "ammo_arrow_regular",
+        kind = "ammunition",
+        itemName = "ammo_arrow_regular",
+        label = "Arrow - Regular",
+        nativeAmmoName = "AMMO_ARROW",
+        -- The standard RedM arrow pool is bounded independently from firearm
+        -- ammunition. Keep excess arrows in Inventory.
+        maxTotal = 40,
+        stackable = true,
+        tags = { "bow", "arrow", "regular", "purchase" }
+    },
+    ammo_arrow_small_game = {
+        id = "ammo_arrow_small_game",
+        kind = "ammunition",
+        itemName = "ammo_arrow_small_game",
+        label = "Arrow - Small Game",
+        nativeAmmoName = "AMMO_ARROW_SMALL_GAME",
+        maxTotal = 40,
+        stackable = true,
+        tags = { "bow", "arrow", "small_game", "craft" }
+    },
+    ammo_arrow_poison = {
+        id = "ammo_arrow_poison",
+        kind = "ammunition",
+        itemName = "ammo_arrow_poison",
+        label = "Arrow - Poison",
+        nativeAmmoName = "AMMO_ARROW_POISON",
+        -- Special arrows use the smaller native carrying pool.
+        maxTotal = 8,
+        stackable = true,
+        tags = { "bow", "arrow", "poison", "craft" }
+    },
+    ammo_arrow_fire = {
+        id = "ammo_arrow_fire",
+        kind = "ammunition",
+        itemName = "ammo_arrow_fire",
+        label = "Arrow - Fire",
+        nativeAmmoName = "AMMO_ARROW_FIRE",
+        -- Special arrows use the smaller native carrying pool.
+        maxTotal = 8,
+        stackable = true,
+        tags = { "bow", "arrow", "fire", "craft" }
+    },
+    ammo_arrow_dynamite = {
+        id = "ammo_arrow_dynamite",
+        kind = "ammunition",
+        itemName = "ammo_arrow_dynamite",
+        label = "Arrow - Dynamite",
+        nativeAmmoName = "AMMO_ARROW_DYNAMITE",
+        -- Crafted special arrows use the smaller native carrying pool.
+        maxTotal = 8,
+        stackable = true,
+        tags = { "bow", "arrow", "dynamite", "craft" }
+    },
+
+    ammo_throwing_knives_regular = {
+        id = "ammo_throwing_knives_regular",
+        kind = "ammunition",
+        itemName = "ammo_throwing_knives_regular",
+        label = "Throwing Knife - Regular",
+        nativeAmmoName = "AMMO_THROWING_KNIVES",
+        -- The target RedM build clamps regular throwing knives to eight.
+        maxTotal = 8,
+        stackable = true,
+        tags = { "throwable", "throwing_knife", "regular", "purchase" }
+    },
+
+    ammo_throwing_knives_poison = {
+        id = "ammo_throwing_knives_poison",
+        kind = "ammunition",
+        itemName = "ammo_throwing_knives_poison",
+        label = "Throwing Knife - Poison",
+        nativeAmmoName = "AMMO_THROWING_KNIVES_POISON",
+        -- Eight-item load, restart, consumption and exact unload passed live testing.
+        maxTotal = 8,
+        stackable = true,
+        tags = { "throwable", "throwing_knife", "poison", "craft" }
+    },
+    ammo_tomahawk_regular = {
+        id = "ammo_tomahawk_regular",
+        kind = "ammunition",
+        itemName = "ammo_tomahawk_regular",
+        label = "Tomahawk - Regular",
+        nativeAmmoName = "AMMO_TOMAHAWK",
+        -- The target RedM build clamps regular tomahawks to three.
+        maxTotal = 3,
+        stackable = true,
+        tags = { "throwable", "tomahawk", "regular", "purchase" }
+    },
+    ammo_bolas_regular = {
+        id = "ammo_bolas_regular",
+        kind = "ammunition",
+        itemName = "ammo_bolas_regular",
+        label = "Bolas - Regular",
+        nativeAmmoName = "AMMO_BOLAS",
+        -- Candidate ceiling; target-build capacity/lifecycle verification pending.
+        maxTotal = 3,
+        stackable = true,
+        tags = { "throwable", "bolas", "regular", "purchase" }
+    },
+    ammo_bolas_hawkmoth = {
+        id = "ammo_bolas_hawkmoth",
+        kind = "ammunition",
+        itemName = "ammo_bolas_hawkmoth",
+        label = "Bolas - Hawkmoth",
+        nativeAmmoName = "AMMO_BOLAS_HAWKMOTH",
+        -- Candidate ceiling; target-build capacity/lifecycle verification pending.
+        maxTotal = 3,
+        stackable = true,
+        tags = { "throwable", "bolas", "regular", "purchase" }
+    },
+    ammo_tomahawk_ancient = {
+        id = "ammo_tomahawk_ancient",
+        kind = "ammunition",
+        itemName = "ammo_tomahawk_ancient",
+        label = "Tomahawk - Ancient",
+        nativeAmmoName = "AMMO_TOMAHAWK_ANCIENT",
+        -- Target-build GetMaxAmmo reports one; one-item lifecycle passed live testing.
+        maxTotal = 1,
+        stackable = true,
+        tags = { "throwable", "tomahawk", "ancient" }
     }
 }

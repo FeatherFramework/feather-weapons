@@ -33,6 +33,7 @@ function EquipService.ValidateOwnedItem(context, itemInstanceId)
     local definitionResult = DefinitionRegistry.Get("weapon", metadata.weaponDefinitionId)
     if not definitionResult.ok then return definitionResult end
     local definition = definitionResult.value
+
     if item.itemName ~= definition.itemName then
         return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Item definition does not match weapon metadata", {
             itemName = item.itemName,
@@ -60,7 +61,10 @@ local function ValidateSlotEligibility(source, slot, definition, correlationId, 
     local runtime = WeaponRuntime.Get(source)
     local configured = definition.slot == "sidearm"
         and (Config.Loadout and Config.Loadout.sidearmSlots)
-        or (definition.slot == "longgun" and Config.Loadout and Config.Loadout.longgunSlots or nil)
+        or (definition.slot == "longgun" and Config.Loadout and Config.Loadout.longgunSlots
+            or (definition.slot == "melee" and Config.Loadout and Config.Loadout.meleeSlots
+                or (definition.slot == "throwable" and Config.Loadout
+                    and Config.Loadout.throwableSlots or nil)))
     if slot == nil or slot == "auto" then
         for _, candidate in ipairs(configured or {}) do
             if not (runtime and runtime.slots and runtime.slots[candidate]) then
@@ -79,7 +83,9 @@ local function ValidateSlotEligibility(source, slot, definition, correlationId, 
             "Weapon equipment slot is invalid", nil, correlationId)
     end
     local expectedCategory = WeaponConstants.SidearmSlots[slot] and "sidearm"
-        or (WeaponConstants.LonggunSlots[slot] and "longgun" or nil)
+        or (WeaponConstants.LonggunSlots[slot] and "longgun"
+            or (WeaponConstants.MeleeSlots[slot] and "melee"
+                or (WeaponConstants.ThrowableSlots[slot] and "throwable" or nil)))
     if definition.slot ~= expectedCategory then
         return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
             "That weapon cannot use the requested loadout slot", {
@@ -169,7 +175,9 @@ function EquipService.ValidateConfiguration()
     if settings.enabled ~= true then return WeaponResult.Ok(true) end
     if type(Config.Loadout) ~= "table"
         or type(Config.Loadout.sidearmSlots) ~= "table"
-        or type(Config.Loadout.longgunSlots) ~= "table" then
+        or type(Config.Loadout.longgunSlots) ~= "table"
+        or type(Config.Loadout.meleeSlots) ~= "table"
+        or type(Config.Loadout.throwableSlots) ~= "table" then
         return WeaponResult.Error(WeaponErrors.INVALID_DEFINITION,
             "Weapon loadout configuration is invalid")
     end
@@ -183,6 +191,18 @@ function EquipService.ValidateConfiguration()
         if not WeaponConstants.LonggunSlots[slot] then
             return WeaponResult.Error(WeaponErrors.INVALID_DEFINITION,
                 "Long-gun loadout slot configuration is invalid")
+        end
+    end
+    for _, slot in ipairs(Config.Loadout.meleeSlots) do
+        if not WeaponConstants.MeleeSlots[slot] then
+            return WeaponResult.Error(WeaponErrors.INVALID_DEFINITION,
+                "Melee loadout slot configuration is invalid")
+        end
+    end
+    for _, slot in ipairs(Config.Loadout.throwableSlots) do
+        if not WeaponConstants.ThrowableSlots[slot] then
+            return WeaponResult.Error(WeaponErrors.INVALID_DEFINITION,
+                "Throwable loadout slot configuration is invalid")
         end
     end
     local shoulderPoint = tonumber(Config.Loadout.shoulderAttachPoint)

@@ -873,5 +873,324 @@ WeaponDefinitionCatalog.weapons = {
             serialRequired = true
         },
         tags = { "firearm", "longgun", "shotgun" }
+    },
+    melee_knife = {
+        id = "melee_knife",
+        kind = "weapon",
+        itemName = "weapon_melee_knife",
+        label = "Knife",
+        nativeWeaponName = "WEAPON_MELEE_KNIFE",
+        family = "knife",
+        slot = "melee",
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "melee", "knife" }
+    },
+    melee_machete = {
+        id = "melee_machete",
+        kind = "weapon",
+        itemName = "weapon_melee_machete",
+        label = "Machete",
+        nativeWeaponName = "WEAPON_MELEE_MACHETE",
+        family = "machete",
+        slot = "melee",
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "melee", "machete" }
+    },
+    melee_cleaver = {
+        id = "melee_cleaver",
+        kind = "weapon",
+        itemName = "weapon_melee_cleaver",
+        label = "Cleaver",
+        nativeWeaponName = "WEAPON_MELEE_CLEAVER",
+        family = "cleaver",
+        slot = "melee",
+        nativeGrantAmount = 1,
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "melee", "cleaver" }
+    },
+    melee_hatchet = {
+        id = "melee_hatchet",
+        kind = "weapon",
+        itemName = "weapon_melee_hatchet",
+        label = "Hatchet",
+        nativeWeaponName = "WEAPON_MELEE_HATCHET",
+        family = "hatchet",
+        slot = "melee",
+        nativeGrantAmount = 1,
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "melee", "hatchet" }
+    },
+    throwable_throwing_knives = {
+        id = "throwable_throwing_knives",
+        kind = "weapon",
+        itemName = "weapon_throwable_throwing_knives",
+        label = "Throwing Knives",
+        nativeWeaponName = "WEAPON_THROWN_THROWING_KNIVES",
+        family = "throwing_knife",
+        multiTypeAmmunition = true,
+        slot = "throwable",
+        ammunitionType = "ammo_throwing_knives_regular",
+        ammunitionTypes = { "ammo_throwing_knives_regular", "ammo_throwing_knives_poison" },
+        capacity = 1,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "throwable", "throwing_knife" }
+    },
+    throwable_tomahawk = {
+        id = "throwable_tomahawk",
+        kind = "weapon",
+        itemName = "weapon_throwable_tomahawk",
+        label = "Tomahawk",
+        nativeWeaponName = "WEAPON_THROWN_TOMAHAWK",
+        family = "tomahawk",
+        slot = "throwable",
+        ammunitionType = "ammo_tomahawk_regular",
+        ammunitionTypes = { "ammo_tomahawk_regular" },
+        capacity = 1,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "throwable", "tomahawk" }
+    },
+    throwable_tomahawk_ancient = {
+        id = "throwable_tomahawk_ancient",
+        kind = "weapon",
+        itemName = "weapon_throwable_tomahawk_ancient",
+        label = "Ancient Tomahawk",
+        nativeWeaponName = "WEAPON_THROWN_TOMAHAWK_ANCIENT",
+        family = "tomahawk",
+        slot = "throwable",
+        ammunitionType = "ammo_tomahawk_ancient",
+        ammunitionTypes = { "ammo_tomahawk_ancient" },
+        capacity = 1,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "throwable", "tomahawk", "ancient" }
+    },
+    throwable_bolas = {
+        id = "throwable_bolas",
+        kind = "weapon",
+        itemName = "weapon_throwable_bolas",
+        label = "Bolas",
+        nativeWeaponName = "WEAPON_THROWN_BOLAS",
+        family = "bolas",
+        slot = "throwable",
+        ammunitionType = "ammo_bolas_regular",
+        ammunitionTypes = { "ammo_bolas_regular" },
+        capacity = 1,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "throwable", "bolas", "regular" }
+    },
+    throwable_bolas_hawkmoth = {
+        id = "throwable_bolas_hawkmoth",
+        kind = "weapon",
+        itemName = "weapon_throwable_bolas_hawkmoth",
+        label = "Hawkmoth Bolas",
+        nativeWeaponName = "WEAPON_THROWN_BOLAS_HAWKMOTH",
+        family = "bolas",
+        slot = "throwable",
+        ammunitionType = "ammo_bolas_hawkmoth",
+        ammunitionTypes = { "ammo_bolas_hawkmoth" },
+        capacity = 1,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "throwable", "bolas", "regular" }
+    },
+    bow = {
+        id = "bow",
+        kind = "weapon",
+        itemName = "weapon_bow",
+        label = "Bow",
+        nativeWeaponName = "WEAPON_BOW",
+        family = "bow",
+        slot = "longgun",
+        ammunitionType = "ammo_arrow_regular",
+        ammunitionTypes = {
+            "ammo_arrow_regular",
+            "ammo_arrow_small_game",
+            "ammo_arrow_poison",
+            "ammo_arrow_fire",
+            "ammo_arrow_dynamite"
+        },
+        capacity = 1,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "ranged", "longgun", "bow" }
     }
 }

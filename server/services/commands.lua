@@ -70,7 +70,7 @@ RegisterCommand("WeaponRuntimeLeaseSmokeTest", function(source, args)
         end
         local runtime = targetSource and WeaponRuntime.Get(targetSource) or nil
         local activeSlot, equipped = nil, nil
-        for _, slot in ipairs({ "primary", "offhand", "shoulder", "back" }) do
+        for _, slot in ipairs(WeaponConstants.LoadoutSlots) do
             local candidate = runtime and runtime.slots and runtime.slots[slot] or nil
             if candidate then
                 activeSlot, equipped = slot, candidate
@@ -140,7 +140,7 @@ RegisterCommand("WeaponAttachmentContractSmokeTest", function(source, args)
             end
         end
 
-        for _, slot in ipairs({ "primary", "offhand", "shoulder", "back" }) do
+        for _, slot in ipairs(WeaponConstants.LoadoutSlots) do
             local equipped = runtime and runtime.slots and runtime.slots[slot] or nil
             if equipped then
                 activeSlots = activeSlots + 1
@@ -495,6 +495,65 @@ RegisterCommand("WeaponDualSlotContractSmokeTest", function(source, args)
                     and Config.Inventory.equipmentSlots.offhand ~= Config.Inventory.equipmentSlots.primary
                     and Config.Inventory.equipmentSlots.shoulder ~= Config.Inventory.equipmentSlots.primary
                     and Config.Inventory.equipmentSlots.back ~= Config.Inventory.equipmentSlots.shoulder
+                    and Config.Inventory.equipmentSlots.melee ~= Config.Inventory.equipmentSlots.primary
+                    and Config.Inventory.equipmentSlots.melee ~= Config.Inventory.equipmentSlots.offhand
+                    and Config.Inventory.equipmentSlots.melee ~= Config.Inventory.equipmentSlots.shoulder
+                    and Config.Inventory.equipmentSlots.melee ~= Config.Inventory.equipmentSlots.back
+                    and Config.Inventory.equipmentSlots.melee_secondary ~= Config.Inventory.equipmentSlots.melee
+                    and Config.Inventory.equipmentSlots.melee_secondary ~= Config.Inventory.equipmentSlots.primary
+                    and Config.Inventory.equipmentSlots.melee_secondary ~= Config.Inventory.equipmentSlots.offhand
+                    and Config.Inventory.equipmentSlots.melee_secondary ~= Config.Inventory.equipmentSlots.shoulder
+                    and Config.Inventory.equipmentSlots.melee_secondary ~= Config.Inventory.equipmentSlots.back
+                    and Config.Inventory.equipmentSlots.melee_tertiary ~= Config.Inventory.equipmentSlots.melee
+                    and Config.Inventory.equipmentSlots.melee_tertiary ~= Config.Inventory.equipmentSlots.melee_secondary
+                    and Config.Inventory.equipmentSlots.melee_tertiary ~= Config.Inventory.equipmentSlots.primary
+                    and Config.Inventory.equipmentSlots.melee_tertiary ~= Config.Inventory.equipmentSlots.offhand
+                    and Config.Inventory.equipmentSlots.melee_tertiary ~= Config.Inventory.equipmentSlots.shoulder
+                    and Config.Inventory.equipmentSlots.melee_tertiary ~= Config.Inventory.equipmentSlots.back
+                    and Config.Inventory.equipmentSlots.melee_quaternary ~= Config.Inventory.equipmentSlots.melee
+                    and Config.Inventory.equipmentSlots.melee_quaternary ~= Config.Inventory.equipmentSlots.melee_secondary
+                    and Config.Inventory.equipmentSlots.melee_quaternary ~= Config.Inventory.equipmentSlots.melee_tertiary
+                    and Config.Inventory.equipmentSlots.melee_quaternary ~= Config.Inventory.equipmentSlots.primary
+                    and Config.Inventory.equipmentSlots.melee_quaternary ~= Config.Inventory.equipmentSlots.offhand
+                    and Config.Inventory.equipmentSlots.melee_quaternary ~= Config.Inventory.equipmentSlots.shoulder
+                    and Config.Inventory.equipmentSlots.melee_quaternary ~= Config.Inventory.equipmentSlots.back
+                    and Config.Inventory.equipmentSlots.throwable ~= Config.Inventory.equipmentSlots.melee
+                    and Config.Inventory.equipmentSlots.throwable ~= Config.Inventory.equipmentSlots.melee_secondary
+                    and Config.Inventory.equipmentSlots.throwable ~= Config.Inventory.equipmentSlots.melee_tertiary
+                    and Config.Inventory.equipmentSlots.throwable ~= Config.Inventory.equipmentSlots.melee_quaternary
+                    and Config.Inventory.equipmentSlots.throwable ~= Config.Inventory.equipmentSlots.primary
+                    and Config.Inventory.equipmentSlots.throwable ~= Config.Inventory.equipmentSlots.offhand
+                    and Config.Inventory.equipmentSlots.throwable ~= Config.Inventory.equipmentSlots.shoulder
+                    and Config.Inventory.equipmentSlots.throwable ~= Config.Inventory.equipmentSlots.back
+                    and Config.Inventory.equipmentSlots.throwable_secondary ~= Config.Inventory.equipmentSlots.throwable
+                    and Config.Inventory.equipmentSlots.throwable_secondary ~= Config.Inventory.equipmentSlots.melee
+                    and Config.Inventory.equipmentSlots.throwable_secondary ~= Config.Inventory.equipmentSlots.melee_secondary
+                    and Config.Inventory.equipmentSlots.throwable_secondary ~= Config.Inventory.equipmentSlots.melee_tertiary
+                    and Config.Inventory.equipmentSlots.throwable_secondary ~= Config.Inventory.equipmentSlots.melee_quaternary
+                    and Config.Inventory.equipmentSlots.throwable_secondary ~= Config.Inventory.equipmentSlots.primary
+                    and Config.Inventory.equipmentSlots.throwable_secondary ~= Config.Inventory.equipmentSlots.offhand
+                    and Config.Inventory.equipmentSlots.throwable_secondary ~= Config.Inventory.equipmentSlots.shoulder
+                    and Config.Inventory.equipmentSlots.throwable_secondary ~= Config.Inventory.equipmentSlots.back
+                    and type(Config.Inventory.equipmentSlots.throwable_tertiary) == 'string'
+                    and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.throwable
+                    and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.throwable_secondary
+                    and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.melee
+                    and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.melee_secondary
+                    and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.melee_tertiary
+                    and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.melee_quaternary
+                    and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.primary
+                    and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.offhand
+                    and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.shoulder
+                    and Config.Inventory.equipmentSlots.throwable_tertiary ~= Config.Inventory.equipmentSlots.back
+                    and (function()
+                        local seen = {}
+                        for _, slot in ipairs(WeaponConstants.LoadoutSlots) do
+                            local mapped = Config.Inventory.equipmentSlots[slot]
+                            if type(mapped) ~= 'string' or mapped == '' or seen[mapped] then return false end
+                            seen[mapped] = true
+                        end
+                        return true
+                    end)()
             },
             {
                 name = "slot runtime initialized",
@@ -679,6 +738,12 @@ RegisterCommand("WeaponMetadataInspect", function(source, args)
             tostring(item and item.loaded), tostring(item and item.reserve),
             tostring(item and item.condition), tostring(item and #(item.attachments or {})),
             tostring(item and item.runtimeMatches or false)))
+        if item and item.ammoPools then
+            for id, total in pairs(item.ammoPools) do
+                print(('[WeaponMetadataInspect] pool slot=%s type=%s total=%s runtimeMatch=%s')
+                    :format(slot, id, tostring(total), tostring(item.runtimeMatches)))
+            end
+        end
     end
 end, true)
 
@@ -942,7 +1007,7 @@ RegisterCommand("WeaponReleaseContractSmokeTest", function(source, args)
             and type(metadata.value) == "table" and type(metadata.value.slots) == "table"
         local activeSlotCount = 0
         if activeMetadataValid then
-            for _, slot in ipairs({ "primary", "offhand", "shoulder", "back" }) do
+            for _, slot in ipairs(WeaponConstants.LoadoutSlots) do
                 local entry = metadata.value.slots[slot]
                 if entry ~= nil then
                     activeSlotCount = activeSlotCount + 1
@@ -957,8 +1022,8 @@ RegisterCommand("WeaponReleaseContractSmokeTest", function(source, args)
             {
                 name = "definitions ready",
                 passed = capabilities.ready == true
-                    and capabilities.definitions.weapon == 24
-                    and capabilities.definitions.ammunition == 27
+                    and capabilities.definitions.weapon == 34
+                    and capabilities.definitions.ammunition == 38
                     and capabilities.definitions.attachment == 38,
                 detail = ("weapon=%s ammunition=%s attachment=%s"):format(
                     tostring(capabilities.definitions.weapon),
@@ -989,6 +1054,7 @@ RegisterCommand("WeaponReleaseContractSmokeTest", function(source, args)
                 name = "runtime routes present",
                 passed = routes["feather-weapons:equip:request"] == true
                     and routes["feather-weapons:ammo:sync"] == true
+                    and routes["feather-weapons:ammo:syncPools"] == true
                     and routes["feather-weapons:ammo:pairSync"] == true
                     and routes["feather-weapons:ammo:unload"] == true
                     and routes["feather-weapons:ammo:loadSlot"] == true

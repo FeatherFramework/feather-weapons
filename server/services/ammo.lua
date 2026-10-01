@@ -1,5 +1,21 @@
 AmmoService = {}
 
+-- A throwable may be recovered from the world only after this runtime lease
+-- has committed an equal number as consumed. Credits are intentionally
+-- ephemeral: a resource/session restart discards them instead of allowing an
+-- unverifiable ammunition increase.
+local throwableRecoveryCredits = {}
+
+local function RecoveryCreditKey(source, rpcContext, equipped)
+    return table.concat({
+        tostring(source),
+        tostring(rpcContext.sessionId),
+        tostring(equipped.itemInstanceId),
+        tostring(equipped.generation),
+        tostring(equipped.ammunitionType)
+    }, ':')
+end
+
 local function Context(source, rpcContext, reason)
     return {
         actorSource = source,
@@ -116,6 +132,7 @@ local function Reload(source, rpcContext, requested, slot)
         item.metadata.ammo.loaded = newLoaded
         item.metadata.ammo.reserve = newReserve
         item.metadata.ammo.chambered = newLoaded > 0
+        WeaponMetadata.SaveSelectedAmmunitionPool(item.metadata, definition)
 
         if not tx:SetMetadata(item.id, item.metadata, item.metadataRevision) then
             return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
@@ -413,7 +430,12 @@ function AmmoService.LoadSlot(source, rpcContext, params)
         local reserve = math.max(0, math.floor(tonumber(item.metadata.ammo.reserve) or 0))
         local total = loaded + reserve
         local previousType = item.metadata.ammo.type or definition.ammunitionType
-        if previousType ~= ammunitionType and total > 0 then
+        if definition.multiTypeAmmunition == true then
+            WeaponMetadata.EnsureAmmunitionPools(item.metadata, definition)
+            total = item.metadata.ammo.pools[ammunitionType] or 0
+            loaded = previousType == ammunitionType and loaded or math.min(definition.capacity, total)
+        end
+        if definition.multiTypeAmmunition ~= true and previousType ~= ammunitionType and total > 0 then
             return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
                 'Unload this weapon before changing its ammunition type', { slot = slot },
                 context.correlationId)
@@ -443,6 +465,7 @@ function AmmoService.LoadSlot(source, rpcContext, params)
         item.metadata.ammo.loaded = nextLoaded
         item.metadata.ammo.reserve = nextTotal - nextLoaded
         item.metadata.ammo.chambered = nextLoaded > 0
+        WeaponMetadata.SaveSelectedAmmunitionPool(item.metadata, definition)
         if not tx:SetMetadata(item.id, item.metadata, item.metadataRevision) then
             return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
                 'Weapon metadata changed during ammunition loading', nil, context.correlationId)
@@ -530,6 +553,27 @@ function AmmoService.SwitchSlot(source, rpcContext, params)
         if previousType == ammunitionType then
             return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
                 'This ammunition type is already loaded', { slot = slot }, context.correlationId)
+        end
+
+        if definition.multiTypeAmmunition == true then
+            WeaponMetadata.EnsureAmmunitionPools(item.metadata, definition)
+            local owned = item.metadata.ammo.pools[ammunitionType] or 0
+            if owned < 1 then
+                return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+                    'Load this ammunition type before selecting it', { slot = slot }, context.correlationId)
+            end
+            WeaponMetadata.ProjectAmmunitionPool(item.metadata, definition, ammunitionType)
+            if not tx:SetMetadata(item.id, item.metadata, item.metadataRevision) then
+                return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+                    'Weapon metadata changed during ammunition selection', nil, context.correlationId)
+            end
+            return {
+                slot = slot, itemInstanceId = item.id,
+                ammunitionType = ammunitionType, nativeAmmoName = ammunition.value.nativeAmmoName,
+                total = owned, loaded = item.metadata.ammo.loaded,
+                reserve = item.metadata.ammo.reserve, moved = 0, returned = 0,
+                inventoryAmmo = tx:GetQuantity(ammunition.value.itemName), typeChanged = true
+            }
         end
 
         local previous = DefinitionRegistry.Get('ammunition', previousType)
@@ -673,6 +717,11 @@ function AmmoService.Unload(source, rpcContext, requested, requestedSlot, lease)
 
     local definition = definitionResult.value
     local context = Context(source, rpcContext, 'unload')
+    local allTypes = lease and lease.allTypes == true
+    if allTypes and (definition.multiTypeAmmunition ~= true or requested ~= nil) then
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+            'Unload-all-types requires a multi-type carrier and no partial amount', nil, rpcContext.correlationId)
+    end
     local transactionResult = InventoryAdapter.Transaction(context, function(tx)
         local item = tx:GetItemForUpdate(equipped.itemInstanceId)
         if not item then
@@ -681,6 +730,35 @@ function AmmoService.Unload(source, rpcContext, requested, requestedSlot, lease)
 
         local metadataResult = WeaponMetadata.Validate(item.metadata, definition, context.correlationId)
         if not metadataResult.ok then return metadataResult end
+
+        if allTypes then
+            WeaponMetadata.EnsureAmmunitionPools(item.metadata, definition)
+            local returned, moved = {}, 0
+            for _, id in ipairs(definition.ammunitionTypes) do
+                local amount = item.metadata.ammo.pools[id] or 0
+                if amount > 0 then
+                    local ammunition = DefinitionRegistry.Get('ammunition', id)
+                    if not ammunition.ok then return ammunition end
+                    if not tx:AddQuantity(ammunition.value.itemName, amount) then
+                        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+                            'Inventory cannot accept all unloaded ammunition', nil, context.correlationId)
+                    end
+                    returned[id], moved = amount, moved + amount
+                end
+                item.metadata.ammo.pools[id] = 0
+            end
+            if moved == 0 then
+                return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+                    'All ammunition pools are already empty', nil, context.correlationId)
+            end
+            WeaponMetadata.ProjectAmmunitionPool(item.metadata, definition, item.metadata.ammo.type)
+            if not tx:SetMetadata(item.id, item.metadata, item.metadataRevision) then
+                return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+                    'Weapon metadata changed during ammunition operation', nil, context.correlationId)
+            end
+            return { total = 0, loaded = 0, reserve = 0, moved = moved,
+                returnedPools = returned, nativeAmmoName = equipped.nativeAmmoName }
+        end
 
         local loaded = tonumber(item.metadata.ammo.loaded) or 0
         local reserve = tonumber(item.metadata.ammo.reserve) or 0
@@ -704,6 +782,7 @@ function AmmoService.Unload(source, rpcContext, requested, requestedSlot, lease)
         item.metadata.ammo.loaded = math.min(loaded, remaining)
         item.metadata.ammo.reserve = remaining - item.metadata.ammo.loaded
         item.metadata.ammo.chambered = item.metadata.ammo.loaded > 0
+        WeaponMetadata.SaveSelectedAmmunitionPool(item.metadata, definition)
         if not tx:SetMetadata(item.id, item.metadata, item.metadataRevision) then
             return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
                 'Weapon metadata changed during ammunition operation', nil, context.correlationId)
@@ -721,10 +800,69 @@ function AmmoService.Unload(source, rpcContext, requested, requestedSlot, lease)
 
     if not transactionResult.ok then return transactionResult end
 
+    if allTypes and equipped.ammoPools then
+        for id in pairs(equipped.ammoPools) do equipped.ammoPools[id] = 0 end
+    end
     WeaponRuntime.SetSlotAmmo(source, rpcContext.sessionId, slot,
         transactionResult.value.total, transactionResult.value.loaded, rpcContext.correlationId)
     transactionResult.value.slot = slot
     return WeaponResult.Ok(transactionResult.value, rpcContext.correlationId)
+end
+
+-- Multi-type checkpoints may consume existing ownership, never mint native
+-- pickups. Poison-to-Regular recovery needs a separate exactly-once ledger.
+function AmmoService.SyncPools(source, rpcContext, params)
+    local slot = WeaponRuntime.NormalizeSlot(params and params.slot)
+    local equipped, failure = GetEquipped(source, rpcContext, slot)
+    if not equipped then return failure end
+    local leaseFailure = ValidateLease(source, equipped, rpcContext, params)
+    if leaseFailure then return leaseFailure end
+    local definitionResult = DefinitionRegistry.Get('weapon', equipped.definitionId)
+    if not definitionResult.ok then return definitionResult end
+    local definition = definitionResult.value
+    if definition.multiTypeAmmunition ~= true or type(params.pools) ~= 'table'
+        or not WeaponValidation.AcceptsAmmunition(definition, params.ammunitionType) then
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID, 'Invalid multi-type checkpoint', nil, rpcContext.correlationId)
+    end
+    for id, total in pairs(params.pools) do
+        if not WeaponValidation.AcceptsAmmunition(definition, id) or type(total) ~= 'number'
+            or total ~= total or total < 0 or total % 1 ~= 0
+            or total > WeaponValidation.EscrowMaximum(definition, id) then
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID, 'Invalid ammunition pool', nil, rpcContext.correlationId)
+        end
+    end
+    local result = InventoryAdapter.Transaction(Context(source, rpcContext, 'pool_checkpoint'), function(tx)
+        local item = tx:GetItemForUpdate(equipped.itemInstanceId)
+        if not item then return WeaponResult.Error(WeaponErrors.ITEM_NOT_OWNED, 'Weapon is no longer owned') end
+        local valid = WeaponMetadata.Validate(item.metadata, definition, rpcContext.correlationId)
+        if not valid.ok then return valid end
+        WeaponMetadata.EnsureAmmunitionPools(item.metadata, definition)
+        local pools = {}
+        for _, id in ipairs(definition.ammunitionTypes) do
+            local reported = params.pools[id]
+            if reported == nil or reported > (item.metadata.ammo.pools[id] or 0) then
+                return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+                    'Checkpoint cannot increase or omit ammunition ownership', nil, rpcContext.correlationId)
+            end
+            pools[id] = reported
+        end
+        item.metadata.ammo.pools = pools
+        WeaponMetadata.ProjectAmmunitionPool(item.metadata, definition, params.ammunitionType)
+        if not tx:SetMetadata(item.id, item.metadata, item.metadataRevision) then
+            return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, 'Weapon metadata changed', nil, rpcContext.correlationId)
+        end
+        return { pools = pools, ammunitionType = item.metadata.ammo.type,
+            total = item.metadata.ammo.loaded + item.metadata.ammo.reserve,
+            loaded = item.metadata.ammo.loaded, reserve = item.metadata.ammo.reserve }
+    end)
+    if not result.ok then return result end
+    local pools = {}
+    for id, total in pairs(result.value.pools) do pools[id] = total end
+    equipped.ammoPools = pools
+    equipped.ammunitionType = result.value.ammunitionType
+    equipped.nativeAmmoName = DefinitionRegistry.Get('ammunition', equipped.ammunitionType).value.nativeAmmoName
+    WeaponRuntime.SetSlotAmmo(source, rpcContext.sessionId, slot, result.value.total, result.value.loaded, rpcContext.correlationId)
+    return result
 end
 
 function AmmoService.SyncConsumption(source, rpcContext, params)
@@ -740,8 +878,16 @@ function AmmoService.SyncConsumption(source, rpcContext, params)
     local definitionResult = DefinitionRegistry.Get('weapon', equipped.definitionId)
     if not definitionResult.ok then return definitionResult end
 
-    if reportedTotal < 0 or reportedTotal > equipped.ammo or reportedLoaded < 0
-        or reportedLoaded > definitionResult.value.capacity or reportedLoaded > reportedTotal then
+    local definition = definitionResult.value
+    local recoveryKey = RecoveryCreditKey(source, rpcContext, equipped)
+    if definition.multiTypeAmmunition == true then
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID, 'Multi-type weapons require a pool checkpoint', nil, rpcContext.correlationId)
+    end
+    local recoveryCredit = math.max(0, math.floor(tonumber(throwableRecoveryCredits[recoveryKey]) or 0))
+    local maxTotal = WeaponValidation.EscrowMaximum(definition, equipped.ammunitionType)
+
+    if reportedTotal < 0 or reportedTotal > maxTotal or reportedLoaded < 0
+        or reportedLoaded > definition.capacity or reportedLoaded > reportedTotal then
         return WeaponResult.Error(WeaponErrors.ITEM_INVALID, 'Reported ammunition is outside the approved range', nil, rpcContext.correlationId)
     end
 
@@ -755,14 +901,20 @@ function AmmoService.SyncConsumption(source, rpcContext, params)
         local current = tonumber(item.metadata.ammo.loaded) or 0
         local currentReserve = tonumber(item.metadata.ammo.reserve) or 0
         local currentTotal = current + currentReserve
-        if reportedTotal > currentTotal then
-            return WeaponResult.Error(WeaponErrors.ITEM_INVALID, 'Ammunition increases are not accepted from the client', nil, context.correlationId)
+        local recovered = math.max(0, reportedTotal - currentTotal)
+        if recovered > 0 and (definition.slot ~= 'throwable' or recovered > recoveryCredit) then
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+                'Ammunition recovery exceeds the committed throwable recovery credit', {
+                    requested = recovered,
+                    available = definition.slot == 'throwable' and recoveryCredit or 0
+                }, context.correlationId)
         end
 
-        local consumed = currentTotal - reportedTotal
+        local consumed = math.max(0, currentTotal - reportedTotal)
         item.metadata.ammo.loaded = reportedLoaded
         item.metadata.ammo.reserve = reportedTotal - reportedLoaded
         item.metadata.ammo.chambered = reportedLoaded > 0
+        WeaponMetadata.SaveSelectedAmmunitionPool(item.metadata, definition)
         if not tx:SetMetadata(item.id, item.metadata, item.metadataRevision) then
             return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
                 'Weapon metadata changed during ammunition checkpoint', nil, context.correlationId)
@@ -773,12 +925,18 @@ function AmmoService.SyncConsumption(source, rpcContext, params)
             loaded = reportedLoaded,
             reserve = reportedTotal - reportedLoaded,
             consumed = consumed,
+            recovered = recovered,
             condition = item.metadata.condition,
             broken = false
         }
     end)
 
     if not transactionResult.ok then return transactionResult end
+
+    if definition.slot == 'throwable' then
+        throwableRecoveryCredits[recoveryKey] = math.max(0,
+            recoveryCredit + transactionResult.value.consumed - transactionResult.value.recovered)
+    end
 
     WeaponRuntime.SetSlotAmmo(source, rpcContext.sessionId, slot, reportedTotal, reportedLoaded, rpcContext.correlationId)
     WeaponRuntime.SetSlotCondition(source, rpcContext.sessionId, slot, transactionResult.value.condition, rpcContext.correlationId)
@@ -935,9 +1093,14 @@ function AmmoService.SyncPair(source, rpcContext, params)
 end
 
 FeatherCore.RPC.Register('feather-weapons:ammo:unload', function(params, respond, source, context)
+    if params and params.allTypes == true and not params.itemInstanceId then
+        respond(WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID,
+            'Unload-all-types requires an equipped weapon lease', nil, context.correlationId))
+        return
+    end
     respond(AmmoService.Unload(source, context, params and params.amount,
         params and params.slot, params and params.itemInstanceId and params or nil))
-end, { requireCharacter = true, windowMs = 1000, maxCalls = 4, maxPayloadBytes = 128 })
+end, { requireCharacter = true, windowMs = 1000, maxCalls = 4, maxPayloadBytes = 256 })
 
 FeatherCore.RPC.Register('feather-weapons:ammo:loadSlot', function(params, respond, source, context)
     respond(AmmoService.LoadSlot(source, context, params))
@@ -954,6 +1117,10 @@ end, { requireCharacter = true, windowMs = 1000, maxCalls = 4, maxPayloadBytes =
 FeatherCore.RPC.Register('feather-weapons:ammo:sync', function(params, respond, source, context)
     respond(AmmoService.SyncConsumption(source, context, params))
 end, { requireCharacter = true, windowMs = 5000, maxCalls = 12, maxPayloadBytes = 256 })
+
+FeatherCore.RPC.Register('feather-weapons:ammo:syncPools', function(params, respond, source, context)
+    respond(AmmoService.SyncPools(source, context, params))
+end, { requireCharacter = true, windowMs = 5000, maxCalls = 12, maxPayloadBytes = 768 })
 
 FeatherCore.RPC.Register('feather-weapons:ammo:pairSync', function(params, respond, source, context)
     respond(AmmoService.SyncPair(source, context, params))

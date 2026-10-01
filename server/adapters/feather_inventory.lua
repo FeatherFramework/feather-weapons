@@ -224,7 +224,24 @@ function FeatherInventoryProvider.GetEquippedSlotsForCharacter(context)
         primary = result.value and result.value[configured.primary or Config.Inventory.equipmentSlot] or nil,
         offhand = result.value and result.value[configured.offhand or "weapon_offhand"] or nil,
         shoulder = result.value and result.value[configured.shoulder or "weapon_shoulder"] or nil,
-        back = result.value and result.value[configured.back or "weapon_back"] or nil
+        back = result.value and result.value[configured.back or "weapon_back"] or nil,
+        melee = result.value and result.value[configured.melee or "weapon_melee"] or nil,
+        melee_secondary = result.value
+            and result.value[configured.melee_secondary or "weapon_melee_secondary"] or nil,
+        melee_tertiary = result.value
+            and result.value[configured.melee_tertiary or "weapon_melee_tertiary"] or nil,
+        melee_quaternary = result.value
+            and result.value[configured.melee_quaternary or "weapon_melee_quaternary"] or nil,
+        throwable = result.value
+            and result.value[configured.throwable or "weapon_throwable"] or nil,
+        throwable_secondary = result.value
+            and result.value[configured.throwable_secondary or "weapon_throwable_secondary"] or nil,
+        throwable_tertiary = result.value
+            and result.value[configured.throwable_tertiary or "weapon_throwable_tertiary"] or nil,
+        throwable_quaternary = result.value
+            and result.value[configured.throwable_quaternary or "weapon_throwable_quaternary"] or nil,
+        throwable_quinary = result.value
+            and result.value[configured.throwable_quinary or "weapon_throwable_quinary"] or nil
     }, context.correlationId)
 end
 

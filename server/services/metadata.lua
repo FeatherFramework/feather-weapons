@@ -1,5 +1,34 @@
 WeaponMetadata = {}
 
+-- Opted-in carriers keep one authoritative total per ammunition definition.
+-- The legacy clip/reserve fields are only a projection of the selected pool.
+function WeaponMetadata.EnsureAmmunitionPools(metadata, definition)
+    if definition.multiTypeAmmunition ~= true then return end
+    if metadata.ammo.pools == nil then
+        metadata.ammo.pools = {
+            [metadata.ammo.type or definition.ammunitionType] =
+                (tonumber(metadata.ammo.loaded) or 0) + (tonumber(metadata.ammo.reserve) or 0)
+        }
+    end
+end
+
+function WeaponMetadata.ProjectAmmunitionPool(metadata, definition, ammunitionType)
+    WeaponMetadata.EnsureAmmunitionPools(metadata, definition)
+    local total = metadata.ammo.pools[ammunitionType] or 0
+    local loaded = math.min(definition.capacity, total)
+    metadata.ammo.type = ammunitionType
+    metadata.ammo.loaded = loaded
+    metadata.ammo.reserve = total - loaded
+    metadata.ammo.chambered = loaded > 0
+end
+
+function WeaponMetadata.SaveSelectedAmmunitionPool(metadata, definition)
+    if definition.multiTypeAmmunition ~= true then return end
+    WeaponMetadata.EnsureAmmunitionPools(metadata, definition)
+    metadata.ammo.pools[metadata.ammo.type or definition.ammunitionType] =
+        (tonumber(metadata.ammo.loaded) or 0) + (tonumber(metadata.ammo.reserve) or 0)
+end
+
 local function NormalizeMaintenance(value)
     value = type(value) == "table" and value or {}
     local function Unit(number)
@@ -39,6 +68,7 @@ function WeaponMetadata.Build(definition, options)
         provenance = options.provenance or {}
     }
 
+    WeaponMetadata.EnsureAmmunitionPools(metadata, definition)
     local valid, errors = WeaponValidation.Metadata(metadata, definition)
     if not valid then
         return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Generated weapon metadata is invalid", errors)
@@ -49,12 +79,27 @@ function WeaponMetadata.Build(definition, options)
 end
 
 function WeaponMetadata.Validate(metadata, definition, correlationId)
+    -- Retire only the explicitly rejected candidate's empty, unselected key.
+    -- Never discard nonzero ownership or silently change a retired selection.
+    if definition.id == 'throwable_throwing_knives' and type(metadata) == 'table'
+        and type(metadata.ammo) == 'table' and type(metadata.ammo.pools) == 'table'
+        and metadata.ammo.type ~= 'ammo_throwing_knives_improved'
+        and metadata.ammo.pools.ammo_throwing_knives_improved == 0 then
+        metadata.ammo.pools.ammo_throwing_knives_improved = nil
+    end
     if type(metadata) == "table" and type(metadata.ammo) == "table"
         and metadata.ammo.reserve == nil then
         metadata.ammo.reserve = 0
     end
     if type(metadata) == "table" and metadata.maintenance ~= nil then
         metadata.maintenance = NormalizeMaintenance(metadata.maintenance)
+    end
+    if type(metadata) == "table" and type(metadata.ammo) == "table"
+        and metadata.ammo.pools == nil then
+        -- Only import already-valid legacy metadata. A malformed existing pool
+        -- must fail validation instead of being overwritten by a projection.
+        local legacyValid = WeaponValidation.Metadata(metadata, definition)
+        if legacyValid then WeaponMetadata.EnsureAmmunitionPools(metadata, definition) end
     end
     local valid, errors = WeaponValidation.Metadata(metadata, definition)
     if not valid then

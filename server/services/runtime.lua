@@ -1,6 +1,13 @@
 WeaponRuntime = {}
 local sessions = {}
 
+local function PoolSnapshot(pools)
+    if type(pools) ~= 'table' then return nil end
+    local result = {}
+    for id, total in pairs(pools) do result[id] = total end
+    return result
+end
+
 local function MaintenanceSnapshot(metadata)
     local value = type(metadata.maintenance) == "table" and metadata.maintenance or {}
     return {
@@ -12,10 +19,18 @@ local function MaintenanceSnapshot(metadata)
     }
 end
 local tokenCounter = 0
-local validSlots = { primary = true, offhand = true, shoulder = true, back = true }
+local validSlots = {
+    primary = true, offhand = true, shoulder = true, back = true,
+    melee = true, melee_secondary = true, melee_tertiary = true, melee_quaternary = true,
+    throwable = true, throwable_secondary = true, throwable_tertiary = true, throwable_quaternary = true, throwable_quinary = true
+}
 
 local function EmptySlots()
-    return { primary = nil, offhand = nil, shoulder = nil, back = nil }
+    return {
+        primary = nil, offhand = nil, shoulder = nil, back = nil,
+        melee = nil, melee_secondary = nil, melee_tertiary = nil, melee_quaternary = nil,
+        throwable = nil, throwable_secondary = nil, throwable_tertiary = nil, throwable_quaternary = nil, throwable_quinary = nil
+    }
 end
 
 function WeaponRuntime.NormalizeSlot(slot)
@@ -27,7 +42,11 @@ local function RefreshCompatibility(runtime)
     runtime.equipped = runtime.slots and runtime.slots.primary or nil
     local occupied = runtime.slots
         and (runtime.slots.primary ~= nil or runtime.slots.offhand ~= nil
-            or runtime.slots.shoulder ~= nil or runtime.slots.back ~= nil)
+            or runtime.slots.shoulder ~= nil or runtime.slots.back ~= nil
+            or runtime.slots.melee ~= nil or runtime.slots.melee_secondary ~= nil
+            or runtime.slots.melee_tertiary ~= nil or runtime.slots.melee_quaternary ~= nil
+            or runtime.slots.throwable ~= nil or runtime.slots.throwable_secondary ~= nil
+            or runtime.slots.throwable_tertiary ~= nil or runtime.slots.throwable_quaternary ~= nil or runtime.slots.throwable_quinary ~= nil)
     runtime.state = runtime.pending and "equipping" or (occupied and "equipped" or "idle")
 end
 
@@ -43,6 +62,7 @@ local function NextGeneration(runtime)
 end
 
 local function NativeAmmoName(definition, metadata)
+    if definition.usesAmmunition == false then return nil end
     local result = DefinitionRegistry.Get("ammunition", metadata.ammo.type or definition.ammunitionType)
     return result.ok and result.value.nativeAmmoName or nil
 end
@@ -74,7 +94,7 @@ end
 
 function WeaponRuntime.FindLeaseByItem(itemInstanceId)
     for source, runtime in pairs(sessions) do
-        for _, slot in ipairs({ "primary", "offhand", "shoulder", "back" }) do
+        for _, slot in ipairs(WeaponConstants.LoadoutSlots) do
             local equipped = runtime.slots and runtime.slots[slot] or nil
             if equipped and tostring(equipped.itemInstanceId) == tostring(itemInstanceId) then
                 return source, slot, equipped, runtime
@@ -85,6 +105,7 @@ function WeaponRuntime.FindLeaseByItem(itemInstanceId)
 end
 
 local function AmmoSnapshot(metadata, definition)
+    if definition.usesAmmunition == false then return 0, 0, 0 end
     local loaded = math.max(0, math.min(definition.capacity,
         math.floor(tonumber(metadata.ammo and metadata.ammo.loaded) or 0)))
     local reserve = math.max(0, math.floor(tonumber(metadata.ammo and metadata.ammo.reserve) or 0))
@@ -144,6 +165,7 @@ function WeaponRuntime.RestoreEquipped(source, sessionId, item, definition, corr
         nativeWeaponName = definition.nativeWeaponName,
         ammunitionType = item.metadata.ammo.type or definition.ammunitionType,
         nativeAmmoName = NativeAmmoName(definition, item.metadata),
+        ammoPools = PoolSnapshot(item.metadata.ammo.pools),
         ammo = total,
         loaded = loaded,
         reserve = reserve,
@@ -194,6 +216,7 @@ function WeaponRuntime.BeginEquip(source, sessionId, item, definition, correlati
         nativeWeaponName = definition.nativeWeaponName,
         ammunitionType = item.metadata.ammo.type or definition.ammunitionType,
         nativeAmmoName = NativeAmmoName(definition, item.metadata),
+        ammoPools = PoolSnapshot(item.metadata.ammo.pools),
         ammo = total,
         loaded = loaded,
         reserve = reserve,
@@ -223,6 +246,7 @@ function WeaponRuntime.BeginEquip(source, sessionId, item, definition, correlati
         nativeWeaponName = definition.nativeWeaponName,
         ammunitionType = item.metadata.ammo.type or definition.ammunitionType,
         nativeAmmoName = NativeAmmoName(definition, item.metadata),
+        ammoPools = PoolSnapshot(item.metadata.ammo.pools),
         ammo = total,
         loaded = loaded,
         reserve = reserve,
@@ -257,6 +281,7 @@ function WeaponRuntime.CompleteEquip(source, sessionId, token, correlationId)
         nativeWeaponName = pending.nativeWeaponName,
         ammunitionType = pending.ammunitionType,
         nativeAmmoName = pending.nativeAmmoName,
+        ammoPools = PoolSnapshot(pending.ammoPools),
         ammo = pending.ammo,
         loaded = pending.loaded,
         reserve = pending.reserve,
@@ -299,6 +324,10 @@ function WeaponRuntime.SetSlotAmmo(source, sessionId, slot, total, loaded, corre
     end
     local definitionResult = DefinitionRegistry.Get("weapon", equipped.definitionId)
     if not definitionResult.ok then return definitionResult end
+    if definitionResult.value.usesAmmunition == false then
+        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+            "This weapon does not use ammunition", { slot = slot }, correlationId)
+    end
     total = math.floor(tonumber(total) or -1)
     loaded = math.floor(tonumber(loaded) or -1)
     local maxTotal = WeaponValidation.EscrowMaximum(
@@ -311,6 +340,7 @@ function WeaponRuntime.SetSlotAmmo(source, sessionId, slot, total, loaded, corre
     equipped.ammo = total
     equipped.loaded = loaded
     equipped.reserve = total - loaded
+    if equipped.ammoPools then equipped.ammoPools[equipped.ammunitionType] = total end
     return WeaponResult.Ok({ slot = slot, total = total, loaded = loaded,
         reserve = total - loaded }, correlationId)
 end

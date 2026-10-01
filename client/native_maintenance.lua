@@ -4,7 +4,16 @@ local preferredPoints = {
     primary = { 1, 2, 0, 3 },
     offhand = { 0, 3, 1, 2 },
     shoulder = { 10, 9 },
-    back = { 9, 10 }
+    back = { 9, 10 },
+    melee = { 0, 1, 2, 3 },
+    melee_secondary = { 0, 1, 2, 3 },
+    melee_tertiary = { 0, 1, 2, 3 },
+    melee_quaternary = { 0, 1, 2, 3 },
+    throwable = { 0, 1, 2, 3 },
+    throwable_secondary = { 0, 1, 2, 3 },
+    throwable_tertiary = { 0, 1, 2, 3 },
+    throwable_quaternary = { 0, 1, 2, 3 },
+    throwable_quinary = { 0, 1, 2, 3 }
 }
 
 local function NativeTrue(value)
