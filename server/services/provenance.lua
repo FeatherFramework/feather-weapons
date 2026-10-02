@@ -16,7 +16,7 @@ local function Trusted(resource)
 end
 
 function WeaponProvenanceService.Start()
-    MySQL.query.await([[
+    DB.exec([[
         CREATE TABLE IF NOT EXISTS `feather_weapon_events` (
           `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
           `item_instance_id` BIGINT UNSIGNED NOT NULL,
@@ -39,7 +39,7 @@ function WeaponProvenanceService.Start()
           KEY `idx_weapon_events_serial` (`serial_number`,`id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     ]])
-    MySQL.query.await([[
+    DB.exec([[
         CREATE TABLE IF NOT EXISTS `feather_weapon_issuance_requests` (
           `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
           `resource` VARCHAR(64) NOT NULL,
@@ -61,15 +61,14 @@ function WeaponProvenanceService.Start()
         { name = 'character_id', sql = 'ADD COLUMN `character_id` CHAR(36) NULL AFTER `purpose`' },
         { name = 'definition_id', sql = 'ADD COLUMN `definition_id` VARCHAR(64) NULL AFTER `character_id`' }
     }) do
-        local found = MySQL.query.await('SHOW COLUMNS FROM `feather_weapon_issuance_requests` LIKE ?',
-            { column.name }) or {}
+        local found = DB.query('SHOW COLUMNS FROM `feather_weapon_issuance_requests` LIKE ?', column.name)
         if not found[1] then
-            MySQL.query.await(('ALTER TABLE `feather_weapon_issuance_requests` %s'):format(column.sql))
+            DB.exec(('ALTER TABLE `feather_weapon_issuance_requests` %s'):format(column.sql))
         end
     end
     recoverableIssuanceIds = {}
-    local pending = MySQL.query.await([[SELECT `id` FROM `feather_weapon_issuance_requests`
-        WHERE `status`='pending']]) or {}
+    local pending = DB.query([[SELECT `id` FROM `feather_weapon_issuance_requests`
+        WHERE `status`='pending']])
     for _, row in ipairs(pending) do
         local id = tonumber(row.id)
         if id then recoverableIssuanceIds[id] = true end
@@ -92,22 +91,24 @@ function WeaponProvenanceService.Record(fact)
         return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
             'Weapon provenance fact is incomplete', nil, fact.correlationId)
     end
-    local id = MySQL.insert.await([[
+    -- DB.insert raises on failure (unlike MySQL.insert.await, which returned nil); pcall keeps
+    -- that failure inside this service's existing WeaponResult.Error contract instead of letting
+    -- a raw Lua error cross the exports() boundary into whatever resource called IssueWeapon etc.
+    local inserted, id = pcall(DB.insert, [[
         INSERT INTO `feather_weapon_events`
         (`item_instance_id`,`serial_number`,`definition_id`,`event_type`,`operation`,
          `actor_character_id`,`from_character_id`,`to_character_id`,
          `from_inventory_id`,`to_inventory_id`,`reason`,`resource`,`correlation_id`,`snapshot`,`occurred_at`)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,FROM_UNIXTIME(?))
-    ]], {
+    ]],
         itemId, serial, definitionId, eventType, operation,
         CoreAdapter.NormalizeCharacterId(fact.actorCharacterId),
         CoreAdapter.NormalizeCharacterId(fact.fromCharacterId),
         CoreAdapter.NormalizeCharacterId(fact.toCharacterId),
         tonumber(fact.fromInventoryId), tonumber(fact.toInventoryId),
         Clean(fact.reason, 64), Clean(fact.resource or 'feather-weapons', 64),
-        Clean(fact.correlationId, 128), json.encode(fact), tonumber(fact.occurredAt) or os.time()
-    })
-    if not id then
+        Clean(fact.correlationId, 128), json.encode(fact), tonumber(fact.occurredAt) or os.time())
+    if not inserted or not id then
         return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
             'Weapon provenance event could not be persisted', nil, fact.correlationId)
     end
@@ -130,13 +131,19 @@ function WeaponProvenanceService.Inspect(request, context, invokingResource)
     local maximum = math.max(1, math.min(500,
         math.floor(tonumber((Config.Provenance or {}).maxInspectionEvents) or 100)))
     local limit = math.max(1, math.min(maximum, math.floor(tonumber(request.limit) or 50)))
-    local rows
+    local queried, rows
     if itemId then
-        rows = MySQL.query.await([[SELECT * FROM `feather_weapon_events`
-            WHERE `item_instance_id`=? ORDER BY `id` DESC LIMIT ?]], { itemId, limit }) or {}
+        queried, rows = pcall(DB.query, [[SELECT * FROM `feather_weapon_events`
+            WHERE `item_instance_id`=? ORDER BY `id` DESC LIMIT ?]], itemId, limit)
     else
-        rows = MySQL.query.await([[SELECT * FROM `feather_weapon_events`
-            WHERE `serial_number`=? ORDER BY `id` DESC LIMIT ?]], { serial, limit }) or {}
+        queried, rows = pcall(DB.query, [[SELECT * FROM `feather_weapon_events`
+            WHERE `serial_number`=? ORDER BY `id` DESC LIMIT ?]], serial, limit)
+    end
+    if not queried then
+        return WeaponResult.Error(WeaponErrors.DEPENDENCY_UNAVAILABLE,
+            'Weapon provenance ledger could not be read', nil, context.correlationId)
+    end
+    if not itemId then
         itemId = rows[1] and tonumber(rows[1].item_instance_id) or nil
     end
     local current = itemId and InventoryAdapter.GetInstance(context, itemId) or nil
@@ -160,15 +167,23 @@ function WeaponProvenanceService.BeginIssuance(resource, requestId, purpose, cha
         return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
             'A durable issuance request identity is required', nil, correlationId)
     end
-    local inserted = MySQL.insert.await([[INSERT IGNORE INTO `feather_weapon_issuance_requests`
+    local insertedOk, inserted = pcall(DB.insert, [[INSERT IGNORE INTO `feather_weapon_issuance_requests`
         (`resource`,`request_id`,`purpose`,`character_id`,`definition_id`,`status`)
         VALUES (?,?,?,?,?,'pending')]],
-        { resource, requestId, purpose, characterId, definitionId })
+        resource, requestId, purpose, characterId, definitionId)
+    if not insertedOk then
+        return WeaponResult.Error(WeaponErrors.DEPENDENCY_UNAVAILABLE,
+            'Weapon issuance ledger could not be written', nil, correlationId)
+    end
     if inserted and tonumber(inserted) and tonumber(inserted) > 0 then
         return WeaponResult.Ok({ reservationId = tonumber(inserted), replayed = false }, correlationId)
     end
-    local rows = MySQL.query.await([[SELECT * FROM `feather_weapon_issuance_requests`
-        WHERE `resource`=? AND `request_id`=? LIMIT 1]], { resource, requestId }) or {}
+    local queriedOk, rows = pcall(DB.query, [[SELECT * FROM `feather_weapon_issuance_requests`
+        WHERE `resource`=? AND `request_id`=? LIMIT 1]], resource, requestId)
+    if not queriedOk then
+        return WeaponResult.Error(WeaponErrors.DEPENDENCY_UNAVAILABLE,
+            'Weapon issuance ledger could not be read', nil, correlationId)
+    end
     local row = rows[1]
     if row and (row.purpose ~= purpose or row.character_id ~= characterId
         or row.definition_id ~= definitionId) then
@@ -210,18 +225,22 @@ function WeaponProvenanceService.MarkIssuanceInterrupted(reservationId)
 end
 
 function WeaponProvenanceService.FindIssuanceEvent(itemInstanceId, correlationId)
-    local rows = MySQL.query.await([[SELECT `id` FROM `feather_weapon_events`
+    local queried, rows = pcall(DB.query, [[SELECT `id` FROM `feather_weapon_events`
         WHERE `item_instance_id`=? AND `event_type`='issuance'
-        ORDER BY `id` ASC LIMIT 1]], { tonumber(itemInstanceId) }) or {}
+        ORDER BY `id` ASC LIMIT 1]], tonumber(itemInstanceId))
+    if not queried then
+        return WeaponResult.Error(WeaponErrors.DEPENDENCY_UNAVAILABLE,
+            'Weapon provenance ledger could not be read', nil, correlationId)
+    end
     return WeaponResult.Ok({ eventId = rows[1] and tonumber(rows[1].id) or nil }, correlationId)
 end
 
 function WeaponProvenanceService.CommitIssuance(reservationId, value, correlationId)
-    local changed = MySQL.update.await([[UPDATE `feather_weapon_issuance_requests`
+    local executed, changed = pcall(DB.exec, [[UPDATE `feather_weapon_issuance_requests`
         SET `status`='committed',`item_instance_id`=?,`serial_number`=?,`result_json`=?
         WHERE `id`=? AND `status`='pending']],
-        { value.itemInstanceId, value.serialNumber, json.encode(value), tonumber(reservationId) })
-    if tonumber(changed) ~= 1 then
+        value.itemInstanceId, value.serialNumber, json.encode(value), tonumber(reservationId))
+    if not executed or tonumber(changed) ~= 1 then
         return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
             'Issuance request could not be committed', nil, correlationId)
     end
@@ -232,8 +251,8 @@ end
 function WeaponProvenanceService.CancelIssuance(reservationId)
     if reservationId then
         recoverableIssuanceIds[tonumber(reservationId)] = nil
-        MySQL.update.await([[DELETE FROM `feather_weapon_issuance_requests`
-            WHERE `id`=? AND `status`='pending']], { tonumber(reservationId) })
+        pcall(DB.exec, [[DELETE FROM `feather_weapon_issuance_requests`
+            WHERE `id`=? AND `status`='pending']], tonumber(reservationId))
     end
 end
 
