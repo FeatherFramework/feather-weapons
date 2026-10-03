@@ -9,11 +9,22 @@ local preferredPoints = {
     melee_secondary = { 0, 1, 2, 3 },
     melee_tertiary = { 0, 1, 2, 3 },
     melee_quaternary = { 0, 1, 2, 3 },
+    utility = { 0, 1, 2, 3 },
+    utility_secondary = { 0, 1, 2, 3 },
+    utility_tertiary = { 0, 1, 2, 3 },
+    utility_quaternary = { 0, 1, 2, 3 },
+    utility_quinary = { 0, 1, 2, 3 },
+    utility_senary = { 0, 1, 2, 3 },
     throwable = { 0, 1, 2, 3 },
     throwable_secondary = { 0, 1, 2, 3 },
     throwable_tertiary = { 0, 1, 2, 3 },
     throwable_quaternary = { 0, 1, 2, 3 },
-    throwable_quinary = { 0, 1, 2, 3 }
+    throwable_quinary = { 0, 1, 2, 3 },
+    throwable_senary = { 0, 1, 2, 3 },
+    throwable_septenary = { 0, 1, 2, 3 },
+    throwable_octonary = { 0, 1, 2, 3 },
+    throwable_nonary = { 0, 1, 2, 3 },
+    throwable_denary = { 0, 1, 2, 3 }
 }
 
 local function NativeTrue(value)

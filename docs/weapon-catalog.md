@@ -213,3 +213,84 @@ Tomahawk single-type recovery is unchanged. See throwing-knife-multi-ammo.md.
 Native identifiers were cross-checked against:
 - https://github.com/femga/rdr3_discoveries/blob/master/weapons/weapons.lua
 - https://github.com/femga/rdr3_discoveries/blob/master/weapons/ammo_types.lua
+
+## Current catalog gate
+
+Toxic Moonshine (internal Poison Bottle) passed reported manual checks at 39 weapons / 43 ammunition / 38 attachments and ten logical throwable positions. Native capacity eight and wheel naming are confirmed; smoke tests passed 5/5, 17/17 and 9/9. See [Toxic Moonshine live checks](poison-bottle-live-gate.md).
+
+Standard Dynamite and Fire Bottle passed manual lifecycle checks. Current accepted catalog: 38 weapons / 42 ammunition / 38 attachments, nine logical throwable positions. Fire Bottle capacity eight, throw/unload conservation, and two successive resource restarts are verified; smoke tests passed 5/5, 17/17 and 9/9. See [Fire Bottle checks](fire-bottle-live-gate.md).
+
+Gravesend (internal Ironspiked) and Brookstone (internal Intertwined) passed manual testing. Current accepted catalog: 36 weapons / 40 ammunition / 38 attachments, with seven logical throwable positions. Brookstone wheel naming and native capacity three are confirmed, and the release contract passed 9/9. See [Brookstone live checks](brookstone-bolas-live-gate.md). Historical counts above describe earlier gates, not the current catalog. Next: standard Dynamite, followed by Fire Bottle; Improved ammunition and cosmetics remain deferred.
+
+
+## Standard Lasso accepted
+
+Standard Lantern is retired from the active catalog and fresh-install seeds after failed wheel testing. Existing owned instances are preserved, not converted. Davy Lantern is the supported Lantern.
+
+Reinforced Lasso and the one-equipped-Lasso policy passed reported manual checks on 2026-10-02. Both carriers may be owned, but only one Lasso-family carrier may be equipped at a time: the native wheel suppressed Regular when Reinforced was equipped. Final metadata confirms one Lasso and all ten throwables; lease checks passed 5/5 and release checks 9/9. Current accepted catalog: 41 weapons / 43 ammunition / 38 attachments. See [Reinforced Lasso live gate](reinforced-lasso-live-gate.md). Standard Lasso acceptance below describes the previous gate.
+
+Lasso (`WEAPON_LASSO`) uses the independent `utility` slot and unique `weapon_utility_lasso` item, with no ammunition. Manual checks passed on 2026-10-02; server metadata confirms coexistence with all ten throwable carriers and zero Lasso ammunition. Utility lease checks passed 5/5 and release checks 9/9; see [Lasso live gate](lasso-live-gate.md). Current accepted catalog: 40 weapons, 43 ammunition and 38 attachments.
+
+
+Davy Lantern is a separate follow-up candidate (utility_davy_lantern / WEAPON_MELEE_DAVY_LANTERN).
+Standard Lantern has native ownership but no observed wheel entry, including without Lasso.
+Davy Lantern passed reported manual checks on 2026-10-02; screenshot confirms Light / Lantern wheel entry alongside Lasso. Metadata and client native ownership match; lease checks passed 5/5 and release checks 9/9 with 14 active slots. Standard Lantern remains unaccepted. After retiring Standard Lantern, the active catalog contains 42 weapon definitions, 43 ammunition and 38 attachments.
+Existing Standard Lantern ownership and native mapping are preserved.
+
+Standard Lantern has since been retired from the active catalog; owned carriers remain untouched.
+Binoculars is the next candidate, using WEAPON_KIT_BINOCULARS and a third utility slot.
+Candidate counts: 43 weapons / 43 ammunition / 38 attachments.
+The live gate includes all four prior melee carriers alongside Lantern, one Lasso and throwables.
+Logical slot names do not force wheel placement; tester observed Lasso bottom-left and Lantern bottom-right.
+See [combined Binoculars/melee checks](binoculars-live-gate.md).
+
+Binoculars and combined four-melee/three-utility manual checks passed on 2026-10-02.
+Screenshot confirms Kit / Binoculars on the Items wheel. Metadata/runtime match for
+all seven carriers; native ownership true. Lease 5/5, release 9/9, 19 active slots.
+Current accepted catalog: 43 weapons / 43 ammunition / 38 attachments.
+
+Standard Camera is the next candidate (utility_camera / WEAPON_KIT_CAMERA),
+in a fourth logical utility position. Candidate catalog: 44 weapons / 43 ammunition / 38 attachments.
+No photo storage integration is added; native view/exit and photo behavior require separate verification.
+See [Camera live gate](camera-live-gate.md).
+
+Camera equipment and wheel coexistence passed reported testing on 2026-10-02;
+screenshot confirms Kit / Camera on the Items wheel alongside Binoculars.
+User confirmed no default camera controls and scoped photography to a separate
+optional add-on. Weapons retains only carrier ownership/equip/persistence responsibilities.
+No camera controls or photo storage are implemented. Camera-specific lifecycle and
+smoke results were not included in the initial submission. Follow-up source=3 metadata
+confirms Camera item 133/serial FW-CAME-6AC097F2-28FAEF-0001 restored with runtimeMatch=true.
+Lease checks passed 5/5; release checks passed 9/9 with 20 active slots.
+Current accepted equipment catalog: 44 weapons / 43 ammunition / 38 attachments.
+
+Advanced Camera is the next equipment-only candidate (utility_camera_advanced / WEAPON_KIT_CAMERA_ADVANCED),
+using a fifth logical utility slot. Candidate counts: 45 weapons / 43 ammunition / 38 attachments.
+Native wheel coexistence with Standard Camera remains unverified; photography belongs in a separate optional add-on.
+See [Advanced Camera live gate](advanced-camera-live-gate.md).
+
+Advanced Camera screenshot and supplied metadata/runtime confirm wheel access and both Camera carriers
+owned/equipped simultaneously; lease 5/5 and release 9/9. Photography remains external.
+Electric Lantern is the next separate candidate, with a sixth logical utility position.
+Candidate counts: 46 weapons / 43 ammunition / 38 attachments; wheel and lighting unverified.
+See [Electric Lantern live gate](electric-lantern-live-gate.md).
+
+
+Electric Lantern retired on 2026-10-03 after nativeOwned=false and failed wheel access.
+Removed from active catalog and fresh-install seeds; existing owned items remain untouched.
+Stable utility_senary position retained. Davy is the supported Lantern.
+Current active catalog: 45 weapons / 43 ammunition / 38 attachments.
+See [Electric Lantern retirement](electric-lantern-live-gate.md).
+
+
+Electric Lantern retirement fully confirmed: owned retired item retained/unusable,
+slot cleared and release checks 9/9. Torch is the next candidate (utility_torch / WEAPON_MELEE_TORCH),
+using the free sixth utility slot. Candidate counts: 46 weapons / 43 ammunition / 38 attachments.
+See [Torch live gate](torch-live-gate.md); native wheel/light/melee behavior remains unverified.
+
+
+Torch retired on 2026-10-03: native drop on holster/switch, native ownership lost
+while saved carrier remained equipped, and Davy wheel suppression reported.
+Removed from active catalog/fresh seeds; owned holders preserved, usable definition disabled by migration.
+Current active catalog: 45 weapons / 43 ammunition / 38 attachments.
+See [Torch retirement](torch-live-gate.md).

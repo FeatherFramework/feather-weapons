@@ -59,7 +59,22 @@ end
 
 local function ValidateSlotEligibility(source, slot, definition, correlationId, metadata)
     local runtime = WeaponRuntime.Get(source)
-    local configured = definition.slot == "sidearm"
+    -- The native wheel suppresses Standard Lasso while Reinforced is present.
+    -- Keep ownership independent, but require an explicit unequip to switch.
+    -- This also applies during saved-loadout restoration.
+    if definition.family == "lasso" then
+        for _, otherSlot in ipairs(WeaponConstants.LoadoutSlots) do
+            local other = runtime and runtime.slots and runtime.slots[otherSlot] or nil
+            local otherDefinition = other and WeaponDefinitionCatalog.weapons[other.definitionId] or nil
+            if otherDefinition and otherDefinition.family == "lasso" then
+                return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+                    "Only one lasso can be equipped. Unequip your current lasso first.",
+                    { otherSlot = otherSlot, itemInstanceId = other.itemInstanceId }, correlationId)
+            end
+        end
+    end
+    local configured = definition.slot == "utility" and Config.Loadout.utilitySlots
+        or definition.slot == "sidearm"
         and (Config.Loadout and Config.Loadout.sidearmSlots)
         or (definition.slot == "longgun" and Config.Loadout and Config.Loadout.longgunSlots
             or (definition.slot == "melee" and Config.Loadout and Config.Loadout.meleeSlots
@@ -82,7 +97,8 @@ local function ValidateSlotEligibility(source, slot, definition, correlationId, 
         return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
             "Weapon equipment slot is invalid", nil, correlationId)
     end
-    local expectedCategory = WeaponConstants.SidearmSlots[slot] and "sidearm"
+    local expectedCategory = WeaponConstants.UtilitySlots[slot] and "utility"
+        or WeaponConstants.SidearmSlots[slot] and "sidearm"
         or (WeaponConstants.LonggunSlots[slot] and "longgun"
             or (WeaponConstants.MeleeSlots[slot] and "melee"
                 or (WeaponConstants.ThrowableSlots[slot] and "throwable" or nil)))
@@ -176,10 +192,16 @@ function EquipService.ValidateConfiguration()
     if type(Config.Loadout) ~= "table"
         or type(Config.Loadout.sidearmSlots) ~= "table"
         or type(Config.Loadout.longgunSlots) ~= "table"
+        or type(Config.Loadout.utilitySlots) ~= "table"
         or type(Config.Loadout.meleeSlots) ~= "table"
         or type(Config.Loadout.throwableSlots) ~= "table" then
         return WeaponResult.Error(WeaponErrors.INVALID_DEFINITION,
             "Weapon loadout configuration is invalid")
+    end
+    for _, slot in ipairs(Config.Loadout.utilitySlots) do
+        if not WeaponConstants.UtilitySlots[slot] then
+            return WeaponResult.Error(WeaponErrors.INVALID_DEFINITION, "Utility loadout slot configuration is invalid")
+        end
     end
     for _, slot in ipairs(Config.Loadout.sidearmSlots) do
         if not WeaponConstants.SidearmSlots[slot] then

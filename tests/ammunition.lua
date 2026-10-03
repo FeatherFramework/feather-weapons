@@ -92,7 +92,7 @@ local function check(value, message)
 end
 
 -- Every catalog combination loads, persists its native type and unloads the
-for _, slot in ipairs({ 'throwable_quaternary', 'throwable_quinary' }) do
+for _, slot in ipairs({ 'throwable_quaternary', 'throwable_quinary', 'throwable_senary', 'throwable_septenary', 'throwable_octonary', 'throwable_nonary', 'throwable_denary' }) do
     check(WeaponRuntime.NormalizeSlot(slot) == slot and WeaponConstants.ThrowableSlots[slot],
         'New throwable position is recognized: ' .. slot)
     check(Config.Inventory.equipmentSlots[slot] == 'weapon_' .. slot,
@@ -474,7 +474,100 @@ check(fourthMeleeRuntime.ok and WeaponRuntime.Get(1).slots.melee ~= nil
     and WeaponRuntime.Get(1).slots.melee_tertiary ~= nil
     and WeaponRuntime.Get(1).slots.melee_quaternary ~= nil,
     'Distinct melee models coexist in four persistent slots')
+local lassoDefinition = WeaponDefinitionCatalog.weapons.utility_lasso
+local lassoMetadata = WeaponMetadata.Build(lassoDefinition, { serialNumber = 'TEST-LASSO' })
+check(lassoMetadata.ok and lassoMetadata.value.ammo.type == nil
+    and lassoMetadata.value.ammo.loaded == 0 and lassoMetadata.value.ammo.reserve == 0,
+    'Lasso metadata has no ammunition')
+local lassoItem = { id = 9001, metadata = lassoMetadata.value, metadataRevision = 1 }
+local lassoRuntime = WeaponRuntime.RestoreEquipped(1, 'test', lassoItem,
+    lassoDefinition, 'test', 'utility')
+check(lassoRuntime.ok and lassoRuntime.value.nativeAmmoName == nil
+    and lassoRuntime.value.ammo == 0 and WeaponRuntime.Get(1).slots.melee ~= nil,
+    'Lasso occupies independent utility slot without displacing melee')
+local invalidLassoMetadata = copy(lassoMetadata.value)
+invalidLassoMetadata.ammo.loaded = 1
+check(not WeaponValidation.Metadata(invalidLassoMetadata, lassoDefinition),
+    'Lasso rejects invented ammunition')
 -- Retain coverage for the legacy single-pool recovery service. The shipped
+local reinforcedDefinition = WeaponDefinitionCatalog.weapons.utility_lasso_reinforced
+local reinforcedMetadata = WeaponMetadata.Build(reinforcedDefinition,
+    { serialNumber = 'TEST-LASSO-REINFORCED' })
+check(reinforcedMetadata.ok and reinforcedMetadata.value.ammo.type == nil
+    and reinforcedMetadata.value.ammo.loaded == 0 and reinforcedMetadata.value.ammo.reserve == 0,
+    'Reinforced Lasso metadata has no ammunition')
+local reinforcedItem = { id = 9002, metadata = reinforcedMetadata.value, metadataRevision = 1 }
+reinforcedItem.itemName = reinforcedDefinition.itemName
+items[9002] = reinforcedItem
+local blockedLasso = EquipService.Request(1, context, 9002, 'utility_secondary')
+check(not blockedLasso.ok and blockedLasso.error.code == WeaponErrors.OPERATION_CONFLICT,
+    'Second Lasso equip rejected while Standard remains equipped')
+local blockedRestore = EquipService.Restore(1, { characterId = 1, sessionId = 'test' },
+    9002, 'test', 'utility_secondary')
+check(not blockedRestore.ok and blockedRestore.error.code == WeaponErrors.OPERATION_CONFLICT,
+    'Saved second Lasso restore rejected without deleting its carrier')
+assert(WeaponRuntime.Unequip(1, 'test', 'test', 'utility').ok)
+local reinforcedRuntime = WeaponRuntime.RestoreEquipped(1, 'test', reinforcedItem,
+    reinforcedDefinition, 'test', 'utility_secondary')
+check(reinforcedRuntime.ok and reinforcedRuntime.value.nativeAmmoName == nil
+    and reinforcedRuntime.value.ammo == 0 and WeaponRuntime.Get(1).slots.utility == nil,
+    'Reinforced Lasso restores after Standard is unequipped')
+check(not WeaponRuntime.SetSlotAmmo(1, 'test', 'utility_secondary', 1, 1, 'test').ok,
+    'Reinforced Lasso rejects runtime ammunition')
+local lanternDefinition = WeaponDefinitionCatalog.weapons.utility_davy_lantern
+local lanternMetadata = WeaponMetadata.Build(lanternDefinition, { serialNumber = 'TEST-LANTERN' })
+check(lanternMetadata.ok and lanternMetadata.value.ammo.type == nil
+    and lanternMetadata.value.ammo.loaded == 0, 'Lantern metadata is ammunition-free')
+items[9003] = { id = 9003, itemName = lanternDefinition.itemName,
+    metadata = lanternMetadata.value, metadataRevision = 1 }
+local lanternRequest = EquipService.Request(1, context, 9003, 'utility')
+check(lanternRequest.ok, 'Lantern can equip beside an equipped Lasso')
+local lanternCommit = WeaponRuntime.CompleteEquip(1, 'test', lanternRequest.value.token, 'test')
+check(lanternCommit.ok and WeaponRuntime.Get(1).slots.utility_secondary ~= nil,
+    'Lantern and Lasso occupy independent utility slots')
+check(not WeaponRuntime.SetSlotAmmo(1, 'test', 'utility', 1, 1, 'test').ok,
+    'Lantern rejects ammunition writes')
+local binocularsDefinition = WeaponDefinitionCatalog.weapons.utility_binoculars
+local binocularsMetadata = WeaponMetadata.Build(binocularsDefinition, { serialNumber = 'TEST-BINOCULARS' })
+items[9004] = { id = 9004, itemName = binocularsDefinition.itemName,
+    metadata = binocularsMetadata.value, metadataRevision = 1 }
+local binocularsRequest = EquipService.Request(1, context, 9004, 'utility_tertiary')
+check(binocularsRequest.ok, 'Binoculars equip alongside Lantern, Lasso and melee')
+local binocularsCommit = WeaponRuntime.CompleteEquip(1, 'test', binocularsRequest.value.token, 'test')
+check(binocularsCommit.ok and WeaponRuntime.Get(1).slots.utility ~= nil
+    and WeaponRuntime.Get(1).slots.utility_secondary ~= nil
+    and WeaponRuntime.Get(1).slots.melee_quaternary ~= nil,
+    'Three utility carriers and existing melee coexist in saved runtime')
+check(not WeaponRuntime.SetSlotAmmo(1, 'test', 'utility_tertiary', 1, 1, 'test').ok,
+    'Binoculars reject ammunition writes')
+local cameraDefinition = WeaponDefinitionCatalog.weapons.utility_camera
+local cameraMetadata = WeaponMetadata.Build(cameraDefinition, { serialNumber = 'TEST-CAMERA' })
+items[9005] = { id = 9005, itemName = cameraDefinition.itemName,
+    metadata = cameraMetadata.value, metadataRevision = 1 }
+local cameraRequest = EquipService.Request(1, context, 9005, 'utility_quaternary')
+check(cameraRequest.ok, 'Camera equips in fourth utility position')
+local cameraCommit = WeaponRuntime.CompleteEquip(1, 'test', cameraRequest.value.token, 'test')
+check(cameraCommit.ok and cameraCommit.value.nativeAmmoName == nil
+    and cameraCommit.value.ammo == 0 and WeaponRuntime.Get(1).slots.utility_tertiary ~= nil,
+    'Camera remains ammunition-free alongside Binoculars')
+check(not WeaponRuntime.SetSlotAmmo(1, 'test', 'utility_quaternary', 1, 1, 'test').ok,
+    'Camera rejects ammunition writes')
+local advancedDefinition = WeaponDefinitionCatalog.weapons.utility_camera_advanced
+local advancedMetadata = WeaponMetadata.Build(advancedDefinition, { serialNumber = 'TEST-ADVANCED-CAMERA' })
+items[9006] = { id = 9006, itemName = advancedDefinition.itemName,
+    metadata = advancedMetadata.value, metadataRevision = 1 }
+local advancedRequest = EquipService.Request(1, context, 9006, 'utility_quinary')
+check(advancedRequest.ok, 'Advanced Camera equips beside Standard Camera')
+local advancedCommit = WeaponRuntime.CompleteEquip(1, 'test', advancedRequest.value.token, 'test')
+check(advancedCommit.ok and advancedCommit.value.nativeAmmoName == nil
+    and advancedCommit.value.ammo == 0 and WeaponRuntime.Get(1).slots.utility_quaternary ~= nil,
+    'Both Camera carrier identities coexist without ammunition')
+check(not WeaponRuntime.SetSlotAmmo(1, 'test', 'utility_quinary', 1, 1, 'test').ok,
+    'Advanced Camera rejects ammunition writes')
+check(WeaponDefinitionCatalog.weapons.utility_lantern_electric == nil,
+    'Failed Electric Lantern is absent from active catalog')
+check(WeaponDefinitionCatalog.weapons.utility_torch == nil,
+    'Retired Torch is absent from active catalog')
 -- multi-type carrier uses the separate consumption-only pool checkpoint.
 WeaponDefinitionCatalog.weapons.throwable_throwing_knives.multiTypeAmmunition = false
 assert(DefinitionRegistry.Start().ok)
@@ -731,4 +824,49 @@ WeaponDefinitionCatalog.attachments.cattleman_wide_sight.prerequisites = { 'miss
 check(not DefinitionRegistry.Start().ok, 'Unknown attachment prerequisite rejected at startup')
 WeaponDefinitionCatalog.attachments = originalAttachments
 assert(DefinitionRegistry.Start().ok)
+reset('throwable_bolas_ironspiked')
+stock.ammo_bolas_ironspiked = 5
+local ironspikedLoad = AmmoService.Escrow(1, context, 5, 'ammo_bolas_ironspiked')
+check(ironspikedLoad.ok and ironspikedLoad.value.total == 3
+    and stock.ammo_bolas_ironspiked == 2, 'Ironspiked candidate cap preserves excess stock')
+check(AmmoService.Unload(1, context).ok and stock.ammo_bolas_ironspiked == 5,
+    'Ironspiked unload conserves its exact ammunition')
+reset('throwable_bolas_intertwined')
+stock.ammo_bolas_intertwined = 5
+local brookstoneLoad = AmmoService.Escrow(1, context, 5, 'ammo_bolas_intertwined')
+check(brookstoneLoad.ok and brookstoneLoad.value.total == 3
+    and brookstoneLoad.value.loaded == 1 and brookstoneLoad.value.reserve == 2
+    and stock.ammo_bolas_intertwined == 2, 'Brookstone candidate cap preserves excess stock')
+check(not AmmoService.Escrow(1, context, 1, 'ammo_bolas_regular').ok,
+    'Brookstone rejects another Bolas variant ammunition')
+check(AmmoService.Unload(1, context).ok and stock.ammo_bolas_intertwined == 5,
+    'Brookstone unload returns its exact ammunition')
+reset('throwable_dynamite')
+stock.ammo_dynamite = 10
+local dynamiteLoad = AmmoService.Escrow(1, context, 10, 'ammo_dynamite')
+check(dynamiteLoad.ok and dynamiteLoad.value.total == 8
+    and dynamiteLoad.value.loaded == 1 and dynamiteLoad.value.reserve == 7
+    and stock.ammo_dynamite == 2, 'Dynamite candidate ceiling preserves excess stock')
+check(not AmmoService.Escrow(1, context, 1, 'ammo_bolas_regular').ok,
+    'Dynamite rejects foreign-family ammunition')
+check(AmmoService.Unload(1, context).ok and stock.ammo_dynamite == 10,
+    'Dynamite unload conserves exact ammunition')
+reset('throwable_molotov')
+stock.ammo_molotov = 10
+local fireBottleLoad = AmmoService.Escrow(1, context, 10, 'ammo_molotov')
+check(fireBottleLoad.ok and fireBottleLoad.value.total == 8
+    and stock.ammo_molotov == 2, 'Fire Bottle candidate ceiling preserves excess stock')
+check(not AmmoService.Escrow(1, context, 1, 'ammo_dynamite').ok,
+    'Fire Bottle rejects Dynamite ammunition')
+check(AmmoService.Unload(1, context).ok and stock.ammo_molotov == 10,
+    'Fire Bottle unload conserves exact ammunition')
+reset('throwable_poisonbottle')
+stock.ammo_poisonbottle = 10
+local poisonBottleLoad = AmmoService.Escrow(1, context, 10, 'ammo_poisonbottle')
+check(poisonBottleLoad.ok and poisonBottleLoad.value.total == 8
+    and stock.ammo_poisonbottle == 2, 'Poison Bottle candidate ceiling preserves excess stock')
+check(not AmmoService.Escrow(1, context, 1, 'ammo_molotov').ok,
+    'Poison Bottle rejects Fire Bottle ammunition')
+check(AmmoService.Unload(1, context).ok and stock.ammo_poisonbottle == 10,
+    'Poison Bottle unload conserves exact ammunition')
 print(('Ammunition regression checks: %d passed'):format(passed))

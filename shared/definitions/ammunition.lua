@@ -375,6 +375,61 @@ WeaponDefinitionCatalog.ammunition = {
         stackable = true,
         tags = { "throwable", "bolas", "regular", "purchase" }
     },
+    ammo_bolas_ironspiked = {
+        id = "ammo_bolas_ironspiked",
+        kind = "ammunition",
+        itemName = "ammo_bolas_ironspiked",
+        label = "Bolas - Gravesend",
+        nativeAmmoName = "AMMO_BOLAS_IRONSPIKED",
+        -- Target-build capacity probe reports three; manual lifecycle checks passed.
+        maxTotal = 3,
+        stackable = true,
+        tags = { "throwable", "bolas", "ironspiked", "purchase" }
+    },
+    ammo_bolas_intertwined = {
+        id = "ammo_bolas_intertwined",
+        kind = "ammunition",
+        itemName = "ammo_bolas_intertwined",
+        label = "Bolas - Brookstone",
+        nativeAmmoName = "AMMO_BOLAS_INTERTWINED",
+        -- Target-build maximum three confirmed; manual lifecycle checks passed.
+        maxTotal = 3,
+        stackable = true,
+        tags = { "throwable", "bolas", "intertwined", "purchase" }
+    },
+    ammo_dynamite = {
+        id = "ammo_dynamite",
+        kind = "ammunition",
+        itemName = "ammo_dynamite",
+        label = "Dynamite - Regular",
+        nativeAmmoName = "AMMO_DYNAMITE",
+        -- Provisional eight-item ceiling; requires target-build verification.
+        maxTotal = 8,
+        stackable = true,
+        tags = { "throwable", "dynamite", "regular", "purchase" }
+    },
+    ammo_molotov = {
+        id = "ammo_molotov",
+        kind = "ammunition",
+        itemName = "ammo_molotov",
+        label = "Fire Bottle - Regular",
+        nativeAmmoName = "AMMO_MOLOTOV",
+        -- Target-build maximum eight confirmed; lifecycle and restart checks passed.
+        maxTotal = 8,
+        stackable = true,
+        tags = { "throwable", "molotov", "regular", "purchase" }
+    },
+    ammo_poisonbottle = {
+        id = "ammo_poisonbottle",
+        kind = "ammunition",
+        itemName = "ammo_poisonbottle",
+        label = "Toxic Moonshine - Regular",
+        nativeAmmoName = "AMMO_POISONBOTTLE",
+        -- Target-build maximum eight confirmed; user reports manual checks passed.
+        maxTotal = 8,
+        stackable = true,
+        tags = { "throwable", "poisonbottle", "regular", "purchase" }
+    },
     ammo_tomahawk_ancient = {
         id = "ammo_tomahawk_ancient",
         kind = "ammunition",
