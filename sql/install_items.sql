@@ -1,5 +1,61 @@
 -- Existing installations: run rename_weapon_item_names.sql before this seed.
 
+-- Fire Bottle candidate; preserves existing item IDs and quantities.
+INSERT INTO `items`
+ (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'weapon_throwable_molotov', 'Fire Bottle', 'Unique Fire Bottle carrier.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_throwable_molotov');
+UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
+WHERE `name` = 'weapon_throwable_molotov';
+INSERT INTO `items`
+ (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'ammo_molotov', 'Fire Bottle - Regular', 'Fire Bottle ammunition.', 100, 100, 0.1, 1, 2, 'item_ammo', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'ammo_molotov');
+UPDATE `items` SET `usable` = 1, `type` = 'item_ammo', `instance_mode` = 'stack'
+WHERE `name` = 'ammo_molotov';
+
+-- Dynamite candidate; preserves existing item IDs and quantities.
+INSERT INTO `items`
+ (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'weapon_throwable_dynamite', 'Dynamite', 'Unique Dynamite carrier.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_throwable_dynamite');
+UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
+WHERE `name` = 'weapon_throwable_dynamite';
+INSERT INTO `items`
+ (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'ammo_dynamite', 'Dynamite - Regular', 'Dynamite ammunition.', 100, 100, 0.1, 1, 2, 'item_ammo', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'ammo_dynamite');
+UPDATE `items` SET `usable` = 1, `type` = 'item_ammo', `instance_mode` = 'stack'
+WHERE `name` = 'ammo_dynamite';
+
+-- Brookstone Bolas candidate; preserves existing item IDs and quantities.
+INSERT INTO `items`
+ (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'weapon_throwable_bolas_intertwined', 'Brookstone Bolas', 'Unique Bolas carrier.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_throwable_bolas_intertwined');
+UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
+WHERE `name` = 'weapon_throwable_bolas_intertwined';
+INSERT INTO `items`
+ (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'ammo_bolas_intertwined', 'Bolas - Brookstone', 'Brookstone Bolas ammunition.', 100, 100, 0.1, 1, 2, 'item_ammo', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'ammo_bolas_intertwined');
+UPDATE `items` SET `usable` = 1, `type` = 'item_ammo', `instance_mode` = 'stack'
+WHERE `name` = 'ammo_bolas_intertwined';
+
+-- Gravesend Bolas candidate; preserves existing item IDs and quantities.
+INSERT INTO `items`
+ (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'weapon_throwable_bolas_ironspiked', 'Gravesend Bolas', 'Unique Bolas carrier.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_throwable_bolas_ironspiked');
+UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
+WHERE `name` = 'weapon_throwable_bolas_ironspiked';
+INSERT INTO `items`
+ (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'ammo_bolas_ironspiked', 'Bolas - Gravesend', 'Gravesend Bolas ammunition.', 100, 100, 0.1, 1, 2, 'item_ammo', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'ammo_bolas_ironspiked');
+UPDATE `items` SET `usable` = 1, `type` = 'item_ammo', `instance_mode` = 'stack'
+WHERE `name` = 'ammo_bolas_ironspiked';
+
 -- Hawkmoth Bolas candidate. Preserves existing item IDs and quantities.
 INSERT INTO `items`
     (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)

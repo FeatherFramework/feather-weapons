@@ -3,20 +3,20 @@ local clientContract = 4
 local equipped, offhand, pendingToken, pendingNativeWeaponName = nil, nil, nil, nil
 local extraSlotNames = {
     'shoulder', 'back', 'melee', 'melee_secondary', 'melee_tertiary', 'melee_quaternary',
-    'throwable', 'throwable_secondary', 'throwable_tertiary', 'throwable_quaternary', 'throwable_quinary'
+    'throwable', 'throwable_secondary', 'throwable_tertiary', 'throwable_quaternary', 'throwable_quinary', 'throwable_senary', 'throwable_septenary', 'throwable_octonary', 'throwable_nonary'
 }
 local extraSlots = {
     shoulder = nil, back = nil, melee = nil, melee_secondary = nil,
-    melee_tertiary = nil, melee_quaternary = nil, throwable = nil, throwable_secondary = nil, throwable_tertiary = nil, throwable_quaternary = nil, throwable_quinary = nil
+    melee_tertiary = nil, melee_quaternary = nil, throwable = nil, throwable_secondary = nil, throwable_tertiary = nil, throwable_quaternary = nil, throwable_quinary = nil, throwable_senary = nil, throwable_septenary = nil, throwable_octonary = nil, throwable_nonary = nil
 }
 local extraObserved = {
     shoulder = nil, back = nil, melee = nil, melee_secondary = nil,
-    melee_tertiary = nil, melee_quaternary = nil, throwable = nil, throwable_secondary = nil, throwable_tertiary = nil, throwable_quaternary = nil, throwable_quinary = nil
+    melee_tertiary = nil, melee_quaternary = nil, throwable = nil, throwable_secondary = nil, throwable_tertiary = nil, throwable_quaternary = nil, throwable_quinary = nil, throwable_senary = nil, throwable_septenary = nil, throwable_octonary = nil, throwable_nonary = nil
 }
 local extraSyncInFlight = {
     shoulder = false, back = false, melee = false,
     melee_secondary = false, melee_tertiary = false, melee_quaternary = false,
-    throwable = false, throwable_secondary = false, throwable_tertiary = false, throwable_quaternary = false, throwable_quinary = false
+    throwable = false, throwable_secondary = false, throwable_tertiary = false, throwable_quaternary = false, throwable_quinary = false, throwable_senary = false, throwable_septenary = false, throwable_octonary = false, throwable_nonary = false
 }
 local longgunReloadInFlight = false
 local syncInFlight, desiredAmmo, desiredLoaded = false, nil, nil
@@ -777,16 +777,16 @@ local function ClearNativeWeapon()
     equipped, offhand, pendingToken, pendingNativeWeaponName, desiredAmmo, desiredLoaded, syncInFlight = nil, nil, nil, nil, nil, nil, false
     extraSlots = {
         shoulder = nil, back = nil, melee = nil, melee_secondary = nil,
-        melee_tertiary = nil, melee_quaternary = nil, throwable = nil, throwable_secondary = nil, throwable_tertiary = nil, throwable_quaternary = nil, throwable_quinary = nil
+        melee_tertiary = nil, melee_quaternary = nil, throwable = nil, throwable_secondary = nil, throwable_tertiary = nil, throwable_quaternary = nil, throwable_quinary = nil, throwable_senary = nil, throwable_septenary = nil, throwable_octonary = nil, throwable_nonary = nil
     }
     extraObserved = {
         shoulder = nil, back = nil, melee = nil, melee_secondary = nil,
-        melee_tertiary = nil, melee_quaternary = nil, throwable = nil, throwable_secondary = nil, throwable_tertiary = nil, throwable_quaternary = nil, throwable_quinary = nil
+        melee_tertiary = nil, melee_quaternary = nil, throwable = nil, throwable_secondary = nil, throwable_tertiary = nil, throwable_quaternary = nil, throwable_quinary = nil, throwable_senary = nil, throwable_septenary = nil, throwable_octonary = nil, throwable_nonary = nil
     }
     extraSyncInFlight = {
         shoulder = false, back = false, melee = false,
         melee_secondary = false, melee_tertiary = false, melee_quaternary = false,
-        throwable = false, throwable_secondary = false, throwable_tertiary = false, throwable_quaternary = false, throwable_quinary = false
+        throwable = false, throwable_secondary = false, throwable_tertiary = false, throwable_quaternary = false, throwable_quinary = false, throwable_senary = false, throwable_septenary = false, throwable_octonary = false, throwable_nonary = false
     }
     pairSyncInFlight, pairCheckpointPending, pairObserved = false, false, nil
     pairConsumed = { primary = 0, offhand = 0 }
@@ -812,7 +812,7 @@ local function SlotLabel(slot)
         primary = 'Primary', offhand = 'Offhand', shoulder = 'Shoulder', back = 'Back',
         melee = 'Melee', melee_secondary = 'Second Melee', melee_tertiary = 'Third Melee',
         melee_quaternary = 'Fourth Melee', throwable = 'Throwable',
-        throwable_secondary = 'Second Throwable', throwable_tertiary = 'Third Throwable', throwable_quaternary = 'Fourth Throwable', throwable_quinary = 'Fifth Throwable'
+        throwable_secondary = 'Second Throwable', throwable_tertiary = 'Third Throwable', throwable_quaternary = 'Fourth Throwable', throwable_quinary = 'Fifth Throwable', throwable_senary = 'Sixth Throwable', throwable_septenary = 'Seventh Throwable', throwable_octonary = 'Eighth Throwable', throwable_nonary = 'Ninth Throwable'
     })[slot] or slot
 end
 
@@ -1038,6 +1038,10 @@ local function ScheduleMaintenanceRestore()
             ApplySlotMaintenance('throwable_tertiary', extraSlots.throwable_tertiary)
             ApplySlotMaintenance('throwable_quaternary', extraSlots.throwable_quaternary)
             ApplySlotMaintenance('throwable_quinary', extraSlots.throwable_quinary)
+            ApplySlotMaintenance('throwable_senary', extraSlots.throwable_senary)
+            ApplySlotMaintenance('throwable_septenary', extraSlots.throwable_septenary)
+            ApplySlotMaintenance('throwable_octonary', extraSlots.throwable_octonary)
+            ApplySlotMaintenance('throwable_nonary', extraSlots.throwable_nonary)
         end)
     end
 end
@@ -1557,7 +1561,7 @@ function FeatherWeaponsClient.Checkpoint(callback, skipExtras)
     callback = type(callback) == 'function' and callback or function(_result) end
 
     local extras = {}
-    for _, slot in ipairs({ 'shoulder', 'back', 'throwable', 'throwable_secondary', 'throwable_tertiary', 'throwable_quaternary', 'throwable_quinary' }) do
+    for _, slot in ipairs({ 'shoulder', 'back', 'throwable', 'throwable_secondary', 'throwable_tertiary', 'throwable_quaternary', 'throwable_quinary', 'throwable_senary', 'throwable_septenary', 'throwable_octonary', 'throwable_nonary' }) do
         if extraSlots[slot] then extras[#extras + 1] = slot end
     end
     if not skipExtras and #extras > 0 then
@@ -1725,7 +1729,7 @@ function FeatherWeaponsClient.Reconcile(callback, options)
             ApplyApprovedWeapon(slots.primary)
         elseif slots.shoulder or slots.back or slots.melee or slots.melee_secondary
             or slots.melee_tertiary or slots.melee_quaternary or slots.throwable
-            or slots.throwable_secondary or slots.throwable_tertiary or slots.throwable_quaternary or slots.throwable_quinary then
+            or slots.throwable_secondary or slots.throwable_tertiary or slots.throwable_quaternary or slots.throwable_quinary or slots.throwable_senary or slots.throwable_septenary or slots.throwable_octonary or slots.throwable_nonary then
             ClearSidearmsPreservingLongguns()
         else
             ClearNativeWeapon()
@@ -1768,7 +1772,7 @@ function FeatherWeaponsClient.Reconcile(callback, options)
         if options.holster == true and (equipped or offhand or extraSlots.shoulder or extraSlots.back
             or extraSlots.melee or extraSlots.melee_secondary or extraSlots.melee_tertiary
             or extraSlots.melee_quaternary or extraSlots.throwable
-            or extraSlots.throwable_secondary or extraSlots.throwable_tertiary or extraSlots.throwable_quaternary or extraSlots.throwable_quinary) then
+            or extraSlots.throwable_secondary or extraSlots.throwable_tertiary or extraSlots.throwable_quaternary or extraSlots.throwable_quinary or extraSlots.throwable_senary or extraSlots.throwable_septenary or extraSlots.throwable_octonary or extraSlots.throwable_nonary) then
             ScheduleRestoredWeaponsHolster()
         end
 
@@ -1988,7 +1992,7 @@ function FeatherWeaponsClient.GetDiagnosticState()
     if not equipped and not offhand and not extraSlots.shoulder and not extraSlots.back
         and not extraSlots.melee and not extraSlots.melee_secondary
         and not extraSlots.melee_tertiary and not extraSlots.melee_quaternary
-        and not extraSlots.throwable and not extraSlots.throwable_secondary and not extraSlots.throwable_tertiary and not extraSlots.throwable_quaternary and not extraSlots.throwable_quinary then
+        and not extraSlots.throwable and not extraSlots.throwable_secondary and not extraSlots.throwable_tertiary and not extraSlots.throwable_quaternary and not extraSlots.throwable_quinary and not extraSlots.throwable_senary and not extraSlots.throwable_septenary and not extraSlots.throwable_octonary and not extraSlots.throwable_nonary then
         return { equipped = false }
     end
 
@@ -2015,7 +2019,7 @@ function FeatherWeaponsClient.GetDiagnosticState()
         throwable = extraSlots.throwable,
         throwable_secondary = extraSlots.throwable_secondary,
         throwable_tertiary = extraSlots.throwable_tertiary,
-        throwable_quaternary = extraSlots.throwable_quaternary, throwable_quinary = extraSlots.throwable_quinary
+        throwable_quaternary = extraSlots.throwable_quaternary, throwable_quinary = extraSlots.throwable_quinary, throwable_senary = extraSlots.throwable_senary, throwable_septenary = extraSlots.throwable_septenary, throwable_octonary = extraSlots.throwable_octonary, throwable_nonary = extraSlots.throwable_nonary
     }
 end
 
@@ -2062,7 +2066,7 @@ BeginUnload = function()
     if not equipped and not offhand and not extraSlots.shoulder and not extraSlots.back
         and not extraSlots.melee and not extraSlots.melee_secondary
         and not extraSlots.melee_tertiary and not extraSlots.melee_quaternary
-        and not extraSlots.throwable and not extraSlots.throwable_secondary and not extraSlots.throwable_tertiary and not extraSlots.throwable_quaternary and not extraSlots.throwable_quinary then
+        and not extraSlots.throwable and not extraSlots.throwable_secondary and not extraSlots.throwable_tertiary and not extraSlots.throwable_quaternary and not extraSlots.throwable_quinary and not extraSlots.throwable_senary and not extraSlots.throwable_septenary and not extraSlots.throwable_octonary and not extraSlots.throwable_nonary then
         Notify('No weapon is equipped.')
         return
     end
@@ -2214,7 +2218,7 @@ RegisterNetEvent('feather-weapons:client:useInventoryWeapon', function(itemInsta
         if not equipped and not offhand and not extraSlots.shoulder and not extraSlots.back
             and not extraSlots.melee and not extraSlots.melee_secondary
             and not extraSlots.melee_tertiary and not extraSlots.melee_quaternary
-            and not extraSlots.throwable and not extraSlots.throwable_secondary and not extraSlots.throwable_tertiary and not extraSlots.throwable_quaternary and not extraSlots.throwable_quinary then
+            and not extraSlots.throwable and not extraSlots.throwable_secondary and not extraSlots.throwable_tertiary and not extraSlots.throwable_quaternary and not extraSlots.throwable_quinary and not extraSlots.throwable_senary and not extraSlots.throwable_septenary and not extraSlots.throwable_octonary and not extraSlots.throwable_nonary then
             for slot, approved in pairs(result.value and result.value.slots or {}) do
                 if SameInstance(approved.itemInstanceId, itemInstanceId) then
                     FeatherWeaponsClient.Unequip(function(removed, error)
@@ -2389,7 +2393,7 @@ BuildModificationMenu = function(preferredSlot)
     if not equipped and not offhand and not extraSlots.shoulder and not extraSlots.back
         and not extraSlots.melee and not extraSlots.melee_secondary
         and not extraSlots.melee_tertiary and not extraSlots.melee_quaternary
-        and not extraSlots.throwable and not extraSlots.throwable_secondary and not extraSlots.throwable_tertiary and not extraSlots.throwable_quaternary and not extraSlots.throwable_quinary then
+        and not extraSlots.throwable and not extraSlots.throwable_secondary and not extraSlots.throwable_tertiary and not extraSlots.throwable_quaternary and not extraSlots.throwable_quinary and not extraSlots.throwable_senary and not extraSlots.throwable_septenary and not extraSlots.throwable_octonary and not extraSlots.throwable_nonary then
         Notify('Equip a weapon before modifying it.')
         return
     end
@@ -2680,6 +2684,8 @@ local function AmmunitionUnitLabels(weapon)
     if family == 'throwing_knife' then return 'knife', 'knives' end
     if family == 'tomahawk' then return 'tomahawk', 'tomahawks' end
     if family == 'bolas' then return 'bola', 'bolas' end
+    if family == 'dynamite' then return 'stick', 'sticks' end
+    if family == 'molotov' then return 'bottle', 'bottles' end
     return 'cartridge', 'cartridges'
 end
 
@@ -2741,6 +2747,8 @@ local function LoadedContainerLabel(weapon)
 
     if weapon.family == 'tomahawk' then return 'Readied' end
     if weapon.family == 'bolas' then return 'Readied' end
+    if weapon.family == 'dynamite' then return 'Readied' end
+    if weapon.family == 'molotov' then return 'Readied' end
 
     return 'Magazine'
 end
@@ -3075,7 +3083,7 @@ local function BuildRepairMenu(selectionSlots)
         local location = ({
             primary = true, offhand = true, shoulder = true, back = true,
             melee = true, melee_secondary = true, melee_tertiary = true, melee_quaternary = true,
-            throwable = true, throwable_secondary = true, throwable_tertiary = true, throwable_quaternary = true, throwable_quinary = true
+            throwable = true, throwable_secondary = true, throwable_tertiary = true, throwable_quaternary = true, throwable_quinary = true, throwable_senary = true, throwable_septenary = true, throwable_octonary = true, throwable_nonary = true
         })[choice.location]
             and SlotLabel(choice.location) or tostring(choice.location or 'Inventory')
         AddWeaponElement(RepairPage, 'button', { label = ('%s: %s (%s%%)'):format(location,
@@ -3114,7 +3122,7 @@ RegisterNetEvent('feather-weapons:client:inventoryAmmoResult', function(result)
     if result and result.ok and (equipped or offhand or extraSlots.shoulder or extraSlots.back
         or extraSlots.melee or extraSlots.melee_secondary or extraSlots.melee_tertiary
         or extraSlots.melee_quaternary or extraSlots.throwable
-        or extraSlots.throwable_secondary or extraSlots.throwable_tertiary or extraSlots.throwable_quaternary or extraSlots.throwable_quinary) then
+        or extraSlots.throwable_secondary or extraSlots.throwable_tertiary or extraSlots.throwable_quaternary or extraSlots.throwable_quinary or extraSlots.throwable_senary or extraSlots.throwable_septenary or extraSlots.throwable_octonary or extraSlots.throwable_nonary) then
         local slot = result.value.slot or 'primary'
         local state = SlotState(slot)
         if not state then
@@ -3428,7 +3436,7 @@ CreateThread(function()
         end
         wasShooting = shooting
 
-        for _, slot in ipairs({ 'shoulder', 'back', 'throwable', 'throwable_secondary', 'throwable_tertiary', 'throwable_quaternary', 'throwable_quinary' }) do
+        for _, slot in ipairs({ 'shoulder', 'back', 'throwable', 'throwable_secondary', 'throwable_tertiary', 'throwable_quaternary', 'throwable_quinary', 'throwable_senary', 'throwable_septenary', 'throwable_octonary', 'throwable_nonary' }) do
             local state = extraSlots[slot]
             local observed = extraObserved[slot]
             if state and observed and state.ammoPools and not logoutCheckpointInFlight then
@@ -3793,14 +3801,14 @@ exports('CheckpointBeforeLogout', function()
             or extraSyncInFlight.melee_secondary or extraSyncInFlight.melee_tertiary
             or extraSyncInFlight.melee_quaternary or extraSyncInFlight.throwable
             or extraSyncInFlight.throwable_secondary
-            or extraSyncInFlight.throwable_tertiary or extraSyncInFlight.throwable_quaternary or extraSyncInFlight.throwable_quinary
+            or extraSyncInFlight.throwable_tertiary or extraSyncInFlight.throwable_quaternary or extraSyncInFlight.throwable_quinary or extraSyncInFlight.throwable_senary or extraSyncInFlight.throwable_septenary or extraSyncInFlight.throwable_octonary or extraSyncInFlight.throwable_nonary
             or maintenanceSyncInFlight.primary or maintenanceSyncInFlight.offhand
             or maintenanceSyncInFlight.shoulder or maintenanceSyncInFlight.back
             or maintenanceSyncInFlight.melee or maintenanceSyncInFlight.melee_secondary
             or maintenanceSyncInFlight.melee_tertiary or maintenanceSyncInFlight.melee_quaternary
             or maintenanceSyncInFlight.throwable
             or maintenanceSyncInFlight.throwable_secondary
-            or maintenanceSyncInFlight.throwable_tertiary or maintenanceSyncInFlight.throwable_quaternary or maintenanceSyncInFlight.throwable_quinary)
+            or maintenanceSyncInFlight.throwable_tertiary or maintenanceSyncInFlight.throwable_quaternary or maintenanceSyncInFlight.throwable_quinary or maintenanceSyncInFlight.throwable_senary or maintenanceSyncInFlight.throwable_septenary or maintenanceSyncInFlight.throwable_octonary or maintenanceSyncInFlight.throwable_nonary)
         and GetGameTimer() < deadline do
         Wait(25)
     end

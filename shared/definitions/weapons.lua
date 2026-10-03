@@ -1156,6 +1156,130 @@ WeaponDefinitionCatalog.weapons = {
         },
         tags = { "throwable", "bolas", "regular" }
     },
+    throwable_bolas_ironspiked = {
+        id = "throwable_bolas_ironspiked",
+        kind = "weapon",
+        itemName = "weapon_throwable_bolas_ironspiked",
+        label = "Gravesend Bolas",
+        nativeWeaponName = "WEAPON_THROWN_BOLAS_IRONSPIKED",
+        family = "bolas",
+        slot = "throwable",
+        ammunitionType = "ammo_bolas_ironspiked",
+        ammunitionTypes = { "ammo_bolas_ironspiked" },
+        capacity = 1,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "throwable", "bolas", "ironspiked" }
+    },
+    throwable_bolas_intertwined = {
+        id = "throwable_bolas_intertwined",
+        kind = "weapon",
+        itemName = "weapon_throwable_bolas_intertwined",
+        label = "Brookstone Bolas",
+        nativeWeaponName = "WEAPON_THROWN_BOLAS_INTERTWINED",
+        family = "bolas",
+        slot = "throwable",
+        ammunitionType = "ammo_bolas_intertwined",
+        ammunitionTypes = { "ammo_bolas_intertwined" },
+        capacity = 1,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "throwable", "bolas", "intertwined" }
+    },
+    throwable_dynamite = {
+        id = "throwable_dynamite",
+        kind = "weapon",
+        itemName = "weapon_throwable_dynamite",
+        label = "Dynamite",
+        nativeWeaponName = "WEAPON_THROWN_DYNAMITE",
+        family = "dynamite",
+        slot = "throwable",
+        ammunitionType = "ammo_dynamite",
+        ammunitionTypes = { "ammo_dynamite" },
+        capacity = 1,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "throwable", "dynamite", "regular" }
+    },
+    throwable_molotov = {
+        id = "throwable_molotov",
+        kind = "weapon",
+        itemName = "weapon_throwable_molotov",
+        label = "Fire Bottle",
+        nativeWeaponName = "WEAPON_THROWN_MOLOTOV",
+        family = "molotov",
+        slot = "throwable",
+        ammunitionType = "ammo_molotov",
+        ammunitionTypes = { "ammo_molotov" },
+        capacity = 1,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "throwable", "molotov", "regular" }
+    },
     bow = {
         id = "bow",
         kind = "weapon",

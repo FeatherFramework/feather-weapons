@@ -46,6 +46,7 @@ CreateThread(function()
     end
 
     ReconciliationService.BootstrapActiveSessions()
+    ReconciliationService.MarkStartupReady()
 
     local counts = definitionResult.value
     print(("[feather-weapons] foundation ready: %d weapon, %d ammunition, %d attachment definitions")

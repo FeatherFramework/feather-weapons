@@ -1,4 +1,11 @@
 ReconciliationService = {}
+-- A runtime exists before the yielding per-slot bootstrap has finished.
+-- Do not publish that partial loadout to a restarting client.
+local startupReady = false
+
+function ReconciliationService.MarkStartupReady()
+    startupReady = true
+end
 
 local function CopyPools(pools)
     if type(pools) ~= 'table' then return nil end
@@ -201,6 +208,15 @@ end
 
 RegisterNetEvent("feather-weapons:server:client-ready", function()
     local playerSource = source
+    local deadline = GetGameTimer() + 15000
+    while not startupReady and GetGameTimer() < deadline do
+        Wait(50)
+    end
+    if not startupReady then
+        print(("[feather-weapons] client-ready deferred: startup incomplete source=%s")
+            :format(tostring(playerSource)))
+        return
+    end
     local sessionResult = CoreAdapter.ResolveSession(playerSource)
     -- Full joins are restored by feather-character's runtime-ready signal.
     -- During a weapons-resource restart the character is already active, so

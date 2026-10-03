@@ -213,3 +213,9 @@ Tomahawk single-type recovery is unchanged. See throwing-knife-multi-ammo.md.
 Native identifiers were cross-checked against:
 - https://github.com/femga/rdr3_discoveries/blob/master/weapons/weapons.lua
 - https://github.com/femga/rdr3_discoveries/blob/master/weapons/ammo_types.lua
+
+## Current catalog gate
+
+Standard Dynamite and Fire Bottle passed manual lifecycle checks. Current accepted catalog: 38 weapons / 42 ammunition / 38 attachments, nine logical throwable positions. Fire Bottle capacity eight, throw/unload conservation, and two successive resource restarts are verified; smoke tests passed 5/5, 17/17 and 9/9. See [Fire Bottle checks](fire-bottle-live-gate.md).
+
+Gravesend (internal Ironspiked) and Brookstone (internal Intertwined) passed manual testing. Current accepted catalog: 36 weapons / 40 ammunition / 38 attachments, with seven logical throwable positions. Brookstone wheel naming and native capacity three are confirmed, and the release contract passed 9/9. See [Brookstone live checks](brookstone-bolas-live-gate.md). Historical counts above describe earlier gates, not the current catalog. Next: standard Dynamite, followed by Fire Bottle; Improved ammunition and cosmetics remain deferred.

@@ -92,7 +92,7 @@ local function check(value, message)
 end
 
 -- Every catalog combination loads, persists its native type and unloads the
-for _, slot in ipairs({ 'throwable_quaternary', 'throwable_quinary' }) do
+for _, slot in ipairs({ 'throwable_quaternary', 'throwable_quinary', 'throwable_senary', 'throwable_septenary', 'throwable_octonary', 'throwable_nonary' }) do
     check(WeaponRuntime.NormalizeSlot(slot) == slot and WeaponConstants.ThrowableSlots[slot],
         'New throwable position is recognized: ' .. slot)
     check(Config.Inventory.equipmentSlots[slot] == 'weapon_' .. slot,
@@ -731,4 +731,40 @@ WeaponDefinitionCatalog.attachments.cattleman_wide_sight.prerequisites = { 'miss
 check(not DefinitionRegistry.Start().ok, 'Unknown attachment prerequisite rejected at startup')
 WeaponDefinitionCatalog.attachments = originalAttachments
 assert(DefinitionRegistry.Start().ok)
+reset('throwable_bolas_ironspiked')
+stock.ammo_bolas_ironspiked = 5
+local ironspikedLoad = AmmoService.Escrow(1, context, 5, 'ammo_bolas_ironspiked')
+check(ironspikedLoad.ok and ironspikedLoad.value.total == 3
+    and stock.ammo_bolas_ironspiked == 2, 'Ironspiked candidate cap preserves excess stock')
+check(AmmoService.Unload(1, context).ok and stock.ammo_bolas_ironspiked == 5,
+    'Ironspiked unload conserves its exact ammunition')
+reset('throwable_bolas_intertwined')
+stock.ammo_bolas_intertwined = 5
+local brookstoneLoad = AmmoService.Escrow(1, context, 5, 'ammo_bolas_intertwined')
+check(brookstoneLoad.ok and brookstoneLoad.value.total == 3
+    and brookstoneLoad.value.loaded == 1 and brookstoneLoad.value.reserve == 2
+    and stock.ammo_bolas_intertwined == 2, 'Brookstone candidate cap preserves excess stock')
+check(not AmmoService.Escrow(1, context, 1, 'ammo_bolas_regular').ok,
+    'Brookstone rejects another Bolas variant ammunition')
+check(AmmoService.Unload(1, context).ok and stock.ammo_bolas_intertwined == 5,
+    'Brookstone unload returns its exact ammunition')
+reset('throwable_dynamite')
+stock.ammo_dynamite = 10
+local dynamiteLoad = AmmoService.Escrow(1, context, 10, 'ammo_dynamite')
+check(dynamiteLoad.ok and dynamiteLoad.value.total == 8
+    and dynamiteLoad.value.loaded == 1 and dynamiteLoad.value.reserve == 7
+    and stock.ammo_dynamite == 2, 'Dynamite candidate ceiling preserves excess stock')
+check(not AmmoService.Escrow(1, context, 1, 'ammo_bolas_regular').ok,
+    'Dynamite rejects foreign-family ammunition')
+check(AmmoService.Unload(1, context).ok and stock.ammo_dynamite == 10,
+    'Dynamite unload conserves exact ammunition')
+reset('throwable_molotov')
+stock.ammo_molotov = 10
+local fireBottleLoad = AmmoService.Escrow(1, context, 10, 'ammo_molotov')
+check(fireBottleLoad.ok and fireBottleLoad.value.total == 8
+    and stock.ammo_molotov == 2, 'Fire Bottle candidate ceiling preserves excess stock')
+check(not AmmoService.Escrow(1, context, 1, 'ammo_dynamite').ok,
+    'Fire Bottle rejects Dynamite ammunition')
+check(AmmoService.Unload(1, context).ok and stock.ammo_molotov == 10,
+    'Fire Bottle unload conserves exact ammunition')
 print(('Ammunition regression checks: %d passed'):format(passed))
