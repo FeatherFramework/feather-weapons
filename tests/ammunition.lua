@@ -568,6 +568,18 @@ check(WeaponDefinitionCatalog.weapons.utility_lantern_electric == nil,
     'Failed Electric Lantern is absent from active catalog')
 check(WeaponDefinitionCatalog.weapons.utility_torch == nil,
     'Retired Torch is absent from active catalog')
+local hammerDefinition = WeaponDefinitionCatalog.weapons.melee_hammer
+local hammerMetadata = WeaponMetadata.Build(hammerDefinition, { serialNumber = 'TEST-HAMMER' })
+items[9008] = { id = 9008, itemName = hammerDefinition.itemName,
+    metadata = hammerMetadata.value, metadataRevision = 1 }
+local hammerRequest = EquipService.Request(1, context, 9008, 'melee_quinary')
+check(hammerRequest.ok, 'Hammer equips in fifth melee position')
+local hammerCommit = WeaponRuntime.CompleteEquip(1, 'test', hammerRequest.value.token, 'test')
+check(hammerCommit.ok and hammerCommit.value.nativeAmmoName == nil
+    and hammerCommit.value.ammo == 0 and WeaponRuntime.Get(1).slots.melee_quaternary ~= nil,
+    'Hammer and four prior melee carriers coexist without ammunition')
+check(not WeaponRuntime.SetSlotAmmo(1, 'test', 'melee_quinary', 1, 1, 'test').ok,
+    'Hammer rejects ammunition writes')
 -- multi-type carrier uses the separate consumption-only pool checkpoint.
 WeaponDefinitionCatalog.weapons.throwable_throwing_knives.multiTypeAmmunition = false
 assert(DefinitionRegistry.Start().ok)

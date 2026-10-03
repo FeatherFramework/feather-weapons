@@ -222,6 +222,8 @@ function FeatherInventoryProvider.GetEquippedSlotsForCharacter(context)
     local configured = Config.Inventory.equipmentSlots or {}
     return WeaponResult.Ok({
         utility_senary = result.value and result.value[configured.utility_senary or "weapon_utility_senary"] or nil,
+        utility_septenary = result.value and result.value[configured.utility_septenary or "weapon_utility_septenary"] or nil,
+        utility_octonary = result.value and result.value[configured.utility_octonary or "weapon_utility_octonary"] or nil,
         utility_quinary = result.value and result.value[configured.utility_quinary or "weapon_utility_quinary"] or nil,
         utility_quaternary = result.value and result.value[configured.utility_quaternary or "weapon_utility_quaternary"] or nil,
         utility_tertiary = result.value and result.value[configured.utility_tertiary or "weapon_utility_tertiary"] or nil,
@@ -236,6 +238,7 @@ function FeatherInventoryProvider.GetEquippedSlotsForCharacter(context)
             and result.value[configured.melee_secondary or "weapon_melee_secondary"] or nil,
         melee_tertiary = result.value
             and result.value[configured.melee_tertiary or "weapon_melee_tertiary"] or nil,
+        melee_quinary = result.value and result.value[configured.melee_quinary or "weapon_melee_quinary"] or nil,
         melee_quaternary = result.value
             and result.value[configured.melee_quaternary or "weapon_melee_quaternary"] or nil,
         throwable = result.value

@@ -27,6 +27,9 @@ runtime.slots.utility_tertiary = { itemInstanceId = 91, ammo = 0 }
 runtime.slots.utility_quaternary = { itemInstanceId = 92, ammo = 0 }
 runtime.slots.utility_quinary = { itemInstanceId = 93, ammo = 0 }
 runtime.slots.utility_senary = { itemInstanceId = 94, ammo = 0 }
+runtime.slots.utility_octonary = { itemInstanceId = 97, ammo = 0 }
+runtime.slots.utility_septenary = { itemInstanceId = 96, ammo = 0 }
+runtime.slots.melee_quinary = { itemInstanceId = 95, ammo = 0 }
 ReconciliationService.MarkStartupReady()
 assert(coroutine.resume(pending))
 assert(coroutine.status(pending) == 'dead')
@@ -39,6 +42,9 @@ assert(runtime.slots.utility_tertiary.itemInstanceId == 91, 'Handshake preserves
 assert(runtime.slots.utility_quaternary.itemInstanceId == 92, 'Handshake preserves fourth utility ownership')
 assert(runtime.slots.utility_quinary.itemInstanceId == 93, 'Handshake preserves fifth utility ownership')
 assert(runtime.slots.utility_senary.itemInstanceId == 94, 'Handshake preserves sixth utility ownership')
+assert(runtime.slots.melee_quinary.itemInstanceId == 95, 'Handshake preserves fifth melee ownership')
+assert(runtime.slots.utility_septenary.itemInstanceId == 96, 'Handshake preserves seventh utility ownership')
+assert(runtime.slots.utility_octonary.itemInstanceId == 97, 'Handshake preserves eighth utility ownership')
 assert(handler() == nil and #events == 2, 'Repeated handshake works after readiness')
 -- A fresh service instance that never finishes startup must fail closed.
 dofile('server/services/reconciliation.lua')

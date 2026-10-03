@@ -934,6 +934,66 @@ WeaponDefinitionCatalog.weapons = {
         policies = { transferable = true, droppable = true, destructible = true, serialRequired = true },
         tags = { "utility", "binoculars" }
     },
+    utility_binoculars_improved = {
+        id = "utility_binoculars_improved",
+        kind = "weapon",
+        itemName = "weapon_utility_binoculars_improved",
+        label = "Improved Binoculars",
+        nativeWeaponName = "WEAPON_KIT_BINOCULARS_IMPROVED",
+        family = "binoculars",
+        slot = "utility",
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0, maximum = 100, equipMinimum = 1,
+            repair = { itemDefinitionId = "gun_oil", quantity = 1, restore = 25 }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = { transferable = true, droppable = true, destructible = true, serialRequired = true },
+        tags = { "utility", "binoculars", "improved" }
+    },
+    utility_metal_detector = {
+        id = "utility_metal_detector",
+        kind = "weapon",
+        itemName = "weapon_utility_metal_detector",
+        label = "Metal Detector",
+        nativeWeaponName = "WEAPON_KIT_METAL_DETECTOR",
+        family = "metal_detector",
+        slot = "utility",
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0, maximum = 100, equipMinimum = 1,
+            repair = { itemDefinitionId = "gun_oil", quantity = 1, restore = 25 }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = { transferable = true, droppable = true, destructible = true, serialRequired = true },
+        tags = { "utility", "metal_detector" }
+    },
+    utility_fishing_rod = {
+        id = "utility_fishing_rod",
+        kind = "weapon",
+        itemName = "weapon_utility_fishing_rod",
+        label = "Fishing Rod",
+        nativeWeaponName = "WEAPON_FISHINGROD",
+        family = "fishing_rod",
+        slot = "utility",
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0, maximum = 100, equipMinimum = 1,
+            repair = { itemDefinitionId = "gun_oil", quantity = 1, restore = 25 }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = { transferable = true, droppable = true, destructible = true, serialRequired = true },
+        tags = { "utility", "fishing_rod" }
+    },
     utility_camera = {
         id = "utility_camera",
         kind = "weapon",
@@ -1055,6 +1115,37 @@ WeaponDefinitionCatalog.weapons = {
             serialRequired = true
         },
         tags = { "melee", "machete" }
+    },
+    melee_hammer = {
+        id = "melee_hammer",
+        kind = "weapon",
+        itemName = "weapon_melee_hammer",
+        label = "Hammer",
+        nativeWeaponName = "WEAPON_MELEE_HAMMER",
+        family = "hammer",
+        slot = "melee",
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "melee", "hammer" }
     },
     melee_cleaver = {
         id = "melee_cleaver",

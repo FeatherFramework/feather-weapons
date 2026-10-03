@@ -21,14 +21,14 @@ end
 local tokenCounter = 0
 local validSlots = {
     primary = true, offhand = true, shoulder = true, back = true,
-    melee = true, melee_secondary = true, melee_tertiary = true, melee_quaternary = true, utility = true, utility_secondary = true, utility_tertiary = true, utility_quaternary = true, utility_quinary = true, utility_senary = true,
+    melee = true, melee_secondary = true, melee_tertiary = true, melee_quaternary = true, melee_quinary = true, utility = true, utility_secondary = true, utility_tertiary = true, utility_quaternary = true, utility_quinary = true, utility_senary = true, utility_septenary = true, utility_octonary = true,
     throwable = true, throwable_secondary = true, throwable_tertiary = true, throwable_quaternary = true, throwable_quinary = true, throwable_senary = true, throwable_septenary = true, throwable_octonary = true, throwable_nonary = true, throwable_denary = true
 }
 
 local function EmptySlots()
     return {
         primary = nil, offhand = nil, shoulder = nil, back = nil,
-        melee = nil, melee_secondary = nil, melee_tertiary = nil, melee_quaternary = nil, utility = nil, utility_secondary = nil, utility_tertiary = nil, utility_quaternary = nil, utility_quinary = nil, utility_senary = nil,
+        melee = nil, melee_secondary = nil, melee_tertiary = nil, melee_quaternary = nil, melee_quinary = nil, utility = nil, utility_secondary = nil, utility_tertiary = nil, utility_quaternary = nil, utility_quinary = nil, utility_senary = nil, utility_septenary = nil, utility_octonary = nil,
         throwable = nil, throwable_secondary = nil, throwable_tertiary = nil, throwable_quaternary = nil, throwable_quinary = nil, throwable_senary = nil, throwable_septenary = nil, throwable_octonary = nil, throwable_nonary = nil, throwable_denary = nil
     }
 end
@@ -44,7 +44,7 @@ local function RefreshCompatibility(runtime)
         and (runtime.slots.primary ~= nil or runtime.slots.offhand ~= nil
             or runtime.slots.shoulder ~= nil or runtime.slots.back ~= nil
             or runtime.slots.melee ~= nil or runtime.slots.melee_secondary ~= nil
-            or runtime.slots.melee_tertiary ~= nil or runtime.slots.melee_quaternary ~= nil or runtime.slots.utility ~= nil or runtime.slots.utility_secondary ~= nil or runtime.slots.utility_tertiary ~= nil or runtime.slots.utility_quaternary ~= nil or runtime.slots.utility_quinary ~= nil or runtime.slots.utility_senary ~= nil
+            or runtime.slots.melee_tertiary ~= nil or runtime.slots.melee_quaternary ~= nil or runtime.slots.melee_quinary ~= nil or runtime.slots.utility ~= nil or runtime.slots.utility_secondary ~= nil or runtime.slots.utility_tertiary ~= nil or runtime.slots.utility_quaternary ~= nil or runtime.slots.utility_quinary ~= nil or runtime.slots.utility_senary ~= nil or runtime.slots.utility_septenary ~= nil or runtime.slots.utility_octonary ~= nil
             or runtime.slots.throwable ~= nil or runtime.slots.throwable_secondary ~= nil
             or runtime.slots.throwable_tertiary ~= nil or runtime.slots.throwable_quaternary ~= nil or runtime.slots.throwable_quinary ~= nil or runtime.slots.throwable_senary ~= nil or runtime.slots.throwable_septenary ~= nil or runtime.slots.throwable_octonary ~= nil or runtime.slots.throwable_nonary ~= nil or runtime.slots.throwable_denary ~= nil)
     runtime.state = runtime.pending and "equipping" or (occupied and "equipped" or "idle")

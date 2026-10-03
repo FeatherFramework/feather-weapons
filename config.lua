@@ -14,6 +14,8 @@ Config = {
             utility_quaternary = "weapon_utility_quaternary",
             utility_quinary = "weapon_utility_quinary",
             utility_senary = "weapon_utility_senary",
+            utility_septenary = "weapon_utility_septenary",
+            utility_octonary = "weapon_utility_octonary",
             primary = "weapon",
             offhand = "weapon_offhand",
             shoulder = "weapon_shoulder",
@@ -22,6 +24,7 @@ Config = {
             melee_secondary = "weapon_melee_secondary",
             melee_tertiary = "weapon_melee_tertiary",
             melee_quaternary = "weapon_melee_quaternary",
+            melee_quinary = "weapon_melee_quinary",
             throwable = "weapon_throwable",
             throwable_secondary = "weapon_throwable_secondary",
             throwable_tertiary = "weapon_throwable_tertiary",
@@ -86,10 +89,10 @@ Config = {
         -- Inventory uses these names when a weapon is equipped without an
         -- explicit slot; definitions marked sidearm fill primary/offhand and
         -- definitions marked longgun fill shoulder/back.
-        utilitySlots = { "utility", "utility_secondary", "utility_tertiary", "utility_quaternary", "utility_quinary", "utility_senary" },
+        utilitySlots = { "utility", "utility_secondary", "utility_tertiary", "utility_quaternary", "utility_quinary", "utility_senary","utility_septenary", "utility_octonary" },
         sidearmSlots = { "primary", "offhand" },
         longgunSlots = { "shoulder", "back" },
-        meleeSlots = { "melee", "melee_secondary", "melee_tertiary", "melee_quaternary" },
+        meleeSlots = { "melee", "melee_secondary", "melee_tertiary", "melee_quaternary", "melee_quinary" },
         throwableSlots = { "throwable", "throwable_secondary", "throwable_tertiary", "throwable_quaternary", "throwable_quinary", "throwable_senary", "throwable_septenary", "throwable_octonary", "throwable_nonary", "throwable_denary" },
         -- RedM's two weapon-wheel long-gun positions. These are the native
         -- RIFLE and RIFLE_ALTERNATE attach points, not cosmetic body bones.
