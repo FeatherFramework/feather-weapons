@@ -419,6 +419,17 @@ WeaponDefinitionCatalog.ammunition = {
         stackable = true,
         tags = { "throwable", "molotov", "regular", "purchase" }
     },
+    ammo_poisonbottle = {
+        id = "ammo_poisonbottle",
+        kind = "ammunition",
+        itemName = "ammo_poisonbottle",
+        label = "Toxic Moonshine - Regular",
+        nativeAmmoName = "AMMO_POISONBOTTLE",
+        -- Target-build maximum eight confirmed; user reports manual checks passed.
+        maxTotal = 8,
+        stackable = true,
+        tags = { "throwable", "poisonbottle", "regular", "purchase" }
+    },
     ammo_tomahawk_ancient = {
         id = "ammo_tomahawk_ancient",
         kind = "ammunition",

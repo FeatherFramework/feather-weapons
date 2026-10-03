@@ -20,11 +20,25 @@ local pending = coroutine.create(handler)
 assert(coroutine.resume(pending))
 assert(#events == 0, 'Existing partial runtime must not notify the client')
 runtime.slots.throwable_nonary = { itemInstanceId = 87, ammo = 7 }
+runtime.slots.throwable_denary = { itemInstanceId = 88, ammo = 7 }
+runtime.slots.utility = { itemInstanceId = 89, ammo = 0 }
+runtime.slots.utility_secondary = { itemInstanceId = 90, ammo = 0 }
+runtime.slots.utility_tertiary = { itemInstanceId = 91, ammo = 0 }
+runtime.slots.utility_quaternary = { itemInstanceId = 92, ammo = 0 }
+runtime.slots.utility_quinary = { itemInstanceId = 93, ammo = 0 }
+runtime.slots.utility_senary = { itemInstanceId = 94, ammo = 0 }
 ReconciliationService.MarkStartupReady()
 assert(coroutine.resume(pending))
 assert(coroutine.status(pending) == 'dead')
 assert(#events == 1 and events[1][1] == 'feather-weapons:client:runtime-ready')
 assert(runtime.slots.throwable_nonary.ammo == 7, 'Handshake preserves restored ownership')
+assert(runtime.slots.throwable_denary.ammo == 7, 'Handshake preserves tenth-slot ownership')
+assert(runtime.slots.utility.itemInstanceId == 89, 'Handshake preserves utility ownership')
+assert(runtime.slots.utility_secondary.itemInstanceId == 90, 'Handshake preserves second utility ownership')
+assert(runtime.slots.utility_tertiary.itemInstanceId == 91, 'Handshake preserves third utility ownership')
+assert(runtime.slots.utility_quaternary.itemInstanceId == 92, 'Handshake preserves fourth utility ownership')
+assert(runtime.slots.utility_quinary.itemInstanceId == 93, 'Handshake preserves fifth utility ownership')
+assert(runtime.slots.utility_senary.itemInstanceId == 94, 'Handshake preserves sixth utility ownership')
 assert(handler() == nil and #events == 2, 'Repeated handshake works after readiness')
 -- A fresh service instance that never finishes startup must fail closed.
 dofile('server/services/reconciliation.lua')

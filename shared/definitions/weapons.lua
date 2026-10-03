@@ -874,6 +874,126 @@ WeaponDefinitionCatalog.weapons = {
         },
         tags = { "firearm", "longgun", "shotgun" }
     },
+    utility_lasso = {
+        id = "utility_lasso",
+        kind = "weapon",
+        itemName = "weapon_utility_lasso",
+        label = "Lasso",
+        nativeWeaponName = "WEAPON_LASSO",
+        family = "lasso",
+        slot = "utility",
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0, maximum = 100, equipMinimum = 1,
+            repair = { itemDefinitionId = "gun_oil", quantity = 1, restore = 25 }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = { transferable = true, droppable = true, destructible = true, serialRequired = true },
+        tags = { "utility", "lasso" }
+    },
+    utility_davy_lantern = {
+        id = "utility_davy_lantern",
+        kind = "weapon",
+        itemName = "weapon_utility_davy_lantern",
+        label = "Davy Lantern",
+        nativeWeaponName = "WEAPON_MELEE_DAVY_LANTERN",
+        family = "lantern",
+        slot = "utility",
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0, maximum = 100, equipMinimum = 1,
+            repair = { itemDefinitionId = "gun_oil", quantity = 1, restore = 25 }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = { transferable = true, droppable = true, destructible = true, serialRequired = true },
+        tags = { "utility", "lantern" }
+    },
+    utility_binoculars = {
+        id = "utility_binoculars",
+        kind = "weapon",
+        itemName = "weapon_utility_binoculars",
+        label = "Binoculars",
+        nativeWeaponName = "WEAPON_KIT_BINOCULARS",
+        family = "binoculars",
+        slot = "utility",
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0, maximum = 100, equipMinimum = 1,
+            repair = { itemDefinitionId = "gun_oil", quantity = 1, restore = 25 }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = { transferable = true, droppable = true, destructible = true, serialRequired = true },
+        tags = { "utility", "binoculars" }
+    },
+    utility_camera = {
+        id = "utility_camera",
+        kind = "weapon",
+        itemName = "weapon_utility_camera",
+        label = "Camera",
+        nativeWeaponName = "WEAPON_KIT_CAMERA",
+        family = "camera",
+        slot = "utility",
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0, maximum = 100, equipMinimum = 1,
+            repair = { itemDefinitionId = "gun_oil", quantity = 1, restore = 25 }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = { transferable = true, droppable = true, destructible = true, serialRequired = true },
+        tags = { "utility", "camera" }
+    },
+    utility_camera_advanced = {
+        id = "utility_camera_advanced",
+        kind = "weapon",
+        itemName = "weapon_utility_camera_advanced",
+        label = "Advanced Camera",
+        nativeWeaponName = "WEAPON_KIT_CAMERA_ADVANCED",
+        family = "camera",
+        slot = "utility",
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0, maximum = 100, equipMinimum = 1,
+            repair = { itemDefinitionId = "gun_oil", quantity = 1, restore = 25 }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = { transferable = true, droppable = true, destructible = true, serialRequired = true },
+        tags = { "utility", "camera" }
+    },
+    utility_lasso_reinforced = {
+        id = "utility_lasso_reinforced",
+        kind = "weapon",
+        itemName = "weapon_utility_lasso_reinforced",
+        label = "Reinforced Lasso",
+        nativeWeaponName = "WEAPON_LASSO_REINFORCED",
+        family = "lasso",
+        slot = "utility",
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0, maximum = 100, equipMinimum = 1,
+            repair = { itemDefinitionId = "gun_oil", quantity = 1, restore = 25 }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = { transferable = true, droppable = true, destructible = true, serialRequired = true },
+        tags = { "utility", "lasso" }
+    },
     melee_knife = {
         id = "melee_knife",
         kind = "weapon",
@@ -1279,6 +1399,37 @@ WeaponDefinitionCatalog.weapons = {
             serialRequired = true
         },
         tags = { "throwable", "molotov", "regular" }
+    },
+    throwable_poisonbottle = {
+        id = "throwable_poisonbottle",
+        kind = "weapon",
+        itemName = "weapon_throwable_poisonbottle",
+        label = "Toxic Moonshine",
+        nativeWeaponName = "WEAPON_THROWN_POISONBOTTLE",
+        family = "poisonbottle",
+        slot = "throwable",
+        ammunitionType = "ammo_poisonbottle",
+        ammunitionTypes = { "ammo_poisonbottle" },
+        capacity = 1,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "throwable", "poisonbottle", "regular" }
     },
     bow = {
         id = "bow",

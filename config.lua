@@ -8,6 +8,12 @@ Config = {
         -- Stable Inventory equipment keys. Do not rename these after launch.
         equipmentSlot = "weapon", -- Legacy alias for the primary slot.
         equipmentSlots = {
+            utility = "weapon_utility",
+            utility_secondary = "weapon_utility_secondary",
+            utility_tertiary = "weapon_utility_tertiary",
+            utility_quaternary = "weapon_utility_quaternary",
+            utility_quinary = "weapon_utility_quinary",
+            utility_senary = "weapon_utility_senary",
             primary = "weapon",
             offhand = "weapon_offhand",
             shoulder = "weapon_shoulder",
@@ -24,7 +30,8 @@ Config = {
             throwable_senary = "weapon_throwable_senary",
             throwable_septenary = "weapon_throwable_septenary",
             throwable_octonary = "weapon_throwable_octonary",
-            throwable_nonary = "weapon_throwable_nonary"
+            throwable_nonary = "weapon_throwable_nonary",
+            throwable_denary = "weapon_throwable_denary"
         }
     },
     Runtime = {
@@ -79,10 +86,11 @@ Config = {
         -- Inventory uses these names when a weapon is equipped without an
         -- explicit slot; definitions marked sidearm fill primary/offhand and
         -- definitions marked longgun fill shoulder/back.
+        utilitySlots = { "utility", "utility_secondary", "utility_tertiary", "utility_quaternary", "utility_quinary", "utility_senary" },
         sidearmSlots = { "primary", "offhand" },
         longgunSlots = { "shoulder", "back" },
         meleeSlots = { "melee", "melee_secondary", "melee_tertiary", "melee_quaternary" },
-        throwableSlots = { "throwable", "throwable_secondary", "throwable_tertiary", "throwable_quaternary", "throwable_quinary", "throwable_senary", "throwable_septenary", "throwable_octonary", "throwable_nonary" },
+        throwableSlots = { "throwable", "throwable_secondary", "throwable_tertiary", "throwable_quaternary", "throwable_quinary", "throwable_senary", "throwable_septenary", "throwable_octonary", "throwable_nonary", "throwable_denary" },
         -- RedM's two weapon-wheel long-gun positions. These are the native
         -- RIFLE and RIFLE_ALTERNATE attach points, not cosmetic body bones.
         -- In-game layout: point 10 is the shoulder carry and point 9 is the

@@ -221,6 +221,12 @@ function FeatherInventoryProvider.GetEquippedSlotsForCharacter(context)
     if not result.ok then return result end
     local configured = Config.Inventory.equipmentSlots or {}
     return WeaponResult.Ok({
+        utility_senary = result.value and result.value[configured.utility_senary or "weapon_utility_senary"] or nil,
+        utility_quinary = result.value and result.value[configured.utility_quinary or "weapon_utility_quinary"] or nil,
+        utility_quaternary = result.value and result.value[configured.utility_quaternary or "weapon_utility_quaternary"] or nil,
+        utility_tertiary = result.value and result.value[configured.utility_tertiary or "weapon_utility_tertiary"] or nil,
+        utility_secondary = result.value and result.value[configured.utility_secondary or "weapon_utility_secondary"] or nil,
+        utility = result.value and result.value[configured.utility or "weapon_utility"] or nil,
         primary = result.value and result.value[configured.primary or Config.Inventory.equipmentSlot] or nil,
         offhand = result.value and result.value[configured.offhand or "weapon_offhand"] or nil,
         shoulder = result.value and result.value[configured.shoulder or "weapon_shoulder"] or nil,
@@ -249,7 +255,9 @@ function FeatherInventoryProvider.GetEquippedSlotsForCharacter(context)
         throwable_octonary = result.value
             and result.value[configured.throwable_octonary or "weapon_throwable_octonary"] or nil,
         throwable_nonary = result.value
-            and result.value[configured.throwable_nonary or "weapon_throwable_nonary"] or nil
+            and result.value[configured.throwable_nonary or "weapon_throwable_nonary"] or nil,
+        throwable_denary = result.value
+            and result.value[configured.throwable_denary or "weapon_throwable_denary"] or nil
     }, context.correlationId)
 end
 

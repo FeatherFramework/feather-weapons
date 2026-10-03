@@ -1,4 +1,66 @@
+-- Advanced Camera: equipment-only; photography belongs to an optional add-on.
+INSERT INTO `items`
+ (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'weapon_utility_camera_advanced', 'Advanced Camera', 'A reusable advanced camera.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_utility_camera_advanced');
+UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
+WHERE `name` = 'weapon_utility_camera_advanced';
+
+-- Standard Camera: unique utility equipment; no ammunition.
+INSERT INTO `items`
+ (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'weapon_utility_camera', 'Camera', 'A reusable standard camera.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_utility_camera');
+UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
+WHERE `name` = 'weapon_utility_camera';
+
+-- Standard Binoculars: unique utility equipment, no ammunition.
+INSERT INTO `items`
+ (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'weapon_utility_binoculars', 'Binoculars', 'Reusable standard binoculars.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_utility_binoculars');
+UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
+WHERE `name` = 'weapon_utility_binoculars';
+
+-- Davy Lantern candidate; preserves Standard Lantern ownership.
+INSERT INTO `items`
+ (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'weapon_utility_davy_lantern', 'Davy Lantern', 'A reusable handheld Davy lantern.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_utility_davy_lantern');
+UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
+WHERE `name` = 'weapon_utility_davy_lantern';
+
+-- Reinforced Lasso: unique equipment; no ammunition.
+INSERT INTO `items`
+ (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'weapon_utility_lasso_reinforced', 'Reinforced Lasso', 'A reusable reinforced lasso.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_utility_lasso_reinforced');
+UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
+WHERE `name` = 'weapon_utility_lasso_reinforced';
+
+-- Standard Lasso: unique equipment, no ammunition item.
+INSERT INTO `items`
+ (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'weapon_utility_lasso', 'Lasso', 'A standard reusable lasso.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_utility_lasso');
+UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
+WHERE `name` = 'weapon_utility_lasso';
+
 -- Existing installations: run rename_weapon_item_names.sql before this seed.
+
+-- Toxic Moonshine candidate; preserves existing item IDs and quantities.
+INSERT INTO `items`
+ (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'weapon_throwable_poisonbottle', 'Toxic Moonshine', 'Unique Toxic Moonshine carrier.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_throwable_poisonbottle');
+UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
+WHERE `name` = 'weapon_throwable_poisonbottle';
+INSERT INTO `items`
+ (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'ammo_poisonbottle', 'Toxic Moonshine - Regular', 'Toxic Moonshine ammunition.', 100, 100, 0.1, 1, 2, 'item_ammo', 'stack'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'ammo_poisonbottle');
+UPDATE `items` SET `usable` = 1, `type` = 'item_ammo', `instance_mode` = 'stack'
+WHERE `name` = 'ammo_poisonbottle';
 
 -- Fire Bottle candidate; preserves existing item IDs and quantities.
 INSERT INTO `items`
