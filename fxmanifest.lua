@@ -15,7 +15,8 @@ shared_scripts {
     '/shared/definitions/ammunition.lua',
     '/shared/definitions/attachments.lua',
     '/shared/definitions/weapons.lua',
-    '/shared/validation.lua'
+    '/shared/validation.lua',
+    '/shared/ammunition_pools.lua'
 }
 
 server_scripts {
@@ -47,6 +48,7 @@ client_scripts {
     '/client/guid_weapons.lua',
     '/client/native_maintenance.lua',
     '/client/native_weapon_coordinator.lua',
+    '/client/firearm_pools.lua',
     '/client/main.lua',
     '/client/native_probe.lua'
 }

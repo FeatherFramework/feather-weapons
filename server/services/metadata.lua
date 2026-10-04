@@ -10,16 +10,31 @@ function WeaponMetadata.EnsureAmmunitionPools(metadata, definition)
                 (tonumber(metadata.ammo.loaded) or 0) + (tonumber(metadata.ammo.reserve) or 0)
         }
     end
+    if definition.family ~= 'throwing_knife' and metadata.ammo.clips == nil then
+        metadata.ammo.clips = {
+            [metadata.ammo.type or definition.ammunitionType] = metadata.ammo.loaded or 0
+        }
+    end
 end
 
-function WeaponMetadata.ProjectAmmunitionPool(metadata, definition, ammunitionType)
+function WeaponMetadata.ProjectAmmunitionPool(metadata, definition, ammunitionType, reportedLoaded)
     WeaponMetadata.EnsureAmmunitionPools(metadata, definition)
     local total = metadata.ammo.pools[ammunitionType] or 0
+    metadata.ammo.pools[ammunitionType] = total
     local loaded = math.min(definition.capacity, total)
+    if metadata.ammo.clips and metadata.ammo.clips[ammunitionType] ~= nil then
+        loaded = math.min(loaded, metadata.ammo.clips[ammunitionType])
+    end
+    -- Firearm checkpoints must preserve the actual cylinder/clip, not refill
+    -- it merely because reserve ammunition remains in this pool.
+    if reportedLoaded ~= nil then
+        loaded = math.min(definition.capacity, total, math.max(0, math.floor(reportedLoaded)))
+    end
     metadata.ammo.type = ammunitionType
     metadata.ammo.loaded = loaded
     metadata.ammo.reserve = total - loaded
     metadata.ammo.chambered = loaded > 0
+    if metadata.ammo.clips then metadata.ammo.clips[ammunitionType] = loaded end
 end
 
 function WeaponMetadata.SaveSelectedAmmunitionPool(metadata, definition)
@@ -27,6 +42,9 @@ function WeaponMetadata.SaveSelectedAmmunitionPool(metadata, definition)
     WeaponMetadata.EnsureAmmunitionPools(metadata, definition)
     metadata.ammo.pools[metadata.ammo.type or definition.ammunitionType] =
         (tonumber(metadata.ammo.loaded) or 0) + (tonumber(metadata.ammo.reserve) or 0)
+    if metadata.ammo.clips then
+        metadata.ammo.clips[metadata.ammo.type or definition.ammunitionType] = metadata.ammo.loaded
+    end
 end
 
 local function NormalizeMaintenance(value)

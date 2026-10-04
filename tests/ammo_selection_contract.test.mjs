@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const source = readFileSync(new URL('../client/main.lua', import.meta.url), 'utf8');
+const direct = source.split('local function SetNativeAmmo(')[1].split('local function ApplyNativeAttachments')[0];
+const restore = source.split('local function GiveApprovedNativeWeapon(')[1].split('local function ', 1)[0];
+assert.match(direct, /SelectNativeAmmoType\(ped, nativeWeaponName, nativeAmmoName\)\s*SetAmmoInClip/);
+assert.match(restore, /SelectNativeAmmoType\(ped, nativeWeaponName, nativeAmmoName\)\s*SetAmmoInClip/);
+assert(direct.indexOf('SetAmmoInClip') < direct.indexOf('0x5FD1E1F011E76D7E'));
+assert.match(source, /if state and state.nativeAmmoName then\s*if state.ammoPools then/);
+console.log('Ammo selection ordering and inactive-pool diagnostics static checks passed; native behavior requires live validation.');

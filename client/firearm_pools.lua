@@ -1,0 +1,162 @@
+-- Opt-in firearm pool observer; loaded legacy firearms cannot share this mode.
+FeatherFirearmPools = {}
+local snapshot
+local function Copy(value)
+    if type(value) ~= 'table' then return value end
+    local result = {}
+    for key, child in pairs(value) do result[key] = Copy(child) end
+    return result
+end
+
+function FeatherFirearmPools.Reset()
+    snapshot = nil
+end
+
+function FeatherFirearmPools.Restore(ped, slots, catalog)
+    local owners, states, totals = {}, {}, {}
+    -- Validate the entire mode before touching any native pool or selection.
+    for _, state in pairs(slots) do
+        local definition = catalog.weapons[state.definitionId]
+        if definition and (definition.slot == 'sidearm' or definition.slot == 'longgun')
+            and not state.ammoPools and (tonumber(state.ammo) or 0) > 0 then
+            snapshot = nil
+            return false, 'mixed_firearm_pool_modes'
+        end
+    end
+    for slot, state in pairs(slots) do
+        local definition = catalog.weapons[state.definitionId]
+        if state.ammoPools and definition and definition.family ~= 'throwing_knife' then
+            states[slot], owners[slot] = Copy(state), {}
+            for _, id in ipairs(definition.ammunitionTypes) do
+                local amount = state.ammoPools[id] or 0
+                owners[slot][id] = amount
+                local hash = joaat(catalog.ammunition[id].nativeAmmoName)
+                totals[id] = (totals[id] or 0) + amount
+                Citizen.InvokeNative(amount > 0 and 0x23FB9FACA28779C1 or 0xF0D728EEA3C99775,
+                    ped, joaat(state.nativeWeaponName), hash)
+            end
+            if not FeatherGuidWeapons.SelectExistingAmmo(ped, state.nativeWeaponName, state.nativeAmmoName) then
+                snapshot = nil
+                return false, 'native_type_selection_failed'
+            end
+            SetAmmoInClip(ped, joaat(state.nativeWeaponName), state.loaded)
+        end
+    end
+    FeatherNativeWeaponCoordinator.RestorePoolTotals(ped, slots, catalog)
+    local observed = {}
+    for id in pairs(totals) do
+        observed[id] = GetPedAmmoByType(ped, joaat(catalog.ammunition[id].nativeAmmoName))
+        if observed[id] ~= totals[id] then
+            print(('[feather-weapons] firearm pool restore mismatch type=%s approved=%s native=%s')
+                :format(tostring(id), tostring(totals[id]), tostring(observed[id])))
+            snapshot = nil
+            return false, 'native_pool_restore_mismatch'
+        end
+    end
+    snapshot = { states = states, owners = owners, totals = observed }
+    return true
+end
+
+function FeatherFirearmPools.Capture(ped, catalog)
+    if not snapshot then return nil, 'pools_not_ready' end
+    local observed, shots, states = {}, {}, Copy(snapshot.states)
+    for id in pairs(snapshot.totals) do
+        observed[id] = GetPedAmmoByType(ped, joaat(catalog.ammunition[id].nativeAmmoName))
+    end
+    local unchangedPools = true
+    for id, amount in pairs(snapshot.totals) do
+        if observed[id] ~= amount then unchangedPools = false break end
+    end
+    local currentOk, currentWeapon = GetCurrentPedWeapon(ped, true, 0, false)
+    local unarmed = (currentOk == true or currentOk == 1)
+        and currentWeapon == joaat('WEAPON_UNARMED')
+    for slot, state in pairs(states) do
+        local definition = catalog.weapons[state.definitionId]
+        local record = FeatherGuidWeapons.ResolveExisting(state.nativeWeaponName)
+        local selectedHash = record and Citizen.InvokeNative(0xAF9D167A5656D6A6, ped, record.guid)
+        if not record then return nil, 'weapon_guid_not_ready' end
+        local selected
+        for _, id in ipairs(definition.ammunitionTypes) do
+            if type(selectedHash) == 'number' and selectedHash % 4294967296
+                == joaat(catalog.ammunition[id].nativeAmmoName) % 4294967296 then selected = id end
+        end
+        if not selected then return nil, 'unknown_native_type' end
+        local ok, loaded = GetAmmoInClip(ped, joaat(state.nativeWeaponName))
+        local empty = true
+        for _, amount in pairs(snapshot.owners[slot]) do
+            if amount > 0 then empty = false break end
+        end
+        if ok ~= true and ok ~= 1 then
+            if empty then loaded = 0 else return nil, 'clip_not_ready' end
+        end
+        if type(loaded) ~= 'number' or loaded < 0 or loaded % 1 ~= 0
+            or loaded > definition.capacity then return nil, 'invalid_native_clip' end
+        -- Removing a depleted counterpart can collapse a holstered survivor's
+        -- hash clip surface to zero. No pool decrease means no shot to charge.
+        -- Keep its approved loaded state until the native clip rematerializes.
+        if loaded == 0 and state.loaded > 0 and selected == state.ammunitionType
+            and ((unchangedPools and unarmed)
+                or (definition.slot == 'longgun' and (currentOk == true or currentOk == 1)
+                    and currentWeapon ~= joaat(state.nativeWeaponName))) then
+            loaded = state.loaded
+        end
+        if selected == state.ammunitionType then
+            local decrease = math.max(0, state.loaded - loaded)
+            shots[slot] = { [selected] = decrease }
+        end
+        state.ammunitionType, state.loaded = selected, loaded
+        state.nativeAmmoName = catalog.ammunition[selected].nativeAmmoName
+    end
+    local owners, failure = WeaponAmmunitionPools.Allocate(
+        snapshot.totals, observed, snapshot.owners, shots)
+    if not owners then
+        local details = {}
+        for id, before in pairs(snapshot.totals) do
+            local attributed = 0
+            for _, report in pairs(shots) do attributed = attributed + (report[id] or 0) end
+            if type(observed[id]) ~= 'number' or math.max(0, before - observed[id]) ~= attributed then
+                details[#details + 1] = ('%s before=%s native=%s clipDecrease=%s'):format(
+                    id, tostring(before), tostring(observed[id]), tostring(attributed))
+            end
+        end
+        for slot, state in pairs(states) do
+            local hashType = Citizen.InvokeNative(0x7FEAD38B326B9F74, ped, joaat(state.nativeWeaponName))
+            details[#details + 1] = ('slot=%s selected=%s previous=%s loaded=%s previousLoaded=%s hashType=%s'):format(
+                slot, tostring(state.ammunitionType), tostring(snapshot.states[slot].ammunitionType),
+                tostring(state.loaded), tostring(snapshot.states[slot].loaded), tostring(hashType))
+        end
+        return nil, failure, table.concat(details, '; ')
+    end
+    local reports = {}
+    for slot, state in pairs(states) do
+        if state.loaded > (owners[slot][state.ammunitionType] or 0) then
+            -- A native reload can borrow from another weapon's shared reserve.
+            -- Correct the clip only when every pool is unchanged and no shot
+            -- is pending; never rebuild totals to conceal consumption.
+            for id, before in pairs(snapshot.totals) do
+                if observed[id] ~= before then return nil, 'clip_crossed_item_ownership' end
+            end
+            local bounded = owners[slot][state.ammunitionType] or 0
+            SetAmmoInClip(ped, joaat(state.nativeWeaponName), bounded)
+            local ok, actual = GetAmmoInClip(ped, joaat(state.nativeWeaponName))
+            if not (empty and ok ~= true and ok ~= 1)
+                and ((ok ~= true and ok ~= 1) or actual ~= bounded) then
+                return nil, 'clip_ownership_correction_failed'
+            end
+            for id, amount in pairs(observed) do
+                if GetPedAmmoByType(ped, joaat(catalog.ammunition[id].nativeAmmoName)) ~= amount then
+                    return nil, 'clip_correction_changed_pool'
+                end
+            end
+            state.loaded = bounded
+        end
+        reports[slot] = { itemInstanceId = state.itemInstanceId, generation = state.generation,
+            ammunitionType = state.ammunitionType, loaded = state.loaded, pools = owners[slot] }
+    end
+    -- Caller owns commit timing; a failed RPC must never advance the baseline.
+    return { reports = reports, next = { states = states, owners = owners, totals = observed } }
+end
+
+function FeatherFirearmPools.Accept(capture)
+    snapshot = capture.next
+end

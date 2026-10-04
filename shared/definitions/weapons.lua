@@ -1560,3 +1560,13 @@ WeaponDefinitionCatalog.weapons = {
         tags = { "ranged", "longgun", "bow" }
     }
 }
+
+-- Controlled opt-in; no ownership is granted by enabling pool metadata.
+if Config.AmmunitionPools and Config.AmmunitionPools.enabled == true then
+    for id in pairs(Config.AmmunitionPools.weapons or {}) do
+        local definition = WeaponDefinitionCatalog.weapons[id]
+        if definition and definition.usesAmmunition ~= false and #definition.ammunitionTypes > 1 then
+            definition.multiTypeAmmunition = true
+        end
+    end
+end

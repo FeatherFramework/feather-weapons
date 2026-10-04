@@ -37,6 +37,12 @@ Config = {
             throwable_denary = "weapon_throwable_denary"
         }
     },
+    AmmunitionPools = {
+        -- Experimental distinct revolver/repeater gates; not broad catalog opt-in.
+        enabled = true,
+        weapons = { revolver_cattleman = true, revolver_schofield = true,
+            repeater_carbine = true, repeater_lancaster = true }
+    },
     Runtime = {
         authorizationTtlMs = 5000,
         authoritativeNativeAmmo = true,

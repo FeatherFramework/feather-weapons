@@ -326,6 +326,8 @@ function FeatherInventoryProvider.Transaction(context, callback)
     local additions = {}
     local nextMetadata = nil
     local expectedRevision = nil
+    local metadataUpdates = {}
+    local metadataUpdateCount = 0
     local tx = {}
 
     function tx:GetItemForUpdate(itemInstanceId)
@@ -402,6 +404,10 @@ function FeatherInventoryProvider.Transaction(context, callback)
         end
         nextMetadata = metadata
         expectedRevision = revision
+        local key = tostring(itemInstanceId)
+        if not metadataUpdates[key] then metadataUpdateCount = metadataUpdateCount + 1 end
+        metadataUpdates[key] = { itemInstanceId = itemInstanceId,
+            expectedRevision = revision, metadata = metadata }
         return true
     end
 
@@ -434,13 +440,27 @@ function FeatherInventoryProvider.Transaction(context, callback)
                 metadata = addition.metadata
             }
         end
-        local committed = Inventory.MutateItem(context, {
+        local committed
+        if metadataUpdateCount > 1 then
+            if next(removals) ~= nil or next(additions) ~= nil then
+                return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+                    'Multi-item metadata batches cannot include quantity changes', nil, context.correlationId)
+            end
+            local mutations = {}
+            for _, mutation in pairs(metadataUpdates) do mutations[#mutations + 1] = mutation end
+            table.sort(mutations, function(left, right)
+                return tonumber(left.itemInstanceId) < tonumber(right.itemInstanceId)
+            end)
+            committed = Inventory.MutateItems(context, { items = mutations })
+        else
+        committed = Inventory.MutateItem(context, {
             itemInstanceId = currentItem.id,
             expectedRevision = expectedRevision or currentItem.metadataRevision,
             metadata = nextMetadata,
             removals = removalList,
             additions = additionList
         })
+        end
         if not committed.ok then
             if Config.DevMode then
                 local failure = committed.error or {}

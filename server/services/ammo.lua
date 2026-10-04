@@ -218,12 +218,17 @@ local function SelectAmmunition(source, rpcContext, ammunitionType)
 
             local currentType = item.metadata.ammo.type or definition.value.ammunitionType
             if currentType ~= ammunitionType then
-                if (item.metadata.ammo.loaded + item.metadata.ammo.reserve) > 0 then
+                if definition.value.multiTypeAmmunition ~= true
+                    and (item.metadata.ammo.loaded + item.metadata.ammo.reserve) > 0 then
                     return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
                         'Unload the compatible equipped weapon before changing ammunition type')
                 end
 
-                item.metadata.ammo.type = ammunitionType
+                if definition.value.multiTypeAmmunition == true then
+                    WeaponMetadata.ProjectAmmunitionPool(item.metadata, definition.value, ammunitionType)
+                else
+                    item.metadata.ammo.type = ammunitionType
+                end
                 mutations[#mutations + 1] = {
                     itemInstanceId = item.id, expectedRevision = item.metadataRevision, metadata = item.metadata
                 }
@@ -410,9 +415,12 @@ function AmmoService.LoadSlot(source, rpcContext, params)
     local otherPoolTotal = 0
     for _, candidate in ipairs(WeaponConstants.LoadoutSlots) do
         local other = runtime and runtime.slots and runtime.slots[candidate] or nil
-        if candidate ~= slot and other
-            and other.nativeAmmoName == ammunition.value.nativeAmmoName then
-            otherPoolTotal = otherPoolTotal + (tonumber(other.ammo) or 0)
+        if candidate ~= slot and other then
+            if other.ammoPools then
+                otherPoolTotal = otherPoolTotal + (tonumber(other.ammoPools[ammunitionType]) or 0)
+            elseif other.nativeAmmoName == ammunition.value.nativeAmmoName then
+                otherPoolTotal = otherPoolTotal + (tonumber(other.ammo) or 0)
+            end
         end
     end
 
@@ -746,6 +754,7 @@ function AmmoService.Unload(source, rpcContext, requested, requestedSlot, lease)
                     returned[id], moved = amount, moved + amount
                 end
                 item.metadata.ammo.pools[id] = 0
+                if item.metadata.ammo.clips then item.metadata.ammo.clips[id] = 0 end
             end
             if moved == 0 then
                 return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
@@ -831,6 +840,18 @@ function AmmoService.SyncPools(source, rpcContext, params)
             return WeaponResult.Error(WeaponErrors.ITEM_INVALID, 'Invalid ammunition pool', nil, rpcContext.correlationId)
         end
     end
+    local reportedLoaded = params.loaded
+    if definition.family ~= 'throwing_knife' then
+        if type(reportedLoaded) ~= 'number' or reportedLoaded ~= reportedLoaded
+            or reportedLoaded % 1 ~= 0 or reportedLoaded < 0
+            or reportedLoaded > definition.capacity
+            or reportedLoaded > (params.pools[params.ammunitionType] or 0) then
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
+                'Multi-type firearm checkpoint requires a valid loaded count', nil, rpcContext.correlationId)
+        end
+    else
+        reportedLoaded = nil
+    end
     local result = InventoryAdapter.Transaction(Context(source, rpcContext, 'pool_checkpoint'), function(tx)
         local item = tx:GetItemForUpdate(equipped.itemInstanceId)
         if not item then return WeaponResult.Error(WeaponErrors.ITEM_NOT_OWNED, 'Weapon is no longer owned') end
@@ -847,7 +868,10 @@ function AmmoService.SyncPools(source, rpcContext, params)
             pools[id] = reported
         end
         item.metadata.ammo.pools = pools
-        WeaponMetadata.ProjectAmmunitionPool(item.metadata, definition, params.ammunitionType)
+        for id, amount in pairs(item.metadata.ammo.clips or {}) do
+            item.metadata.ammo.clips[id] = math.min(amount, pools[id] or 0)
+        end
+        WeaponMetadata.ProjectAmmunitionPool(item.metadata, definition, params.ammunitionType, reportedLoaded)
         if not tx:SetMetadata(item.id, item.metadata, item.metadataRevision) then
             return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, 'Weapon metadata changed', nil, rpcContext.correlationId)
         end
@@ -862,6 +886,101 @@ function AmmoService.SyncPools(source, rpcContext, params)
     equipped.ammunitionType = result.value.ammunitionType
     equipped.nativeAmmoName = DefinitionRegistry.Get('ammunition', equipped.ammunitionType).value.nativeAmmoName
     WeaponRuntime.SetSlotAmmo(source, rpcContext.sessionId, slot, result.value.total, result.value.loaded, rpcContext.correlationId)
+    return result
+end
+
+-- Commit a shared-pool observation atomically across item leases. A failure in
+-- either hand must not consume the first hand while retaining the second.
+function AmmoService.SyncPoolBatch(source, rpcContext, params)
+    local reports = type(params) == 'table' and params.slots or nil
+    if type(reports) ~= 'table' then
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID, 'Pool batch requires slot reports')
+    end
+    local prepared, seen, count = {}, {}, 0
+    for slot, report in pairs(reports) do
+        if type(report) ~= 'table' or WeaponRuntime.NormalizeSlot(slot) ~= slot then
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID, 'Invalid pool batch slot')
+        end
+        local equipped, failure = GetEquipped(source, rpcContext, slot)
+        if not equipped then return failure end
+        local lease = { slot = slot, itemInstanceId = report.itemInstanceId, generation = report.generation }
+        failure = ValidateLease(source, equipped, rpcContext, lease)
+        if failure then return failure end
+        if seen[equipped.itemInstanceId] then
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID, 'Duplicate item in pool batch')
+        end
+        seen[equipped.itemInstanceId], count = true, count + 1
+        local definition = DefinitionRegistry.Get('weapon', equipped.definitionId)
+        if not definition.ok then return definition end
+        if definition.value.multiTypeAmmunition ~= true or definition.value.family == 'throwing_knife' then
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID, 'Slot is not a multi-type firearm')
+        end
+        prepared[slot] = { equipped = equipped, definition = definition.value, report = report }
+    end
+    if count == 0 or count > 4 then
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID, 'Pool batch requires one to four firearms')
+    end
+    local result = InventoryAdapter.Transaction(Context(source, rpcContext, 'pool_batch'), function(tx)
+        local values = {}
+        for slot, entry in pairs(prepared) do
+            local report, definition = entry.report, entry.definition
+            local item = tx:GetItemForUpdate(entry.equipped.itemInstanceId)
+            if not item then return WeaponResult.Error(WeaponErrors.ITEM_NOT_OWNED, 'Batch item is no longer owned') end
+            -- Acquiring an Inventory row may yield. Recheck the live lease
+            -- rather than trusting the pre-transaction equipped reference.
+            local current, currentFailure = GetEquipped(source, rpcContext, slot)
+            if not current then return currentFailure end
+            local leaseFailure = ValidateLease(source, current, rpcContext, {
+                slot = slot, itemInstanceId = report.itemInstanceId, generation = report.generation
+            })
+            if leaseFailure then return leaseFailure end
+            local valid = WeaponMetadata.Validate(item.metadata, definition, rpcContext.correlationId)
+            if not valid.ok then return valid end
+            WeaponMetadata.EnsureAmmunitionPools(item.metadata, definition)
+            if type(report.pools) ~= 'table' or not WeaponValidation.AcceptsAmmunition(definition, report.ammunitionType) then
+                return WeaponResult.Error(WeaponErrors.ITEM_INVALID, 'Invalid batch ammunition selection')
+            end
+            local pools = {}
+            for id, amount in pairs(report.pools) do
+                if not WeaponValidation.AcceptsAmmunition(definition, id)
+                    or type(amount) ~= 'number' or amount ~= amount or amount < 0 or amount % 1 ~= 0
+                    or amount > (item.metadata.ammo.pools[id] or 0) then
+                    return WeaponResult.Error(WeaponErrors.ITEM_INVALID, 'Batch cannot increase ammunition ownership')
+                end
+            end
+            for _, id in ipairs(definition.ammunitionTypes) do
+                if report.pools[id] == nil then
+                    return WeaponResult.Error(WeaponErrors.ITEM_INVALID, 'Batch cannot omit an ammunition pool')
+                end
+                pools[id] = report.pools[id]
+            end
+            local loaded = report.loaded
+            if type(loaded) ~= 'number' or loaded ~= loaded or loaded < 0 or loaded % 1 ~= 0
+                or loaded > definition.capacity or loaded > pools[report.ammunitionType] then
+                return WeaponResult.Error(WeaponErrors.ITEM_INVALID, 'Invalid batch loaded count')
+            end
+            item.metadata.ammo.pools = pools
+            for id, amount in pairs(item.metadata.ammo.clips or {}) do
+                item.metadata.ammo.clips[id] = math.min(amount, pools[id] or 0)
+            end
+            WeaponMetadata.ProjectAmmunitionPool(item.metadata, definition, report.ammunitionType, loaded)
+            if not tx:SetMetadata(item.id, item.metadata, item.metadataRevision) then
+                return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, 'Pool batch metadata changed')
+            end
+            values[slot] = { pools = pools, ammunitionType = report.ammunitionType,
+                total = pools[report.ammunitionType], loaded = loaded,
+                reserve = pools[report.ammunitionType] - loaded }
+        end
+        return { slots = values }
+    end)
+    if not result.ok then return result end
+    for slot, value in pairs(result.value.slots) do
+        local equipped = prepared[slot].equipped
+        equipped.ammoPools = value.pools
+        equipped.ammunitionType = value.ammunitionType
+        equipped.nativeAmmoName = DefinitionRegistry.Get('ammunition', value.ammunitionType).value.nativeAmmoName
+        WeaponRuntime.SetSlotAmmo(source, rpcContext.sessionId, slot, value.total, value.loaded, rpcContext.correlationId)
+    end
     return result
 end
 
@@ -1023,6 +1142,7 @@ function AmmoService.SyncPair(source, rpcContext, params)
         item.metadata.ammo.loaded = loaded
         item.metadata.ammo.reserve = nextReserve
         item.metadata.ammo.chambered = loaded > 0
+        WeaponMetadata.SaveSelectedAmmunitionPool(item.metadata, definitionResult.value)
         prepared[slot] = {
             item = item,
             total = nextTotal,
@@ -1125,3 +1245,7 @@ end, { requireCharacter = true, windowMs = 5000, maxCalls = 12, maxPayloadBytes 
 FeatherCore.RPC.Register('feather-weapons:ammo:pairSync', function(params, respond, source, context)
     respond(AmmoService.SyncPair(source, context, params))
 end, { requireCharacter = true, windowMs = 5000, maxCalls = 12, maxPayloadBytes = 768 })
+
+FeatherCore.RPC.Register('feather-weapons:ammo:syncPoolBatch', function(params, respond, source, context)
+    respond(AmmoService.SyncPoolBatch(source, context, params))
+end, { requireCharacter = true, windowMs = 5000, maxCalls = 12, maxPayloadBytes = 4096 })

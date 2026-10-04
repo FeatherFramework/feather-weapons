@@ -99,6 +99,89 @@ local function GroupAmmunition(slots)
     return groups
 end
 
+-- Only remove pools with no loadout authorization. Never clamp a funded pool
+-- here: native caps, pending shots and shared cylinders have separate owners.
+function FeatherNativeWeaponCoordinator.ClearUnfundedPools(ped, slots, catalog)
+    local funded, candidates, removed = {}, {}, {}
+    for _, state in pairs(slots or {}) do
+        if state then
+            if state.nativeAmmoName and (tonumber(state.ammo) or 0) > 0 then
+                funded[state.nativeAmmoName] = true
+            end
+            for id, amount in pairs(state.ammoPools or {}) do
+                local ammunition = catalog.ammunition[id]
+                if ammunition and (tonumber(amount) or 0) > 0 then
+                    funded[ammunition.nativeAmmoName] = true
+                end
+            end
+            local definition = catalog.weapons[state.definitionId]
+            for _, id in ipairs(definition and definition.ammunitionTypes or {}) do
+                local ammunition = catalog.ammunition[id]
+                if ammunition then candidates[ammunition.nativeAmmoName] = true end
+            end
+        end
+    end
+    for name in pairs(candidates) do
+        if not funded[name] then
+            local hash = joaat(name)
+            local amount = math.max(0, math.floor(tonumber(GetPedAmmoByType(ped, hash)) or 0))
+            if amount > 0 then
+                -- Explicit removal: setting a pool to zero can be increase-only
+                -- on the tested RedM runtime (see native probe cleanup).
+                Citizen.InvokeNative(0xB6CFEC32E3742779, ped, hash, amount, 0xA07362E6)
+                removed[name] = { before = amount, after = GetPedAmmoByType(ped, hash) }
+            end
+        end
+    end
+    return removed
+end
+
+-- Build full-loadout type totals; each instance contributes its owned pools
+-- once, even when it selects the same native type as another equipped weapon.
+function FeatherNativeWeaponCoordinator.BuildPoolTotals(slots, catalog)
+    local totals = {}
+    for _, state in pairs(slots or {}) do
+        if state and state.ammoPools then
+            -- Persisted pools are sparse. Unsaved compatible types still have
+            -- an authoritative zero and must clear native default-clip ammo.
+            local definition = catalog.weapons and catalog.weapons[state.definitionId]
+            for _, id in ipairs(definition and definition.ammunitionTypes or {}) do
+                local ammunition = catalog.ammunition[id]
+                if ammunition then
+                    local name = ammunition.nativeAmmoName
+                    totals[name] = totals[name] or 0
+                end
+            end
+            for id, amount in pairs(state.ammoPools) do
+                local ammunition = catalog.ammunition[id]
+                if ammunition then
+                    local name = ammunition.nativeAmmoName
+                    totals[name] = (totals[name] or 0) + amount
+                end
+            end
+        elseif state and state.nativeAmmoName then
+            totals[state.nativeAmmoName] = (totals[state.nativeAmmoName] or 0) + state.ammo
+        end
+    end
+    return totals
+end
+
+-- Called only at a completed restore/load boundary, never during observation:
+-- setting authoritative totals while shots are pending would resurrect ammo.
+function FeatherNativeWeaponCoordinator.RestorePoolTotals(ped, slots, catalog)
+    local totals = FeatherNativeWeaponCoordinator.BuildPoolTotals(slots, catalog)
+    for name, approved in pairs(totals) do
+        local hash = joaat(name)
+        local current = math.max(0, tonumber(GetPedAmmoByType(ped, hash)) or 0)
+        if current > approved then
+            Citizen.InvokeNative(0xB6CFEC32E3742779, ped, hash, current - approved, 0xA07362E6)
+        elseif current < approved then
+            SetPedAmmoByType(ped, hash, approved)
+        end
+    end
+    return totals
+end
+
 -- RedM may expose less ammunition than Feather's equipped item instances own.
 -- Remember the largest observed native window separately from authoritative
 -- ownership so a capped pool is never mistaken for lost Inventory ammunition.
