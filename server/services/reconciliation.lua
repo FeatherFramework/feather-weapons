@@ -14,6 +14,46 @@ local function CopyPools(pools)
     return snapshot
 end
 
+local function AmmunitionTotal(item)
+    local ammo = item and item.metadata and item.metadata.ammo or nil
+    if type(ammo) ~= 'table' then return 0 end
+    if type(ammo.pools) == 'table' then
+        local total = 0
+        for _, amount in pairs(ammo.pools) do
+            total = total + math.max(0, math.floor(tonumber(amount) or 0))
+        end
+        return total
+    end
+    return math.max(0, math.floor(tonumber(ammo.loaded) or 0))
+        + math.max(0, math.floor(tonumber(ammo.reserve) or 0))
+end
+
+local function NormalizeFundedOffhand(context, equipped)
+    if not equipped.primary or not equipped.offhand then return WeaponResult.Ok(equipped) end
+    local primaryResult = InventoryAdapter.GetItemForCharacter(context, equipped.primary)
+    if not primaryResult.ok then return primaryResult end
+    local offhandResult = InventoryAdapter.GetItemForCharacter(context, equipped.offhand)
+    if not offhandResult.ok then return offhandResult end
+    local primaryDefinition = DefinitionRegistry.Get('weapon',
+        primaryResult.value.metadata and primaryResult.value.metadata.weaponDefinitionId)
+    if not primaryDefinition.ok then return primaryDefinition end
+    local offhandDefinition = DefinitionRegistry.Get('weapon',
+        offhandResult.value.metadata and offhandResult.value.metadata.weaponDefinitionId)
+    if not offhandDefinition.ok then return offhandDefinition end
+    if primaryDefinition.value.multiTypeAmmunition ~= true
+        or offhandDefinition.value.multiTypeAmmunition ~= true
+        or AmmunitionTotal(primaryResult.value) > 0
+        or AmmunitionTotal(offhandResult.value) == 0 then
+        return WeaponResult.Ok(equipped)
+    end
+    local promoted = InventoryAdapter.PromoteOffhandToPrimary(context)
+    if not promoted.ok then return promoted end
+    print(('[feather-weapons] promoted funded offhand before restore character=%s item=%s displacedEmptyPrimary=%s')
+        :format(tostring(context.characterId), tostring(equipped.offhand), tostring(equipped.primary)))
+    equipped.primary, equipped.offhand = equipped.offhand, nil
+    return WeaponResult.Ok(equipped)
+end
+
 local function ContextForSession(session, correlationId)
     return {
         actorSource = session.source,
@@ -31,10 +71,13 @@ function ReconciliationService.RehydrateSession(session)
         ("rehydrate:%s:%s"):format(tostring(session.characterId), tostring(GetGameTimer())))
     local equippedResult = InventoryAdapter.GetEquippedSlotsForCharacter(context)
     if not equippedResult.ok then return equippedResult end
+    local normalizedEquipped = NormalizeFundedOffhand(context, equippedResult.value or {})
+    if not normalizedEquipped.ok then return normalizedEquipped end
+    local equipped = normalizedEquipped.value
 
     local restored = {}
     for _, slot in ipairs(WeaponConstants.LoadoutSlots) do
-        local itemInstanceId = equippedResult.value and equippedResult.value[slot] or nil
+        local itemInstanceId = equipped[slot]
         if itemInstanceId then
             local restoreResult = EquipService.Restore(
                 session.source, session, itemInstanceId, context.correlationId, slot)

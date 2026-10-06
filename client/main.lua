@@ -861,7 +861,11 @@ local function FlushFirearmPools(callback)
             message = 'Deploy client/firearm_pools.lua, shared/ammunition_pools.lua and the updated fxmanifest.lua.' } })
         return
     end
-    if firearmPoolsInFlight then
+    -- Pool batches and periodic maintenance can touch the same equipped item
+    -- metadata. Keep their Inventory transactions mutually exclusive; letting
+    -- a multi-item pool batch overlap a single-item maintenance write produced
+    -- repeatable InnoDB deadlocks under live firing checkpoints.
+    if firearmPoolsInFlight or maintenanceBatchInFlight then
         SetTimeout(50, function() FlushFirearmPools(callback) end)
         return
     end
@@ -1245,7 +1249,7 @@ local function SyncSlotMaintenance(slot, state, callback)
 end
 
 local function CheckpointMaintenance(callback)
-    if maintenanceBatchInFlight then
+    if maintenanceBatchInFlight or firearmPoolsInFlight then
         callback({ ok = true, value = { deferred = true } })
         return
     end

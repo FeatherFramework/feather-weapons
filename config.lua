@@ -38,10 +38,12 @@ Config = {
         }
     },
     AmmunitionPools = {
-        -- Experimental distinct revolver/repeater gates; not broad catalog opt-in.
+        -- Experimental scoped gates; not broad catalog opt-in.
         enabled = true,
         weapons = { revolver_cattleman = true, revolver_schofield = true,
-            repeater_carbine = true, repeater_lancaster = true }
+            repeater_carbine = true, repeater_lancaster = true,
+            pistol_m1899 = true, pistol_volcanic = true,
+            pistol_semiauto = true }
     },
     Runtime = {
         authorizationTtlMs = 5000,

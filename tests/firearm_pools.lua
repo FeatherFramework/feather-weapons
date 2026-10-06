@@ -27,9 +27,33 @@ local retry = assert(FeatherFirearmPools.Capture(1, catalog))
 assert(retry.reports.primary.pools.express == 19, 'Uncommitted observation must not double charge a retry')
 FeatherFirearmPools.Accept(capture)
 assert(FeatherFirearmPools.Capture(1, catalog).reports.primary.pools.express == 19)
+-- A partial native reload only changes the clip projection. The owned total
+-- stays fixed, and the next shot is charged exactly once from that total.
+clip = 6
+capture = assert(FeatherFirearmPools.Capture(1, catalog))
+assert(capture.reports.primary.loaded == 6 and capture.reports.primary.pools.express == 19,
+    'Partial reload must not consume or create ownership')
+FeatherFirearmPools.Accept(capture)
+clip, totals[3] = 5, 18
+capture = assert(FeatherFirearmPools.Capture(1, catalog))
+assert(capture.reports.primary.loaded == 5 and capture.reports.primary.pools.express == 18,
+    'Post-reload shot must debit the selected pool exactly once')
+FeatherFirearmPools.Accept(capture)
 selected, clip = 2, 6
 capture = assert(FeatherFirearmPools.Capture(1, catalog))
 assert(capture.reports.primary.ammunitionType == 'regular' and capture.reports.primary.pools.regular == 10)
+FeatherFirearmPools.Accept(capture)
+-- Switching back after a partial reload must preserve both totals. The native
+-- clip may rematerialize independently for each selected ammunition type.
+selected, clip = 3, 5
+capture = assert(FeatherFirearmPools.Capture(1, catalog))
+assert(capture.reports.primary.ammunitionType == 'express'
+    and capture.reports.primary.pools.regular == 10
+    and capture.reports.primary.pools.express == 18,
+    'Switching ammunition after reload must conserve every owned pool')
+FeatherFirearmPools.Accept(capture)
+selected, clip = 2, 6
+capture = assert(FeatherFirearmPools.Capture(1, catalog))
 FeatherFirearmPools.Accept(capture)
 totals[2] = 9
 assert(not FeatherFirearmPools.Capture(1, catalog), 'Unattributed pool decrease must fail closed')
