@@ -1,6 +1,6 @@
 # Fishing Rod live gate
 
-utility_fishing_rod / weapon_utility_fishing_rod / WEAPON_FISHINGROD.
+utility_fishing_rod / weapon_fishingrod / WEAPON_FISHINGROD.
 Eighth utility position: utility_octonary -> weapon_utility_octonary.
 Equipment-only scope; bait, fishing controls, catches and rewards belong to an add-on.
 Expected catalog: 49 weapons / 43 ammunition / 38 attachments. Live accepted: user confirmed all manual checks. Fishing Rod appears in the Items wheel Hunting category; item 140 serial FW-FISH-6AC17516-C3F034-0001 metadata/runtime matches with native ownership. Server and client show all 25 equipped items; lease 5/5 and release 9/9 passed.

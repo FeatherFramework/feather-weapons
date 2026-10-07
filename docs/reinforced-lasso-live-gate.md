@@ -1,6 +1,6 @@
 # Reinforced Lasso live gate
 
-Candidate: utility_lasso_reinforced / weapon_utility_lasso_reinforced / WEAPON_LASSO_REINFORCED.
+Candidate: utility_lasso_reinforced / weapon_lasso_reinforced / WEAPON_LASSO_REINFORCED.
 The second utility slot maps to Inventory weapon_utility_secondary; automatic equip uses either free utility slot.
 Policy: only one Lasso-family carrier can be equipped at a time. Unequip before switching.
 Previously saved dual-Lasso loadouts restore the first valid carrier in loadout order;

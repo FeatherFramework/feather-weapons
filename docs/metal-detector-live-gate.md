@@ -1,6 +1,6 @@
 # Metal Detector live gate
 
-utility_metal_detector / weapon_utility_metal_detector / WEAPON_KIT_METAL_DETECTOR.
+utility_metal_detector / weapon_kit_metal_detector / WEAPON_KIT_METAL_DETECTOR.
 Seventh utility position: utility_septenary -> weapon_utility_septenary.
 Equipment only: no detecting, collectible spawning, rewards, custom controls or unlock writes.
 Expected catalog: 48 weapons / 43 ammunition / 38 attachments. Live accepted: user confirmed manual checks; Metal Detector visible in Kit wheel, item 139 metadata/runtime match and native ownership; lease 5/5 and release 9/9, 24 active server slots.

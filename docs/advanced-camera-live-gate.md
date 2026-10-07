@@ -1,6 +1,6 @@
 # Advanced Camera equipment live gate
 
-utility_camera_advanced / weapon_utility_camera_advanced / WEAPON_KIT_CAMERA_ADVANCED.
+utility_camera_advanced / weapon_kit_camera_advanced / WEAPON_KIT_CAMERA_ADVANCED.
 Fifth logical utility position: utility_quinary -> weapon_utility_quinary.
 Equipment ownership, equip and persistence only. No photography controls or storage integration.
 No ammunition, film, unlock writes or forced wheel placement.

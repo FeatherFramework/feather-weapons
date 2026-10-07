@@ -84,7 +84,7 @@ assert.match(improvedBinoculars, /usesAmmunition = false/);
 assert.match(improvedBinoculars, /capacity = 0/);
 assert.match(read('sql/add_improved_binoculars.sql'), /'item_weapon', 'unique'/);
 assert.doesNotMatch(read('sql/add_improved_binoculars.sql'), /item_ammo/);
-assert.match(read('sql/install_items.sql'), /weapon_utility_binoculars_improved/);
+assert.match(read('sql/install_items.sql'), /weapon_kit_binoculars_improved/);
 console.log('Improved Binoculars static equipment/catalog checks passed.');
 
 assert.match(read('config.lua'), /utility_septenary = "weapon_utility_septenary"/);

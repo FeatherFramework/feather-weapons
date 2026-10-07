@@ -1,6 +1,6 @@
 # Improved Binoculars live gate
 
-Definition utility_binoculars_improved; item weapon_utility_binoculars_improved;
+Definition utility_binoculars_improved; item weapon_kit_binoculars_improved;
 native WEAPON_KIT_BINOCULARS_IMPROVED. Reuses utility_senary / weapon_utility_senary.
 Expected catalog: 47 weapons / 43 ammunition / 38 attachments.
 No ammunition, unlock changes or custom gameplay controls. Live accepted: user confirmed all manual checks; native wheel label Refined Binoculars. Item 138 metadata matches runtime, nativeOwned=true; 23 active slots, lease 5/5 and release 9/9 passed.

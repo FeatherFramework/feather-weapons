@@ -242,7 +242,7 @@ Standard Lantern is retired from the active catalog and fresh-install seeds afte
 
 Reinforced Lasso and the one-equipped-Lasso policy passed reported manual checks on 2026-10-02. Both carriers may be owned, but only one Lasso-family carrier may be equipped at a time: the native wheel suppressed Regular when Reinforced was equipped. Final metadata confirms one Lasso and all ten throwables; lease checks passed 5/5 and release checks 9/9. Current accepted catalog: 41 weapons / 43 ammunition / 38 attachments. See [Reinforced Lasso live gate](reinforced-lasso-live-gate.md). Standard Lasso acceptance below describes the previous gate.
 
-Lasso (`WEAPON_LASSO`) uses the independent `utility` slot and unique `weapon_utility_lasso` item, with no ammunition. Manual checks passed on 2026-10-02; server metadata confirms coexistence with all ten throwable carriers and zero Lasso ammunition. Utility lease checks passed 5/5 and release checks 9/9; see [Lasso live gate](lasso-live-gate.md). Current accepted catalog: 40 weapons, 43 ammunition and 38 attachments.
+Lasso (`WEAPON_LASSO`) uses the independent `utility` slot and unique `weapon_lasso` item, with no ammunition. Manual checks passed on 2026-10-02; server metadata confirms coexistence with all ten throwable carriers and zero Lasso ammunition. Utility lease checks passed 5/5 and release checks 9/9; see [Lasso live gate](lasso-live-gate.md). Current accepted catalog: 40 weapons, 43 ammunition and 38 attachments.
 
 
 Davy Lantern is a separate follow-up candidate (utility_davy_lantern / WEAPON_MELEE_DAVY_LANTERN).
