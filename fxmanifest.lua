@@ -6,7 +6,7 @@ lua54 'yes'
 description 'The official weapon system for Feather framework.'
 author 'Feather Framework'
 name 'feather-weapons'
-version '0.14.0'
+version '0.15.0'
 
 shared_scripts {
     'config.lua',
@@ -15,7 +15,8 @@ shared_scripts {
     '/shared/definitions/ammunition.lua',
     '/shared/definitions/attachments.lua',
     '/shared/definitions/weapons.lua',
-    '/shared/validation.lua'
+    '/shared/validation.lua',
+    '/shared/ammunition_pools.lua'
 }
 
 server_scripts {
@@ -47,6 +48,7 @@ client_scripts {
     '/client/guid_weapons.lua',
     '/client/native_maintenance.lua',
     '/client/native_weapon_coordinator.lua',
+    '/client/firearm_pools.lua',
     '/client/main.lua',
     '/client/native_probe.lua'
 }

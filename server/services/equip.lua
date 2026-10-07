@@ -12,6 +12,32 @@ local function BuildContext(source, session, correlationId, reason)
     }
 end
 
+local function RuntimeAmmunitionTotal(state)
+    if type(state) ~= 'table' then return 0 end
+    if type(state.ammoPools) == 'table' then
+        local total = 0
+        for _, amount in pairs(state.ammoPools) do
+            total = total + math.max(0, math.floor(tonumber(amount) or 0))
+        end
+        return total
+    end
+    return math.max(0, math.floor(tonumber(state.ammo) or 0))
+end
+
+local function MetadataAmmunitionTotal(metadata)
+    local ammo = type(metadata) == 'table' and metadata.ammo or nil
+    if type(ammo) ~= 'table' then return 0 end
+    if type(ammo.pools) == 'table' then
+        local total = 0
+        for _, amount in pairs(ammo.pools) do
+            total = total + math.max(0, math.floor(tonumber(amount) or 0))
+        end
+        return total
+    end
+    return math.max(0, math.floor(tonumber(ammo.loaded) or 0))
+        + math.max(0, math.floor(tonumber(ammo.reserve) or 0))
+end
+
 function EquipService.ValidateOwnedItem(context, itemInstanceId)
     local idType = type(itemInstanceId)
     if (idType ~= "string" and idType ~= "number")
@@ -134,6 +160,16 @@ local function ValidateSlotEligibility(source, slot, definition, correlationId, 
     end
     local primaryDefinition = DefinitionRegistry.Get("weapon", primary.definitionId)
     if not primaryDefinition.ok then return primaryDefinition end
+
+    if primaryDefinition.value.multiTypeAmmunition == true
+        and definition.multiTypeAmmunition == true
+        and RuntimeAmmunitionTotal(primary) == 0
+        and MetadataAmmunitionTotal(metadata) > 0 then
+        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+            "Unequip the empty primary sidearm before equipping this funded offhand; it will promote safely.", {
+                primaryItemInstanceId = primary.itemInstanceId
+            }, correlationId)
+    end
 
     if type(settings.allowedFamilies) ~= "table"
         or settings.allowedFamilies[definition.family] ~= true then

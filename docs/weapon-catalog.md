@@ -1,10 +1,23 @@
 # Weapon catalog
 
+## Current accepted checkpoint — v0.15.0
+
+The agreed catalog expansion is complete: 49 weapon/equipment, 43 ammunition and
+38 attachment definitions. Hammer, Improved Binoculars (native label Refined
+Binoculars), Metal Detector and Fishing Rod passed their equipment live gates.
+All 25 equipped carriers appeared in the final server/client snapshot, with lease
+5/5 and release 9/9. The tester confirmed all requested manual lifecycle checks.
+Five melee and eight utility persistence positions coexist with ten throwable
+positions; one Lasso at a time remains the policy. Cameras, detecting and fishing
+feature logic remain optional add-on scope. Counts and candidate statuses below
+are historical where superseded by this checkpoint.
+
+
 The catalog contains 24 standard firearms: four pistols, five revolvers,
 four repeaters, six rifles (including scoped rifles and the Elephant Rifle),
 and five shotguns. It also contains the standard Bow as the first
 ammunition-using special weapon plus the standard Knife, Machete, Cleaver, and
-Hatchet as ammunition-free melee weapons. Named story-character and special
+Hatchet and Hammer as ammunition-free melee weapons. Named story-character and special
 cosmetic variants are not included.
 
 Melee weapons use distinct persistent logical positions while sharing RedM's
@@ -229,7 +242,7 @@ Standard Lantern is retired from the active catalog and fresh-install seeds afte
 
 Reinforced Lasso and the one-equipped-Lasso policy passed reported manual checks on 2026-10-02. Both carriers may be owned, but only one Lasso-family carrier may be equipped at a time: the native wheel suppressed Regular when Reinforced was equipped. Final metadata confirms one Lasso and all ten throwables; lease checks passed 5/5 and release checks 9/9. Current accepted catalog: 41 weapons / 43 ammunition / 38 attachments. See [Reinforced Lasso live gate](reinforced-lasso-live-gate.md). Standard Lasso acceptance below describes the previous gate.
 
-Lasso (`WEAPON_LASSO`) uses the independent `utility` slot and unique `weapon_utility_lasso` item, with no ammunition. Manual checks passed on 2026-10-02; server metadata confirms coexistence with all ten throwable carriers and zero Lasso ammunition. Utility lease checks passed 5/5 and release checks 9/9; see [Lasso live gate](lasso-live-gate.md). Current accepted catalog: 40 weapons, 43 ammunition and 38 attachments.
+Lasso (`WEAPON_LASSO`) uses the independent `utility` slot and unique `weapon_lasso` item, with no ammunition. Manual checks passed on 2026-10-02; server metadata confirms coexistence with all ten throwable carriers and zero Lasso ammunition. Utility lease checks passed 5/5 and release checks 9/9; see [Lasso live gate](lasso-live-gate.md). Current accepted catalog: 40 weapons, 43 ammunition and 38 attachments.
 
 
 Davy Lantern is a separate follow-up candidate (utility_davy_lantern / WEAPON_MELEE_DAVY_LANTERN).
@@ -294,3 +307,34 @@ while saved carrier remained equipped, and Davy wheel suppression reported.
 Removed from active catalog/fresh seeds; owned holders preserved, usable definition disabled by migration.
 Current active catalog: 45 weapons / 43 ammunition / 38 attachments.
 See [Torch retirement](torch-live-gate.md).
+
+Hammer is the next agreed candidate (melee_hammer / WEAPON_MELEE_HAMMER),
+with a fifth persistent melee position so all four previous models can coexist.
+Candidate counts: 46 weapons / 43 ammunition / 38 attachments.
+See [Hammer live gate](hammer-live-gate.md). Improved Binoculars, Metal Detector
+and Fishing Rod follow. Hammer has now passed all user manual checks and its metadata/lease/release checks.
+
+## Improved Binoculars candidate
+
+utility_binoculars_improved / WEAPON_KIT_BINOCULARS_IMPROVED is ammunition-free unique equipment.
+The existing utility_senary position provides a sixth utility carrier without a slot migration.
+Candidate counts: 47 weapons / 43 ammunition / 38 attachments.
+Native wheel visibility, controls and coexistence with standard Binoculars remain live-test gates;
+native ownership alone does not prove wheel availability. No unlock writes or custom controls added.
+See [Improved Binoculars live gate](improved-binoculars-live-gate.md).
+Metal Detector and Fishing Rod remain after this gate; no commits are created automatically.
+
+## Metal Detector candidate
+
+Improved Binoculars passed manual checks, metadata and smoke gates; the native label is Refined Binoculars.
+Metal Detector (utility_metal_detector / WEAPON_KIT_METAL_DETECTOR) uses the new seventh utility carrier.
+Candidate counts: 48 weapons / 43 ammunition / 38 attachments. Equipment lifecycle only;
+detection, collectibles and rewards belong to an add-on. Fishing Rod remains after this gate.
+See [Metal Detector live gate](metal-detector-live-gate.md).
+
+## Fishing Rod candidate
+
+Metal Detector passed its equipment-only live gate. Fishing Rod (utility_fishing_rod /
+WEAPON_FISHINGROD) is the final agreed catalog candidate and uses the eighth utility carrier.
+Candidate counts: 49 weapons / 43 ammunition / 38 attachments. Bait, controls, catches and
+rewards remain add-on scope. See [Fishing Rod live gate](fishing-rod-live-gate.md).

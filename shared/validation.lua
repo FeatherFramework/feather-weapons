@@ -51,7 +51,9 @@ function WeaponValidation.EscrowMaximum(definition, ammunitionType)
     local ammunition = WeaponDefinitionCatalog.ammunition[ammunitionType]
     local nativeMaximum = ammunition and tonumber(ammunition.maxTotal) or nil
     if nativeMaximum then configured = math.min(configured, math.floor(nativeMaximum)) end
-    return math.max(capacity, configured)
+    -- A native variant ceiling may be smaller than the weapon's regular clip
+    -- capacity (for example explosive repeater ammunition).
+    return math.max(0, configured)
 end
 
 function WeaponValidation.Definition(definition, expectedKind)
@@ -67,8 +69,8 @@ function WeaponValidation.Definition(definition, expectedKind)
 
     if expectedKind == "weapon" then
         if definition.multiTypeAmmunition ~= nil and (type(definition.multiTypeAmmunition) ~= 'boolean'
-            or (definition.multiTypeAmmunition and definition.family ~= 'throwing_knife')) then
-            AddError(errors, 'multiTypeAmmunition', 'must be boolean and is supported only for throwing knives')
+            or (definition.multiTypeAmmunition and definition.usesAmmunition == false)) then
+            AddError(errors, 'multiTypeAmmunition', 'must be boolean and requires ammunition support')
         end
         if not IsNonEmptyString(definition.nativeWeaponName) then AddError(errors, "nativeWeaponName",
                 "must be a non-empty string") end
@@ -222,6 +224,25 @@ function WeaponValidation.Metadata(metadata, definition)
         end
         if type(metadata.ammo.chambered) ~= "boolean" then
             AddError(errors, "ammo.chambered", "must be boolean")
+        end
+        if metadata.ammo.clips ~= nil then
+            if definition.multiTypeAmmunition ~= true or type(metadata.ammo.clips) ~= 'table'
+                or type(metadata.ammo.pools) ~= 'table' then
+                AddError(errors, 'ammo.clips', 'requires multi-type pools')
+            else
+                for id, amount in pairs(metadata.ammo.clips) do
+                    if not WeaponValidation.AcceptsAmmunition(definition, id)
+                        or type(amount) ~= 'number' or amount ~= amount or amount < 0
+                        or amount % 1 ~= 0 or amount > definition.capacity
+                        or amount > (metadata.ammo.pools[id] or 0) then
+                        AddError(errors, 'ammo.clips', 'contains an invalid per-type loaded count')
+                    end
+                end
+                local selected = metadata.ammo.type or definition.ammunitionType
+                if metadata.ammo.clips[selected] ~= loaded then
+                    AddError(errors, 'ammo.clips', 'selected clip must match loaded count')
+                end
+            end
         end
         if metadata.ammo.pools ~= nil then
             if definition.multiTypeAmmunition ~= true or type(metadata.ammo.pools) ~= "table" then

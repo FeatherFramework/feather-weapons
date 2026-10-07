@@ -1,6 +1,6 @@
 # Standard Lasso live gate
 
-Candidate: `utility_lasso` / `weapon_utility_lasso` / `WEAPON_LASSO`.
+Candidate: `utility_lasso` / `weapon_lasso` / `WEAPON_LASSO`.
 Dedicated `utility` equipment slot maps to Inventory `weapon_utility`.
 No ammunition item, pool or consumption. Uses the existing ammunition-free equipment contract, including its maintenance/repair policy; no custom rope mechanics.
 Expected catalog: 40 weapons, 43 ammunition, 38 attachments.

@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const source = readFileSync(new URL('../client/main.lua', import.meta.url), 'utf8');
+const page = source.slice(source.indexOf('local function BuildAmmunitionPage('), source.indexOf('local function BuildAmmunitionMenu('));
+assert.match(page, /'dropdown', \{ key = 'selected-ammo'/);
+assert.match(page, /value = selected\.ammunitionType, options = options, persist = false/);
+assert.match(page, /if amount > 0 or id == selected\.ammunitionType then/);
+assert.match(page, /key = 'unload-ammo'.*value = false/);
+assert.match(page, /key = 'load-ammo'.*value = true/);
+assert.match(page, /settings\.section = section/);
+assert(!page.includes('Serial:'));
+assert(!page.includes('knife types'));
+assert(page.indexOf("key = 'load-ammo'") < page.indexOf('then AddUnloadActions()'));
+console.log('Ammunition menu selection and section contracts passed');

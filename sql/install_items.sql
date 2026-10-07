@@ -1,60 +1,92 @@
+-- Fishing Rod: equipment only; fishing gameplay belongs to an add-on.
+INSERT INTO `items`
+(`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'weapon_fishingrod', 'Fishing Rod', 'Reusable fishing equipment.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_fishingrod');
+UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
+WHERE `name` = 'weapon_fishingrod';
+
+-- Metal Detector: equipment only; detecting gameplay belongs to an add-on.
+INSERT INTO `items`
+(`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'weapon_kit_metal_detector', 'Metal Detector', 'Reusable metal detecting equipment.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_kit_metal_detector');
+UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
+WHERE `name` = 'weapon_kit_metal_detector';
+
+-- Improved Binoculars: unique ammunition-free utility equipment.
+INSERT INTO `items`
+(`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'weapon_kit_binoculars_improved', 'Improved Binoculars', 'Reusable improved binoculars.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_kit_binoculars_improved');
+UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
+WHERE `name` = 'weapon_kit_binoculars_improved';
+
+-- Hammer: unique ammunition-free melee equipment.
+INSERT INTO `items`
+ (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
+SELECT 'weapon_melee_hammer', 'Hammer', 'A sturdy melee hammer.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_melee_hammer');
+UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
+WHERE `name` = 'weapon_melee_hammer';
+
 -- Advanced Camera: equipment-only; photography belongs to an optional add-on.
 INSERT INTO `items`
  (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
-SELECT 'weapon_utility_camera_advanced', 'Advanced Camera', 'A reusable advanced camera.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
-WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_utility_camera_advanced');
+SELECT 'weapon_kit_camera_advanced', 'Advanced Camera', 'A reusable advanced camera.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_kit_camera_advanced');
 UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
-WHERE `name` = 'weapon_utility_camera_advanced';
+WHERE `name` = 'weapon_kit_camera_advanced';
 
 -- Standard Camera: unique utility equipment; no ammunition.
 INSERT INTO `items`
  (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
-SELECT 'weapon_utility_camera', 'Camera', 'A reusable standard camera.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
-WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_utility_camera');
+SELECT 'weapon_kit_camera', 'Camera', 'A reusable standard camera.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_kit_camera');
 UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
-WHERE `name` = 'weapon_utility_camera';
+WHERE `name` = 'weapon_kit_camera';
 
 -- Standard Binoculars: unique utility equipment, no ammunition.
 INSERT INTO `items`
  (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
-SELECT 'weapon_utility_binoculars', 'Binoculars', 'Reusable standard binoculars.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
-WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_utility_binoculars');
+SELECT 'weapon_kit_binoculars', 'Binoculars', 'Reusable standard binoculars.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_kit_binoculars');
 UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
-WHERE `name` = 'weapon_utility_binoculars';
+WHERE `name` = 'weapon_kit_binoculars';
 
 -- Davy Lantern candidate; preserves Standard Lantern ownership.
 INSERT INTO `items`
  (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
-SELECT 'weapon_utility_davy_lantern', 'Davy Lantern', 'A reusable handheld Davy lantern.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
-WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_utility_davy_lantern');
+SELECT 'weapon_melee_davy_lantern', 'Davy Lantern', 'A reusable handheld Davy lantern.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_melee_davy_lantern');
 UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
-WHERE `name` = 'weapon_utility_davy_lantern';
+WHERE `name` = 'weapon_melee_davy_lantern';
 
 -- Reinforced Lasso: unique equipment; no ammunition.
 INSERT INTO `items`
  (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
-SELECT 'weapon_utility_lasso_reinforced', 'Reinforced Lasso', 'A reusable reinforced lasso.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
-WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_utility_lasso_reinforced');
+SELECT 'weapon_lasso_reinforced', 'Reinforced Lasso', 'A reusable reinforced lasso.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_lasso_reinforced');
 UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
-WHERE `name` = 'weapon_utility_lasso_reinforced';
+WHERE `name` = 'weapon_lasso_reinforced';
 
 -- Standard Lasso: unique equipment, no ammunition item.
 INSERT INTO `items`
  (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
-SELECT 'weapon_utility_lasso', 'Lasso', 'A standard reusable lasso.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
-WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_utility_lasso');
+SELECT 'weapon_lasso', 'Lasso', 'A standard reusable lasso.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_lasso');
 UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
-WHERE `name` = 'weapon_utility_lasso';
+WHERE `name` = 'weapon_lasso';
 
 -- Existing installations: run rename_weapon_item_names.sql before this seed.
 
 -- Toxic Moonshine candidate; preserves existing item IDs and quantities.
 INSERT INTO `items`
  (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
-SELECT 'weapon_throwable_poisonbottle', 'Toxic Moonshine', 'Unique Toxic Moonshine carrier.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
-WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_throwable_poisonbottle');
+SELECT 'weapon_thrown_poisonbottle', 'Toxic Moonshine', 'Unique Toxic Moonshine carrier.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_thrown_poisonbottle');
 UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
-WHERE `name` = 'weapon_throwable_poisonbottle';
+WHERE `name` = 'weapon_thrown_poisonbottle';
 INSERT INTO `items`
  (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
 SELECT 'ammo_poisonbottle', 'Toxic Moonshine - Regular', 'Toxic Moonshine ammunition.', 100, 100, 0.1, 1, 2, 'item_ammo', 'stack'
@@ -65,10 +97,10 @@ WHERE `name` = 'ammo_poisonbottle';
 -- Fire Bottle candidate; preserves existing item IDs and quantities.
 INSERT INTO `items`
  (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
-SELECT 'weapon_throwable_molotov', 'Fire Bottle', 'Unique Fire Bottle carrier.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
-WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_throwable_molotov');
+SELECT 'weapon_thrown_molotov', 'Fire Bottle', 'Unique Fire Bottle carrier.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_thrown_molotov');
 UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
-WHERE `name` = 'weapon_throwable_molotov';
+WHERE `name` = 'weapon_thrown_molotov';
 INSERT INTO `items`
  (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
 SELECT 'ammo_molotov', 'Fire Bottle - Regular', 'Fire Bottle ammunition.', 100, 100, 0.1, 1, 2, 'item_ammo', 'stack'
@@ -79,10 +111,10 @@ WHERE `name` = 'ammo_molotov';
 -- Dynamite candidate; preserves existing item IDs and quantities.
 INSERT INTO `items`
  (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
-SELECT 'weapon_throwable_dynamite', 'Dynamite', 'Unique Dynamite carrier.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
-WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_throwable_dynamite');
+SELECT 'weapon_thrown_dynamite', 'Dynamite', 'Unique Dynamite carrier.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_thrown_dynamite');
 UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
-WHERE `name` = 'weapon_throwable_dynamite';
+WHERE `name` = 'weapon_thrown_dynamite';
 INSERT INTO `items`
  (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
 SELECT 'ammo_dynamite', 'Dynamite - Regular', 'Dynamite ammunition.', 100, 100, 0.1, 1, 2, 'item_ammo', 'stack'
@@ -93,10 +125,10 @@ WHERE `name` = 'ammo_dynamite';
 -- Brookstone Bolas candidate; preserves existing item IDs and quantities.
 INSERT INTO `items`
  (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
-SELECT 'weapon_throwable_bolas_intertwined', 'Brookstone Bolas', 'Unique Bolas carrier.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
-WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_throwable_bolas_intertwined');
+SELECT 'weapon_thrown_bolas_intertwined', 'Brookstone Bolas', 'Unique Bolas carrier.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_thrown_bolas_intertwined');
 UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
-WHERE `name` = 'weapon_throwable_bolas_intertwined';
+WHERE `name` = 'weapon_thrown_bolas_intertwined';
 INSERT INTO `items`
  (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
 SELECT 'ammo_bolas_intertwined', 'Bolas - Brookstone', 'Brookstone Bolas ammunition.', 100, 100, 0.1, 1, 2, 'item_ammo', 'stack'
@@ -107,10 +139,10 @@ WHERE `name` = 'ammo_bolas_intertwined';
 -- Gravesend Bolas candidate; preserves existing item IDs and quantities.
 INSERT INTO `items`
  (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
-SELECT 'weapon_throwable_bolas_ironspiked', 'Gravesend Bolas', 'Unique Bolas carrier.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
-WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_throwable_bolas_ironspiked');
+SELECT 'weapon_thrown_bolas_ironspiked', 'Gravesend Bolas', 'Unique Bolas carrier.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_thrown_bolas_ironspiked');
 UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
-WHERE `name` = 'weapon_throwable_bolas_ironspiked';
+WHERE `name` = 'weapon_thrown_bolas_ironspiked';
 INSERT INTO `items`
  (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
 SELECT 'ammo_bolas_ironspiked', 'Bolas - Gravesend', 'Gravesend Bolas ammunition.', 100, 100, 0.1, 1, 2, 'item_ammo', 'stack'
@@ -121,10 +153,10 @@ WHERE `name` = 'ammo_bolas_ironspiked';
 -- Hawkmoth Bolas candidate. Preserves existing item IDs and quantities.
 INSERT INTO `items`
     (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
-SELECT 'weapon_throwable_bolas_hawkmoth', 'Hawkmoth Bolas', 'Unique Bolas carrier.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
-WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_throwable_bolas_hawkmoth');
+SELECT 'weapon_thrown_bolas_hawkmoth', 'Hawkmoth Bolas', 'Unique Bolas carrier.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_thrown_bolas_hawkmoth');
 UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
-WHERE `name` = 'weapon_throwable_bolas_hawkmoth';
+WHERE `name` = 'weapon_thrown_bolas_hawkmoth';
 INSERT INTO `items`
     (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
 SELECT 'ammo_bolas_hawkmoth', 'Bolas - Hawkmoth', 'Hawkmoth Bolas ammunition.', 100, 100, 0.1, 1, 3, 'item_ammo', 'stack'
@@ -135,10 +167,10 @@ WHERE `name` = 'ammo_bolas_hawkmoth';
 -- Standard Bolas candidate. Preserves existing item IDs and quantities.
 INSERT INTO `items`
     (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
-SELECT 'weapon_throwable_bolas', 'Bolas', 'Unique Bolas carrier.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
-WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_throwable_bolas');
+SELECT 'weapon_thrown_bolas', 'Bolas', 'Unique Bolas carrier.', 20, 1, 1, 1, 3, 'item_weapon', 'unique'
+WHERE NOT EXISTS (SELECT 1 FROM `items` WHERE `name` = 'weapon_thrown_bolas');
 UPDATE `items` SET `usable` = 1, `type` = 'item_weapon', `instance_mode` = 'unique', `max_stack_size` = 1
-WHERE `name` = 'weapon_throwable_bolas';
+WHERE `name` = 'weapon_thrown_bolas';
 INSERT INTO `items`
     (`name`, `display_name`, `description`, `max_quantity`, `max_stack_size`, `weight`, `usable`, `category_id`, `type`, `instance_mode`)
 SELECT 'ammo_bolas_regular', 'Bolas - Regular', 'Regular Bolas ammunition.', 100, 100, 0.1, 1, 3, 'item_ammo', 'stack'

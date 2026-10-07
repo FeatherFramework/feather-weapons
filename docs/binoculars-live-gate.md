@@ -1,6 +1,6 @@
 # Binoculars and combined melee/utility live gate
 
-Candidate: utility_binoculars / weapon_utility_binoculars / WEAPON_KIT_BINOCULARS.
+Candidate: utility_binoculars / weapon_kit_binoculars / WEAPON_KIT_BINOCULARS.
 Third persistent utility slot: utility_tertiary -> weapon_utility_tertiary.
 No ammo or custom viewing controls. Existing maintenance contract is retained.
 Logical utility/melee/throwable slots are persistence positions, not forced native wheel positions.

@@ -1,6 +1,6 @@
 # Standard Camera live gate
 
-utility_camera / weapon_utility_camera / WEAPON_KIT_CAMERA.
+utility_camera / weapon_kit_camera / WEAPON_KIT_CAMERA.
 Fourth logical utility position: utility_quaternary -> weapon_utility_quaternary.
 No ammo, film item, unlock writes, custom camera controls or photo storage added.
 Scope confirmed by user: Weapons owns the equipment carrier and persistence only.

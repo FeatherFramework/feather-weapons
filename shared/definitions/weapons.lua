@@ -877,7 +877,7 @@ WeaponDefinitionCatalog.weapons = {
     utility_lasso = {
         id = "utility_lasso",
         kind = "weapon",
-        itemName = "weapon_utility_lasso",
+        itemName = "weapon_lasso",
         label = "Lasso",
         nativeWeaponName = "WEAPON_LASSO",
         family = "lasso",
@@ -897,7 +897,7 @@ WeaponDefinitionCatalog.weapons = {
     utility_davy_lantern = {
         id = "utility_davy_lantern",
         kind = "weapon",
-        itemName = "weapon_utility_davy_lantern",
+        itemName = "weapon_melee_davy_lantern",
         label = "Davy Lantern",
         nativeWeaponName = "WEAPON_MELEE_DAVY_LANTERN",
         family = "lantern",
@@ -917,7 +917,7 @@ WeaponDefinitionCatalog.weapons = {
     utility_binoculars = {
         id = "utility_binoculars",
         kind = "weapon",
-        itemName = "weapon_utility_binoculars",
+        itemName = "weapon_kit_binoculars",
         label = "Binoculars",
         nativeWeaponName = "WEAPON_KIT_BINOCULARS",
         family = "binoculars",
@@ -934,10 +934,70 @@ WeaponDefinitionCatalog.weapons = {
         policies = { transferable = true, droppable = true, destructible = true, serialRequired = true },
         tags = { "utility", "binoculars" }
     },
+    utility_binoculars_improved = {
+        id = "utility_binoculars_improved",
+        kind = "weapon",
+        itemName = "weapon_kit_binoculars_improved",
+        label = "Improved Binoculars",
+        nativeWeaponName = "WEAPON_KIT_BINOCULARS_IMPROVED",
+        family = "binoculars",
+        slot = "utility",
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0, maximum = 100, equipMinimum = 1,
+            repair = { itemDefinitionId = "gun_oil", quantity = 1, restore = 25 }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = { transferable = true, droppable = true, destructible = true, serialRequired = true },
+        tags = { "utility", "binoculars", "improved" }
+    },
+    utility_metal_detector = {
+        id = "utility_metal_detector",
+        kind = "weapon",
+        itemName = "weapon_kit_metal_detector",
+        label = "Metal Detector",
+        nativeWeaponName = "WEAPON_KIT_METAL_DETECTOR",
+        family = "metal_detector",
+        slot = "utility",
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0, maximum = 100, equipMinimum = 1,
+            repair = { itemDefinitionId = "gun_oil", quantity = 1, restore = 25 }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = { transferable = true, droppable = true, destructible = true, serialRequired = true },
+        tags = { "utility", "metal_detector" }
+    },
+    utility_fishing_rod = {
+        id = "utility_fishing_rod",
+        kind = "weapon",
+        itemName = "weapon_fishingrod",
+        label = "Fishing Rod",
+        nativeWeaponName = "WEAPON_FISHINGROD",
+        family = "fishing_rod",
+        slot = "utility",
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0, maximum = 100, equipMinimum = 1,
+            repair = { itemDefinitionId = "gun_oil", quantity = 1, restore = 25 }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = { transferable = true, droppable = true, destructible = true, serialRequired = true },
+        tags = { "utility", "fishing_rod" }
+    },
     utility_camera = {
         id = "utility_camera",
         kind = "weapon",
-        itemName = "weapon_utility_camera",
+        itemName = "weapon_kit_camera",
         label = "Camera",
         nativeWeaponName = "WEAPON_KIT_CAMERA",
         family = "camera",
@@ -957,7 +1017,7 @@ WeaponDefinitionCatalog.weapons = {
     utility_camera_advanced = {
         id = "utility_camera_advanced",
         kind = "weapon",
-        itemName = "weapon_utility_camera_advanced",
+        itemName = "weapon_kit_camera_advanced",
         label = "Advanced Camera",
         nativeWeaponName = "WEAPON_KIT_CAMERA_ADVANCED",
         family = "camera",
@@ -977,7 +1037,7 @@ WeaponDefinitionCatalog.weapons = {
     utility_lasso_reinforced = {
         id = "utility_lasso_reinforced",
         kind = "weapon",
-        itemName = "weapon_utility_lasso_reinforced",
+        itemName = "weapon_lasso_reinforced",
         label = "Reinforced Lasso",
         nativeWeaponName = "WEAPON_LASSO_REINFORCED",
         family = "lasso",
@@ -1056,6 +1116,37 @@ WeaponDefinitionCatalog.weapons = {
         },
         tags = { "melee", "machete" }
     },
+    melee_hammer = {
+        id = "melee_hammer",
+        kind = "weapon",
+        itemName = "weapon_melee_hammer",
+        label = "Hammer",
+        nativeWeaponName = "WEAPON_MELEE_HAMMER",
+        family = "hammer",
+        slot = "melee",
+        usesAmmunition = false,
+        ammunitionTypes = {},
+        capacity = 0,
+        condition = {
+            minimum = 0,
+            maximum = 100,
+            equipMinimum = 1,
+            repair = {
+                itemDefinitionId = "gun_oil",
+                quantity = 1,
+                restore = 25
+            }
+        },
+        attachmentSlots = {},
+        attachmentDefaults = {},
+        policies = {
+            transferable = true,
+            droppable = true,
+            destructible = true,
+            serialRequired = true
+        },
+        tags = { "melee", "hammer" }
+    },
     melee_cleaver = {
         id = "melee_cleaver",
         kind = "weapon",
@@ -1123,7 +1214,7 @@ WeaponDefinitionCatalog.weapons = {
     throwable_throwing_knives = {
         id = "throwable_throwing_knives",
         kind = "weapon",
-        itemName = "weapon_throwable_throwing_knives",
+        itemName = "weapon_thrown_throwing_knives",
         label = "Throwing Knives",
         nativeWeaponName = "WEAPON_THROWN_THROWING_KNIVES",
         family = "throwing_knife",
@@ -1155,7 +1246,7 @@ WeaponDefinitionCatalog.weapons = {
     throwable_tomahawk = {
         id = "throwable_tomahawk",
         kind = "weapon",
-        itemName = "weapon_throwable_tomahawk",
+        itemName = "weapon_thrown_tomahawk",
         label = "Tomahawk",
         nativeWeaponName = "WEAPON_THROWN_TOMAHAWK",
         family = "tomahawk",
@@ -1186,7 +1277,7 @@ WeaponDefinitionCatalog.weapons = {
     throwable_tomahawk_ancient = {
         id = "throwable_tomahawk_ancient",
         kind = "weapon",
-        itemName = "weapon_throwable_tomahawk_ancient",
+        itemName = "weapon_thrown_ancient_tomahawk",
         label = "Ancient Tomahawk",
         nativeWeaponName = "WEAPON_THROWN_TOMAHAWK_ANCIENT",
         family = "tomahawk",
@@ -1217,7 +1308,7 @@ WeaponDefinitionCatalog.weapons = {
     throwable_bolas = {
         id = "throwable_bolas",
         kind = "weapon",
-        itemName = "weapon_throwable_bolas",
+        itemName = "weapon_thrown_bolas",
         label = "Bolas",
         nativeWeaponName = "WEAPON_THROWN_BOLAS",
         family = "bolas",
@@ -1248,7 +1339,7 @@ WeaponDefinitionCatalog.weapons = {
     throwable_bolas_hawkmoth = {
         id = "throwable_bolas_hawkmoth",
         kind = "weapon",
-        itemName = "weapon_throwable_bolas_hawkmoth",
+        itemName = "weapon_thrown_bolas_hawkmoth",
         label = "Hawkmoth Bolas",
         nativeWeaponName = "WEAPON_THROWN_BOLAS_HAWKMOTH",
         family = "bolas",
@@ -1279,7 +1370,7 @@ WeaponDefinitionCatalog.weapons = {
     throwable_bolas_ironspiked = {
         id = "throwable_bolas_ironspiked",
         kind = "weapon",
-        itemName = "weapon_throwable_bolas_ironspiked",
+        itemName = "weapon_thrown_bolas_ironspiked",
         label = "Gravesend Bolas",
         nativeWeaponName = "WEAPON_THROWN_BOLAS_IRONSPIKED",
         family = "bolas",
@@ -1310,7 +1401,7 @@ WeaponDefinitionCatalog.weapons = {
     throwable_bolas_intertwined = {
         id = "throwable_bolas_intertwined",
         kind = "weapon",
-        itemName = "weapon_throwable_bolas_intertwined",
+        itemName = "weapon_thrown_bolas_intertwined",
         label = "Brookstone Bolas",
         nativeWeaponName = "WEAPON_THROWN_BOLAS_INTERTWINED",
         family = "bolas",
@@ -1341,7 +1432,7 @@ WeaponDefinitionCatalog.weapons = {
     throwable_dynamite = {
         id = "throwable_dynamite",
         kind = "weapon",
-        itemName = "weapon_throwable_dynamite",
+        itemName = "weapon_thrown_dynamite",
         label = "Dynamite",
         nativeWeaponName = "WEAPON_THROWN_DYNAMITE",
         family = "dynamite",
@@ -1372,7 +1463,7 @@ WeaponDefinitionCatalog.weapons = {
     throwable_molotov = {
         id = "throwable_molotov",
         kind = "weapon",
-        itemName = "weapon_throwable_molotov",
+        itemName = "weapon_thrown_molotov",
         label = "Fire Bottle",
         nativeWeaponName = "WEAPON_THROWN_MOLOTOV",
         family = "molotov",
@@ -1403,7 +1494,7 @@ WeaponDefinitionCatalog.weapons = {
     throwable_poisonbottle = {
         id = "throwable_poisonbottle",
         kind = "weapon",
-        itemName = "weapon_throwable_poisonbottle",
+        itemName = "weapon_thrown_poisonbottle",
         label = "Toxic Moonshine",
         nativeWeaponName = "WEAPON_THROWN_POISONBOTTLE",
         family = "poisonbottle",
@@ -1469,3 +1560,13 @@ WeaponDefinitionCatalog.weapons = {
         tags = { "ranged", "longgun", "bow" }
     }
 }
+
+-- Controlled opt-in; no ownership is granted by enabling pool metadata.
+if Config.AmmunitionPools and Config.AmmunitionPools.enabled == true then
+    for id in pairs(Config.AmmunitionPools.weapons or {}) do
+        local definition = WeaponDefinitionCatalog.weapons[id]
+        if definition and definition.usesAmmunition ~= false and #definition.ammunitionTypes > 1 then
+            definition.multiTypeAmmunition = true
+        end
+    end
+end

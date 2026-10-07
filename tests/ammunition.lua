@@ -113,7 +113,8 @@ for _, definition in ipairs(DefinitionRegistry.List('weapon').value) do
         local ammo = DefinitionRegistry.Get('ammunition', ammoId).value
         stock[ammo.itemName] = 10
         local result = AmmoService.Escrow(1, context, 10, ammoId)
-        check(result.ok, definition.id .. '/' .. ammoId .. ' load')
+        check(result.ok, definition.id .. '/' .. ammoId .. ' load: '
+            .. tostring(result.error and result.error.message))
         check(items[1].metadata.ammo.type == ammoId, 'Persist selected type')
         check(WeaponRuntime.Get(1).equipped.nativeAmmoName == ammo.nativeAmmoName, 'Native type')
         local restored = WeaponRuntime.RestoreEquipped(1, 'test', items[1], definition, 'test')
@@ -248,7 +249,8 @@ for _, second in ipairs({ 'revolver_schofield', 'revolver_cattleman' }) do
         offhand = { itemInstanceId = 2, generation = runtime.slots.offhand.generation, loaded = 5, consumed = 1 }
     } }).ok, 'Special ammo pair firing checkpoint')
     check(not AmmoService.Escrow(1, context, 10, 'ammo_revolver_explosive').ok, 'Loaded pair switch rejected')
-    check(AmmoService.Unload(1, context).ok and AmmoService.Unload(1, context).ok
+    check(AmmoService.Unload(1, context, nil, 'primary').ok
+        and AmmoService.Unload(1, context, nil, 'offhand').ok
         and stock.ammo_revolver_express == 28, 'Pair unload conserves ammo after two shots')
     stock.ammo_revolver_high_velocity = 10
     check(AmmoService.Escrow(1, context, 10, 'ammo_revolver_high_velocity').ok, 'Empty pair switches')
@@ -280,7 +282,8 @@ check(mixedCheckpoint.ok,
     ('Mixed ammo pair checkpoint conserves both pools (%s: %s)'):format(
         tostring(mixedCheckpoint.error and mixedCheckpoint.error.code),
         tostring(mixedCheckpoint.error and mixedCheckpoint.error.message)))
-check(AmmoService.Unload(1, context).ok and AmmoService.Unload(1, context).ok
+check(AmmoService.Unload(1, context, nil, 'primary').ok
+    and AmmoService.Unload(1, context, nil, 'offhand').ok
     and stock.ammo_revolver_regular == 9 and stock.ammo_pistol_regular == 9,
     'Mixed pair unload returns exact ammunition families')
 
@@ -568,6 +571,18 @@ check(WeaponDefinitionCatalog.weapons.utility_lantern_electric == nil,
     'Failed Electric Lantern is absent from active catalog')
 check(WeaponDefinitionCatalog.weapons.utility_torch == nil,
     'Retired Torch is absent from active catalog')
+local hammerDefinition = WeaponDefinitionCatalog.weapons.melee_hammer
+local hammerMetadata = WeaponMetadata.Build(hammerDefinition, { serialNumber = 'TEST-HAMMER' })
+items[9008] = { id = 9008, itemName = hammerDefinition.itemName,
+    metadata = hammerMetadata.value, metadataRevision = 1 }
+local hammerRequest = EquipService.Request(1, context, 9008, 'melee_quinary')
+check(hammerRequest.ok, 'Hammer equips in fifth melee position')
+local hammerCommit = WeaponRuntime.CompleteEquip(1, 'test', hammerRequest.value.token, 'test')
+check(hammerCommit.ok and hammerCommit.value.nativeAmmoName == nil
+    and hammerCommit.value.ammo == 0 and WeaponRuntime.Get(1).slots.melee_quaternary ~= nil,
+    'Hammer and four prior melee carriers coexist without ammunition')
+check(not WeaponRuntime.SetSlotAmmo(1, 'test', 'melee_quinary', 1, 1, 'test').ok,
+    'Hammer rejects ammunition writes')
 -- multi-type carrier uses the separate consumption-only pool checkpoint.
 WeaponDefinitionCatalog.weapons.throwable_throwing_knives.multiTypeAmmunition = false
 assert(DefinitionRegistry.Start().ok)
@@ -869,4 +884,51 @@ check(not AmmoService.Escrow(1, context, 1, 'ammo_molotov').ok,
     'Poison Bottle rejects Fire Bottle ammunition')
 check(AmmoService.Unload(1, context).ok and stock.ammo_poisonbottle == 10,
     'Poison Bottle unload conserves exact ammunition')
+-- Opt in only inside this test; production firearm definitions remain disabled.
+WeaponDefinitionCatalog.weapons.revolver_cattleman.multiTypeAmmunition = true
+WeaponDefinitionCatalog.weapons.revolver_schofield.multiTypeAmmunition = true
+assert(DefinitionRegistry.Start().ok)
+reset('revolver_cattleman', 'revolver_schofield')
+stock.ammo_revolver_regular, stock.ammo_revolver_express = 40, 40
+for _, slot in ipairs({ 'primary', 'offhand' }) do
+    for _, id in ipairs({ 'ammo_revolver_regular', 'ammo_revolver_express' }) do
+        local state = WeaponRuntime.GetSlot(1, slot)
+        check(AmmoService.LoadSlot(1, context, {
+            slot = slot, itemInstanceId = state.itemInstanceId, generation = state.generation,
+            ammunitionType = id, amount = 10
+        }).ok, 'Multi-type load preserves other funded types: ' .. slot .. '/' .. id)
+    end
+end
+local reports = {}
+for _, slot in ipairs({ 'primary', 'offhand' }) do
+    local state = WeaponRuntime.GetSlot(1, slot)
+    reports[slot] = { itemInstanceId = state.itemInstanceId, generation = state.generation,
+        ammunitionType = 'ammo_revolver_express', loaded = slot == 'primary' and 5 or 6, pools = {} }
+    for _, id in ipairs(WeaponDefinitionCatalog.weapons[state.definitionId].ammunitionTypes) do
+        reports[slot].pools[id] = state.ammoPools[id] or 0
+    end
+end
+reports.primary.pools.ammo_revolver_express = 9
+local committed = AmmoService.SyncPoolBatch(1, context, { slots = reports })
+check(committed.ok and items[1].metadata.ammo.pools.ammo_revolver_express == 9
+    and items[2].metadata.ammo.pools.ammo_revolver_express == 10
+    and items[1].metadata.ammo.pools.ammo_revolver_regular == 10,
+    'Atomic pool batch charges only the firing instance and preserves Regular')
+check(items[1].metadata.ammo.loaded == 5 and items[1].metadata.ammo.reserve == 4,
+    'Pool checkpoint does not refill a partial cylinder')
+local revision = items[1].metadataRevision
+reports.offhand.generation = reports.offhand.generation - 1
+check(not AmmoService.SyncPoolBatch(1, context, { slots = reports }).ok
+    and items[1].metadataRevision == revision, 'Stale second lease prevents entire batch')
+reports.offhand.generation = WeaponRuntime.GetSlot(1, 'offhand').generation
+reports.primary.pools.ammo_revolver_express = 10
+check(not AmmoService.SyncPoolBatch(1, context, { slots = reports }).ok
+    and items[1].metadataRevision == revision, 'Batch cannot mint ownership')
+reports.primary.pools.ammo_revolver_express = 8
+reports.primary.loaded = 4
+rejectTransaction = true
+check(not AmmoService.SyncPoolBatch(1, context, { slots = reports }).ok
+    and items[1].metadataRevision == revision
+    and WeaponRuntime.GetSlot(1, 'primary').ammo == 9, 'Rejected batch preserves metadata and runtime')
+rejectTransaction = false
 print(('Ammunition regression checks: %d passed'):format(passed))
