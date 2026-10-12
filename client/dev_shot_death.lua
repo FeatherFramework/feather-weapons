@@ -1,5 +1,6 @@
 -- Opt-in, self-only native timing test. Never flushes/checkpoints or grants ammo.
 if not Config.DevMode then return end
+if Config.CharacterAmmunitionEnabled==true or Config.CharacterAmmoTransportEnabled==true then return end
 local sequence = 0
 RegisterCommand('weapondeathaftershots', function(_, args)
     sequence = sequence + 1 -- also cancels a previous armed test

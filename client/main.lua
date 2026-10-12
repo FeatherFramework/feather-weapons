@@ -1,3 +1,10 @@
+-- Staging quarantine: never run the hybrid owner alongside character ammo.
+-- This disables the whole old client (including non-firearms), not a completed
+-- native replacement. Flags stay false until native/non-firearm hosting is ready.
+if Config.CharacterAmmunitionEnabled==true or Config.CharacterAmmoTransportEnabled==true then
+    print('[feather-weapons] hybrid client disabled: native cutover staging; production host not ready')
+    return
+end
 FeatherWeaponsClient = {}
 local clientContract = 4
 local equipped, offhand, pendingToken, pendingNativeWeaponName = nil, nil, nil, nil

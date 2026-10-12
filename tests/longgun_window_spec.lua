@@ -23,6 +23,7 @@ end
 local native = Citizen.InvokeNative
 Citizen.InvokeNative = function(hash, ...)
     if hash == 0xAF9D167A5656D6A6 then return 1 end
+    if hash == 0x7FEAD38B326B9F74 then return 1 end
     return native(hash, ...)
 end
 FeatherGuidWeapons = { ResolveExisting = function(v) return {guid = v} end,

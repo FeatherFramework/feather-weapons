@@ -16,16 +16,34 @@ function FeatherFirearmPools.Reset()
     rematerialize = {}
 end
 
+local function SelectLonggunHashAmmo(ped, state, catalog)
+    local weaponHash, ammoHash = joaat(state.nativeWeaponName), joaat(state.nativeAmmoName)
+    for _, id in ipairs(catalog.weapons[state.definitionId].ammunitionTypes) do
+        local candidate = joaat(catalog.ammunition[id].nativeAmmoName)
+        if candidate ~= ammoHash then
+            Citizen.InvokeNative(0xF0D728EEA3C99775, ped, weaponHash, candidate)
+        end
+    end
+    Citizen.InvokeNative(0x23FB9FACA28779C1, ped, weaponHash, ammoHash)
+    Citizen.InvokeNative(0xCC9C4393523833E2, ped, weaponHash, ammoHash)
+    -- Hash getter reports default Regular even for live GUID-selected Express;
+    -- it is diagnostic only, not a selection/restore readiness contract.
+end
+
 -- Per-weapon availability must be reapplied after native ammo selection.
 -- Never remove the other item's escrow from the shared ped total.
 function FeatherFirearmPools.UpdateLonggunWindow(ped, selectedWeapon, catalog)
     if not snapshot then return false end
-    local blockedType
+    local blockedTypes = {}
     for slot, state in pairs(snapshot.states) do
         local definition = catalog.weapons[state.definitionId]
         if definition.slot == 'longgun' and selectedWeapon == joaat(state.nativeWeaponName)
             and (snapshot.owners[slot][state.ammunitionType] or 0) == 0 then
-            blockedType = state.ammunitionType
+            -- Otherwise native auto-selection can borrow an alternate funded
+            -- type when the empty gun's selected pool is hidden.
+            for _, id in ipairs(definition.ammunitionTypes) do
+                if (snapshot.owners[slot][id] or 0) == 0 then blockedTypes[id] = true end
+            end
         end
     end
     for id, approved in pairs(snapshot.totals) do
@@ -41,7 +59,7 @@ function FeatherFirearmPools.UpdateLonggunWindow(ped, selectedWeapon, catalog)
     for id, approved in pairs(snapshot.totals) do
         local hash = joaat(catalog.ammunition[id].nativeAmmoName)
         local escrow = hidden[id] or 0
-        if id == blockedType and escrow == 0 and approved > 0 then
+        if blockedTypes[id] and escrow == 0 and approved > 0 then
             Citizen.InvokeNative(0xB6CFEC32E3742779, ped, hash, approved, 0xA07362E6)
             local remaining = GetPedAmmoByType(ped, hash)
             hidden[id] = approved - remaining
@@ -50,7 +68,7 @@ function FeatherFirearmPools.UpdateLonggunWindow(ped, selectedWeapon, catalog)
                     rematerialize[state.nativeWeaponName] = true
                 end
             end
-        elseif id ~= blockedType and escrow > 0 then
+        elseif not blockedTypes[id] and escrow > 0 then
             -- Return only the tracked escrow, never an authoritative refill.
             local before = GetPedAmmoByType(ped, hash)
             SetPedAmmoByType(ped, hash, before + escrow)
@@ -66,6 +84,18 @@ function FeatherFirearmPools.UpdateLonggunWindow(ped, selectedWeapon, catalog)
         local id = state.ammunitionType
         if rematerialize[state.nativeWeaponName] and selectedWeapon == joaat(state.nativeWeaponName)
             and (hidden[id] or 0) == 0 then
+            -- Removing a native type can auto-select an alternate owned type.
+            -- Restore the accepted GUID selection before writing its clip;
+            -- Capture must not turn that window artifact into a user change.
+            if not FeatherGuidWeapons.SelectExistingAmmo(ped, state.nativeWeaponName, state.nativeAmmoName) then
+                return false
+            end
+            local record = FeatherGuidWeapons.ResolveExisting(state.nativeWeaponName)
+            local selectedHash = record and Citizen.InvokeNative(0xAF9D167A5656D6A6, ped, record.guid)
+            local expectedHash = joaat(state.nativeAmmoName)
+            if type(selectedHash) ~= 'number'
+                or selectedHash % 4294967296 ~= expectedHash % 4294967296 then return false end
+            SelectLonggunHashAmmo(ped, state, catalog)
             -- A clip write may ADD its loaded rounds to the ped total. Never
             -- retry it every frame or accept that increase as a new baseline.
             rematerialize[state.nativeWeaponName] = nil
@@ -117,6 +147,7 @@ function FeatherFirearmPools.Restore(ped, slots, catalog)
                 snapshot = nil
                 return false, 'native_type_selection_failed'
             end
+            if definition.slot == 'longgun' then SelectLonggunHashAmmo(ped, state, catalog) end
             SetAmmoInClip(ped, joaat(state.nativeWeaponName), state.loaded)
         end
     end
@@ -161,6 +192,12 @@ function FeatherFirearmPools.Capture(ped, catalog)
         end
         if not selected then return nil, 'unknown_native_type' end
         local ok, loaded = GetAmmoInClip(ped, joaat(state.nativeWeaponName))
+        if rematerialize[state.nativeWeaponName] then
+            if not unchangedPools then return nil, 'window_selection_not_ready' end
+            -- Both the missing clip and an alternate type are temporary native
+            -- window effects. Preserve the accepted selection until restored.
+            selected, loaded, ok = state.ammunitionType, state.loaded, true
+        end
         local empty = true
         for _, amount in pairs(snapshot.owners[slot]) do
             if amount > 0 then empty = false break end
