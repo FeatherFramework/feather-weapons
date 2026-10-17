@@ -156,6 +156,7 @@ WeaponCharacterAmmoInventoryProvider=WeaponCharacterAmmoInventory.New(function()
 end,function(id,context)
     return WeaponCharacterAmmoService.IsNativeItemBound(id)
         and not WeaponCharacterAmmoService.IsDeathWearWriteAuthorized(id,context)
+        and not WeaponCharacterAmmoService.IsDeathEquipmentWriteAuthorized(id,context)
 end,function(instance)
     local name=type(instance.definition)=='table' and instance.definition.name
     for _,definition in pairs(WeaponDefinitionCatalog.weapons) do

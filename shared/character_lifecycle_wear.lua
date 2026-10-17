@@ -28,7 +28,38 @@ local function copy(v)
     if type(v)~='table' then return v end
     local out={}; for k,x in pairs(v) do out[k]=copy(x) end; return out
 end
-function WeaponCharacterLifecycleWear.Plan(rows,readback,catalog,epoch)
+function WeaponCharacterLifecycleWear.BrokenEquipment(rows,catalog)
+    local slots={primary='weapon',offhand='weapon_offhand',shoulder='weapon_shoulder',back='weapon_back'}
+    local detached={}
+    for logical,row in pairs(rows) do
+        local definition=type(row)=='table' and row.metadata and catalog.weapons[row.metadata.weaponDefinitionId]
+        if not slots[logical] or not definition or row.itemName~=definition.itemName
+            or type(row.metadata.condition)~='number' or row.metadata.condition~=row.metadata.condition
+            or type(definition.condition.equipMinimum)~='number' then return nil,'broken_equipment_snapshot_invalid' end
+        if row.metadata.condition<definition.condition.equipMinimum then
+            detached[slots[logical]]={itemId=row.id,minimum=definition.condition.equipMinimum,reason='broken'}
+        end
+    end
+    if detached.weapon and rows.offhand and not detached.weapon_offhand then
+        detached.weapon_offhand={itemId=rows.offhand.id,reason='primary_broken'}
+        local definition=catalog.weapons[rows.offhand.metadata.weaponDefinitionId]
+        if definition.slot=='sidearm' and not (rows.offhand.metadata.flags or {}).disabled
+            and not (rows.offhand.metadata.flags or {}).evidence then
+            detached.weapon_offhand.promote=true
+            detached.weapon_offhand.minimum=definition.condition.equipMinimum
+        end
+    end
+    return detached
+end
+function WeaponCharacterLifecycleWear.ProjectBroken(rows,detached)
+    local projected=copy(rows)
+    local offhand=projected.offhand
+    local slots={weapon='primary',weapon_offhand='offhand',weapon_shoulder='shoulder',weapon_back='back'}
+    for slot in pairs(detached) do projected[slots[slot]]=nil end
+    if detached.weapon_offhand and detached.weapon_offhand.promote then projected.primary=offhand end
+    return projected
+end
+function WeaponCharacterLifecycleWear.Plan(rows,readback,catalog,epoch,allowBroken)
     if type(rows)~='table' or type(readback)~='table' or readback.epoch~=epoch
         or type(readback.items)~='table' then return nil,'final_wear_readback_required' end
     local expected,count={},0
@@ -37,7 +68,7 @@ function WeaponCharacterLifecycleWear.Plan(rows,readback,catalog,epoch)
         expected[row.id]=row; count=count+1
     end
     if count>4 then return nil,'final_wear_snapshot_invalid' end
-    local seen,changes={},{}
+    local seen,changes,projected={},{},copy(rows)
     for index,item in pairs(readback.items) do
         if type(index)~='number' or index<1 or index>4 or index%1~=0 or type(item)~='table' then return nil,'final_wear_report_invalid' end
         local row=expected[item.itemInstanceId]
@@ -47,7 +78,8 @@ function WeaponCharacterLifecycleWear.Plan(rows,readback,catalog,epoch)
         local after,reason=WeaponCharacterMaintenance.Observe(row.metadata,definition,item.maintenance)
         if not after then return nil,reason end
         -- Broken-loadout policy must be explicit, not a hidden unequip/heal.
-        if after.condition<definition.condition.equipMinimum then return nil,'final_wear_broken_policy_pending' end
+        if after.condition<definition.condition.equipMinimum and allowBroken~=true then return nil,'final_wear_broken_policy_pending' end
+        for _,value in pairs(projected) do if value.id==row.id then value.metadata=copy(after) end end
         local changed=after.condition~=row.metadata.condition
         for key,value in pairs(after.maintenance) do changed=changed or value~=row.metadata.maintenance[key] end
         if changed then changes[#changes+1]={itemId=row.id,itemRevision=row.revision,before=copy(row.metadata),after=after} end
@@ -56,5 +88,7 @@ function WeaponCharacterLifecycleWear.Plan(rows,readback,catalog,epoch)
     for id in pairs(expected) do if not seen[id] then return nil,'final_wear_copy_missing' end end
     for index=1,count do if not readback.items[index] then return nil,'final_wear_report_sparse' end end
     table.sort(changes,function(a,b) return a.itemId<b.itemId end)
-    return changes
+    local detached,reason=WeaponCharacterLifecycleWear.BrokenEquipment(projected,catalog)
+    if not detached then return nil,reason end
+    return changes,nil,detached
 end

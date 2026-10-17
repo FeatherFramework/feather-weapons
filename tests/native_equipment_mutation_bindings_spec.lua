@@ -125,6 +125,7 @@ Config.NativeAlphaRepairEnabled=true
 Config.AmmunitionPools={enabled=false}; Config.Escrow={maxTotal=200}
 dofile('shared/constants.lua'); dofile('shared/definitions/ammunition.lua'); dofile('shared/definitions/weapons.lua')
 dofile('shared/validation.lua'); dofile('shared/character_ammunition_item.lua'); dofile('shared/character_maintenance.lua')
+dofile('shared/character_lifecycle_wear.lua')
 local definition=WeaponDefinitionCatalog.weapons.revolver_cattleman
 definition.itemName='cattleman'
 candidate.metadata={schemaVersion=2,weaponDefinitionId=definition.id,serialNumber='serial',condition=50,quality=100,

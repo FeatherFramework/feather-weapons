@@ -210,6 +210,30 @@ function S.IsDeathWearWriteAuthorized(itemId,context)
     end
     return false
 end
+function S.IsDeathEquipmentWriteAuthorized(itemId,context)
+    if Config.NativeAlphaLifecycleWearEnabled~=true or Config.DevMode~=true or Config.NativeAlphaRuntime~=true
+        or not enabled() or type(context)~='table' or context.operation~='equipment_write'
+        or context.resource~='feather-weapons' then return false end
+    local request=deathWrites[context.actorSource]
+    if not request or context.characterId~=request.context.characterId or context.sessionId~=request.context.sessionId
+        or context.runtimeEpoch~=request.context.runtimeEpoch or context.runtimeTicket~=request.context.runtimeTicket
+        or not runtime.IsOperationCurrent(request.context,'observe',request.spec) then return false end
+    local plan=request.spec.finalWear
+    local detach=plan and plan.brokenEquipment and plan.brokenEquipment[context.equipmentSlot]
+    local target=plan and plan.expected and plan.expected[context.equipmentSlot]
+    if context.equipmentAction=='equip' then
+        local promotion=plan and plan.brokenEquipment and plan.brokenEquipment.weapon_offhand
+        if context.equipmentSlot~='weapon' or not promotion or promotion.promote~=true
+            or context.equipmentItemId~=promotion.itemId then return false end
+    elseif context.equipmentAction~='unequip' or not detach or not target
+        or detach.itemId~=target.itemId or target.itemId~=context.equipmentItemId then return false end
+    -- Conditional equipment validates all retained assignments, not just the
+    -- target. This permits guard checks only for that exact reserved unequip.
+    for _,row in pairs(plan.expected) do
+        if row.itemId==itemId then return runtime.IsOperationCurrent(request.context,'observe',request.spec)==true end
+    end
+    return false
+end
 -- Dispatch failure/timeout invalidates ammo authority but retains native holds.
 -- Only a trusted lifecycle recovery may release a frozen materialization.
 function S.FreezeLoadout(source,identity)
@@ -281,9 +305,12 @@ local function deathPlan(source,report)
     if not called or not snapshot or not snapshot.ok or loadouts[source]~=bound then return nil,'death_wear_snapshot_unavailable' end
     local valid=bound.lease.Validate(snapshot.value,bound.catalog,bound.registry)
     if not valid then return nil,'death_wear_loadout_changed' end
-    local changes,why=WeaponCharacterLifecycleWear.Plan(snapshot.value.equipment,wear,bound.catalog,live.epoch)
+    local changes,why,detached=WeaponCharacterLifecycleWear.Plan(snapshot.value.equipment,wear,bound.catalog,live.epoch,true)
     if not changes then return nil,why end
+    if next(detached or {}) and snapshot.value.brokenDeathEquipmentContract~=1 then return nil,'broken_death_inventory_update_required' end
+    if detached.weapon_offhand and detached.weapon_offhand.promote and snapshot.value.brokenPromotionContract~=1 then return nil,'broken_promotion_inventory_update_required' end
     return {characterId=bound.characterId,action='death',expected=copy(snapshot.value.expected),lifecycleWear=changes,
+        brokenEquipment=detached,
         medicalRevision=medical.revision,episodeId=medical.episodeId}
 end
 function S.CheckpointAndSeal(source,report)

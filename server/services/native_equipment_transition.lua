@@ -128,6 +128,8 @@ local adapters={
             local snapshot=exports['feather-inventory']:ReadNativeEquipmentTransition(context,nil)
             if not snapshot or not snapshot.ok or type(snapshot.value)~='table' then return denied('final_wear_snapshot_unavailable') end
             return {ok=true,value={identity=bound,spec={characterId=bound.characterId,action='shutdown',
+                brokenEquipmentContract=snapshot.value.brokenEquipmentContract,
+                brokenPromotionContract=snapshot.value.brokenPromotionContract,
                 expected=copy(snapshot.value.expected),lifecycleSnapshot=copy(snapshot.value.equipment)}}}
         end
         if intent.action=='dry-run' or intent.action=='shutdown' then
@@ -218,6 +220,8 @@ local adapters={
             return {ok=true,value={identity=bound,options=options,itemId=intent.itemId}}
         end
         local spec={characterId=bound.characterId,action=intent.action,slot=intent.slot,expected=copy(value.expected)}
+        spec.brokenEquipmentContract=value.brokenEquipmentContract
+        spec.brokenPromotionContract=value.brokenPromotionContract
         if intent.periodic==true then spec.periodic=true end
         if Config.NativeAlphaLifecycleWearEnabled==true and (intent.action=='equip' or intent.action=='unequip' or attachmentChange) then
             spec.lifecycleSnapshot=copy(value.equipment)
@@ -294,6 +298,14 @@ local adapters={
             proposed[slot]=nil
         end
         local catalog=copy(WeaponDefinitionCatalog)
+        if intent.action=='maintenance' then
+            local detached,why=WeaponCharacterLifecycleWear.BrokenEquipment(proposed,catalog)
+            if not detached then return denied(why) end
+            if next(detached) and spec.brokenEquipmentContract~=1 then return denied('broken_equipment_inventory_update_required') end
+            spec.brokenEquipment=detached
+            if detached.weapon_offhand and detached.weapon_offhand.promote and spec.brokenPromotionContract~=1 then return denied('broken_promotion_inventory_update_required') end
+            proposed=WeaponCharacterLifecycleWear.ProjectBroken(proposed,detached)
+        end
         local registry=WeaponCharacterAmmoPolicy.Build(catalog)
         if not registry then return denied('equipment_catalog_unavailable') end
         local plan,reason=WeaponCharacterAmmoMaterialization.Build(proposed,catalog,registry,bound)
@@ -330,9 +342,12 @@ local adapters={
     finalizeSpec=function(context,spec,wear)
         if not spec.lifecycleSnapshot then return {ok=true,value=spec} end
         if Config.NativeAlphaLifecycleWearEnabled~=true then return denied('final_wear_gate_changed') end
-        local changes,reason=WeaponCharacterLifecycleWear.Plan(spec.lifecycleSnapshot,wear,WeaponDefinitionCatalog,context.epoch)
+        local changes,reason,detached=WeaponCharacterLifecycleWear.Plan(spec.lifecycleSnapshot,wear,WeaponDefinitionCatalog,context.epoch,true)
         if not changes then return denied(reason) end
+        if next(detached or {}) and spec.brokenEquipmentContract~=1 then return denied('broken_equipment_inventory_update_required') end
+        if detached and detached.weapon_offhand and detached.weapon_offhand.promote and spec.brokenPromotionContract~=1 then return denied('broken_promotion_inventory_update_required') end
         spec.lifecycleWear=changes
+        spec.brokenEquipment=detached
         if spec.action=='attachment-install' or spec.action=='attachment-remove' then
             for _,change in ipairs(changes) do
                 if change.itemId==spec.itemId then
@@ -423,7 +438,14 @@ local adapters={
             for slot,expected in pairs(spec.expected) do
                 local actual=value.expected[slot]
                 local revision=expected.revision+(expected.itemId==spec.itemId and 1 or 0)+(wearRevisions[expected.itemId] or 0)
-                if not actual or actual.itemId~=expected.itemId or actual.revision~=revision then
+                local removed=spec.brokenEquipment and spec.brokenEquipment[slot]
+                local promotion=slot=='weapon' and spec.brokenEquipment and spec.brokenEquipment.weapon_offhand
+                if promotion and promotion.promote then
+                    local old=spec.expected.weapon_offhand
+                    if not actual or actual.itemId~=promotion.itemId or actual.revision~=old.revision+(wearRevisions[old.itemId] or 0)
+                        +(old.itemId==spec.itemId and 1 or 0) then return denied('repair_postcommit_equipment_changed') end
+                elseif removed and (removed.itemId~=expected.itemId or actual~=nil)
+                    or not removed and (not actual or actual.itemId~=expected.itemId or actual.revision~=revision) then
                     return denied('repair_postcommit_equipment_changed')
                 end
             end

@@ -423,6 +423,9 @@ local function scoped(ped,current,deadRead,resolveOwned)
         read=function(handle,key) return getters[key](handle) end,
         write=function(handle,key,value)
             if deadRead then return false end -- death readback never grants setters
+            -- CfxLua preserves integer/float tags when marshalling natives.
+            -- JSON and fixtures can produce integer 0/1; all wear setters take float.
+            value=value+0.0
             if key=='degradation' then SetWeaponDegradation(handle,value)
             elseif key=='damage' then SetWeaponDamage(handle,value,false)
             elseif key=='dirt' then SetWeaponDirt(handle,value,false)
