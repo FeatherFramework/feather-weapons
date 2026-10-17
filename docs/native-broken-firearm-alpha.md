@@ -1,5 +1,119 @@
 # Broken firearms — released living-player path
 
+2026-10-16 LIVE post-death-promotion repair/re-equip COMPLETE:134rev7/condition0/
+oil1/required1/repaired100 preflight. One normal repair SQL43db4752-461c-4259-aa74-
+bb7c777c2a6b:4175 COMMIT/14queries, payment/metadata CAS/restore PASS/noammo writes;
+independent134rev8/alreadyserviced. Normal offhand134 equipPASS; fresh native
+epoch19918886:3 shows134rev8/all5wear0,112rev2 unchanged dirt1/degradation
+0.00871666707098/others0. Completes synthetic death brokenprimary→healthyoffhand
+promotion→doctor reconstruction→paidrepair→healthyoffhand re-equip in tested scope.
+No independent postrepair oilcount in abbreviated response; no full metadata
+conservation claim. No new runtime delta; no repeat repair/grant/death gate needed.
+
+2026-10-16 LIVE synthetic death-primary-break/healthy-offhand promotion ACCEPTED
+in tested mixed-sidearm scope: source3/Jane session526a00bf-c9dd-11f1-9ad4-e0d55eaa2deb,
+armed134rev6 syntheticdegradation1; Medical dead21; SQL43db4752-461c-4259-aa74-
+bb7c777c2a6b:4050 COMMIT/25queries, deathwearchanges1/final seal. Independent
+currentAcknowledged sealedledger35/repeater1/otherpools0/no economicReplay/adoption.
+Doctor alive22: epoch19461287:2 ACTIVEidle/copies1/no pending/closing/deathClosing,
+ledger35/repeater1.112rev2 unchanged dirt1/degradation0.00871666707098/others0;
+entity4645378 tracked+expectedModel primarypoint2, offhandpoint3 absent. Independent
+repair134rev7/condition0/degradation1/dirt0.97900003194808/others0/oil0/repaired100.
+Dirt came from real report (hook changed only degradation), not pristine assertion.
+Accepts real transaction+funded preservation+promotion+recovery from synthetic
+broken-primary report, not native broken damage generation or same-model coverage.
+
+Temporary death-promotion hook removed locally: arm method/state/report injection,
+F8 command and fixture-only spec; permanent tests retained.128Lua/syntax+7Node PASS.
+No items or audit files deleted. Deploy cleanup Weapons existing client files
+character_ammunition_native_owner.lua and character_ammunition_startup.lua via
+prepare-stop source3/waitPASS/restart; no refresh/Inventory update. Flag0 confirmed.
+134 remains brokenrev7 until ordinary paid repair; no repeat death test needed.
+
+2026-10-16 death-promotion gate PREPARED, LIVE PENDING: user equipped134rev6 primary
+allwear0 and112rev2 offhand with prior dirt1/degradation0.00871666707098; retained
+repeater1/ledger35. Named death-promotion-v1 baseline captured134rev6/noEconomicWrites.
+Temporary F8 weaponNativeArmDeathPromotionFixture requires
+feather_native_death_promotion_fixture=1, DevMode/native/lifecycle, exactJane/live
+lease/two records/slots/revisions, pristine134 and ledger35/repeater1/others0.
+Arming changes no native/SQL state. Death readback copies only134 report and sets
+degradation1; same current Medical revision read repeatedly for preflight/seal.
+112 report and pools unchanged by hook; expiry60s/owner-change/newdeath refuse,
+one arm per owner.129Lua/runtime syntax+7Node PASS using mocked native boundaries;
+no live death promotion accepted yet. Deploy Weapons existing client files
+character_ammunition_native_owner.lua and character_ammunition_startup.lua via
+prepare-stop current source3/waitPASS/restart. No refresh/Inventory/config update.
+Enableflag, arm, own-player admin death within60s only after ARMED; wait seal,
+disableflag, inspect recovery before doctor. Do not fire, add ammo or repeat hooks.
+
+2026-10-16 LIVE funded FINAL-SHOT death/recovery gate ACCEPTED, source3/Jane
+session526a00bf-c9dd-11f1-9ad4-e0d55eaa2deb. Probe ARMED baseline34/repeater2,
+TRIGGERED native2→1 before acknowledged baseline advanced, no flush/checkpoint.
+Medical dead19; SQL43db4752-461c-4259-aa74-bb7c777c2a6b:3786 COMMIT/13queries,
+deathwearchanges1/final seal acknowledged. Independent currentAcknowledged sealed
+rev35/repeater1/otherpools0/economicReplayfalse/nativeAdoptionfalse (top-level34
+is opening snapshot). Doctor alive20; fresh epoch18322301:2 ACTIVEidle/copies2,
+baseline35/repeater1/otherpools0/no pending/closing/deathClosing. Native135rev24
+degradation0.00769333355128/dirt0.65400004386901/damage/soot/permanent0;112rev2
+retains prior dirt1/degradation0.00871666707098. No repeated break/repair/grant
+needed. This gate does not prove concurrent funded broken-detach or death promotion.
+
+Temporary funded-shot selfkill probe removed locally after acceptance: owner
+method/state, F8 command and fixture-only spec deleted; permanent death tests
+retained.128Lua/runtime syntax+7Node PASS. No audit/item data removed. Cleanup
+deployment pending: Weapons client/character_ammunition_native_owner.lua and
+client/character_ammunition_startup.lua via prepare-stop CURRENT SOURCE3/waitPASS/
+restart, no refresh/Inventory/config change. Keep probe flag0. Preserve remaining
+round unless explicitly transferred through normal ammunition controls.
+
+2026-10-16 funded-shot probe live arming REFUSED twice before any shot/death.
+User diagnostics confirm135rev23 entity4997122 tracked at handpoint0, ledger34/
+regularRepeater2/runtimeidle. Combined refusal did not reveal failed subcheck.
+Probe had strict DoesEntityExist==true unlike production true-or-1 normalization;
+aligned predicate and added numerictrue regression. Split entity refusal (tracked/
+hand/exists values) from nativepool refusal (actual/hash), no grants or corrective
+ammo writes. Cause remains unconfirmed until detailed live result; acknowledged
+pool2 is not itself nativepool readback.129Lua/syntax+7Node PASS. Copy only Weapons
+client/character_ammunition_native_owner.lua via orderly restart; no refresh.
+Disable probe flag before restart, draw Carbine and re-enable for one arm attempt;
+do not fire unless ARMED, do not add ammo or selfkill separately.
+
+2026-10-16 final-shot death probe IMPLEMENTED, LIVE PENDING: legacy
+weapondeathaftershots remains quarantined in native mode. Temporary native F8
+weaponNativeFundedShotDeath uses feather_native_funded_shot_death_probe=1,
+DevMode/native/lifecycle gates, currentJane exact135rev23+112 loadout, drawn tracked
+Carbine entity,2 acknowledged/native regularRepeater rounds, otherpools0,30s timeout
+and one use per owner. Observed native2→1 triggers ownped health0 without flushing,
+checkpointing, ammo grants/setters or SQL. Ordinary ack revision/pool change,
+pending save, changed selection/context or gate0 cancels without death; such run
+is NOT final-seal coverage.129Lua/runtime syntax+7Node PASS with mocked probe timing.
+Deploy existing Weapons client/character_ammunition_native_owner.lua and
+client/character_ammunition_startup.lua only, prepare-stop/waitPASS/restart; no
+refresh/Inventory update/config replacement. Draw Carbine, enableflag, arm, fire
+exactly once only after ARMED. No separate selfkill. Wait seal then disableflag;
+inspect currentAcknowledged before doctor recovery. Race acceptance requires
+trigger log and server seal/revision evidence, not merely recovery ammo1.
+
+2026-10-16 LIVE funded NO-SHOT death/recovery gate ACCEPTED: player2/Jane session
+3442603c-c9d9-11f1-9ad4-e0d55eaa2deb loaded2regularRepeater, acknowledged ledger34/
+otherpools0. Admin selfkill: Medical dead15, SQL43db4752-461c-4259-aa74-bb7c777c2a6b:
+3450 COMMIT/12queries; finalwearchanges1/seal acknowledged. Recovery status sealed
+currentAcknowledgedrev34/repeater2/economicReplayfalse/nativeAdoptionfalse. Fresh
+doctor-recovery epoch16721670:6 ACTIVEidle/copies2/no pending/closing/deathClosing,
+baseline34/repeater2/otherpools0. This proves observed funded preservation, NOT
+final-shot reduction at death, nor simultaneous funded broken-equipment removal.
+
+Unexpected native wear recorded, not attributed:112 advancedrev1→2, dirt1 and
+degradation0.00871666707098, damage/soot/permanent0;135 stayedrev23/allwear0.
+No claim112 remained pristine or cause of wear established; no repair/grant needed
+for this diagnostic. Recovery top-level ledgerRevision33 and itemRevisions refer
+to opening snapshot (OpenLoadout caches them); currentAcknowledged is runtime.Get
+and shows34. This is diagnostic semantics, not evidence of lost ammo or a fresh
+SELECT of durable items. No runtime change made; labels could be clarified later.
+Committed deployment reported by user; alpha config defaults initially selected
+legacy host, then scoped native restored by server config merges/restart. Next
+gate is controlled final-shot reduction timing; do not repeat no-shot death.
+
 2026-10-16 LIVE post-promotion recovery COMPLETE in tested scope: user confirms
 normal repair already performed; read-only134rev6/alreadyserviced (repair SQL and
 independent oil count not supplied, no payment-count claim). Normal equip offhand134
