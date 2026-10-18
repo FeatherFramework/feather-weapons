@@ -6,6 +6,7 @@ Config = {
     NativeAlphaPeriodicWearIntervalMs = 60000, -- one equipped copy per interval; round-robin up to four
     NativeAlphaLifecycleWearEnabled = false, -- final wear on equipment/stop/logout/death; opt in
     NativeAlphaCharacterId = nil, -- exact enrolled test character UUID; never default to every character
+    NativeAlphaAdditionalCharacters = {}, -- optional UUID-keyed true map; combined enrollment maximum two; never '*'
     CharacterAmmunitionEnabled = false, -- alpha native integration gate; real cutover not enabled
     CharacterAmmoTransportEnabled = false, -- checkpoint routes only; no automatic baseline/grants
     DevMode = true,

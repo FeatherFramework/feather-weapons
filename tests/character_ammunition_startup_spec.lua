@@ -1,3 +1,4 @@
+dofile('shared/constants.lua') -- shared enrollment dependency from normal manifest
 local calls,threads={},{ }
 RegisterCommand=function() end
 CreateThread=function(fn) threads[#threads+1]=coroutine.create(fn) end

@@ -2,11 +2,15 @@ WeaponAPI = {}
 
 function WeaponAPI.GetCapabilities()
     if Config.CharacterAmmunitionEnabled==true or Config.CharacterAmmoTransportEnabled==true then
+        local issuance=IssuanceService~=nil and type(IssuanceService.NativeAvailable)=='function'
+            and IssuanceService.NativeAvailable()==true
         return {contractVersion=WeaponConstants.ContractVersion,
             ready=Config.DevMode==true and Config.NativeAlphaRuntime==true
                 and WeaponCharacterAmmoInventoryProvider.Status()=='ready',
             definitions=DefinitionRegistry.Counts(),
             features={nativeAlphaFirearms=true,scopedCharacterOnly=true,
+                issuance=issuance,secureIssuance=issuance,idempotentIssuance=issuance,
+                issuancePayloadBinding=issuance,issuanceRecovery=issuance,
                 legacyGameplay=false,equip=false,ammunitionManagement=false,repair=false,
                 attachmentTransactions=false,productionReady=false,
                 evidenceHolds=WeaponEvidenceService~=nil and WeaponEvidenceService.NativeAvailable~=nil

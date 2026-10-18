@@ -2,6 +2,88 @@
 -- Player intent routes remain behind explicit native/scoped development gates.
 WeaponNativeEquipmentTransition={}
 WeaponNativePeriodicWear={}
+WeaponNativeShutdownDrain={}
+-- One-way admission latch; never stops the resource or retries an uncertain owner.
+function WeaponNativeShutdownDrain.New(api)
+    local run
+    local T={}
+    function T.IsLatched() return run~=nil end
+    function T.Status() return run and {phase=run.phase,reason=run.reason,total=#run.roster,completed=run.completed} or {phase='idle'} end
+    local function fail(reason) run.phase='failed'; run.reason=reason; api.report(T.Status()) end
+    local function roster()
+        local ok,value=pcall(api.roster)
+        if not ok or type(value)~='table' then return nil end
+        local seen,characters,clean={},{},{}
+        for _,row in ipairs(value) do
+            if type(row)~='table' or type(row.source)~='number' or row.source<1 or row.source%1~=0
+                or seen[row.source] or type(row.characterId)~='string' or row.characterId=='' or characters[row.characterId]
+                or type(row.sessionId)~='string' or row.sessionId==''
+                or type(row.epoch)~='string' or row.epoch=='' or #clean>=2 then return nil end
+            seen[row.source]=true
+            characters[row.characterId]=true
+            clean[#clean+1]={source=row.source,characterId=row.characterId,sessionId=row.sessionId,epoch=row.epoch}
+        end
+        table.sort(clean,function(a,b) return a.source<b.source end)
+        return clean
+    end
+    local function poll()
+        if run.phase~='draining' and run.phase~='ready' then return end
+        if run.phase=='draining' and (api.now()-run.started)%4294967296>=90000 then return fail('drain_timeout_no_retry') end
+        local current=roster()
+        if run.phase=='failed' then return end -- deadline may fire while an adapter yields
+        if not current or #current~=#run.roster then return fail('drain_roster_changed') end
+        for i,row in ipairs(current) do
+            local old=run.roster[i]
+            if row.source~=old.source or row.characterId~=old.characterId or row.sessionId~=old.sessionId
+                or row.epoch~=old.epoch then return fail('drain_identity_changed') end
+        end
+        for i=1,run.completed do
+            local row=run.roster[i]
+            local ok,state=pcall(api.status,row.source)
+            if run.phase=='failed' then return end
+            if not ok or not state or state.phase~='parked' or state.commitOutcome~='confirmed'
+                or state.sessionId~=row.sessionId then return fail('drain_release_authority_changed') end
+        end
+        if run.phase=='ready' then api.schedule(poll); return end
+        local row=run.roster[run.completed+1]
+        if not row then run.phase='ready'; api.report(T.Status()); api.schedule(poll); return end
+        local ok,state=pcall(api.status,row.source)
+        if run.phase=='failed' then return end
+        if not ok or not state or state.sessionId~=row.sessionId then return fail('drain_owner_unavailable') end
+        if state.phase=='parked' and state.commitOutcome=='confirmed' then
+            run.completed=run.completed+1; run.requested=false
+        elseif state.phase=='frozen' then return fail('drain_owner_frozen')
+        elseif not run.requested then
+            run.requested=true -- reserve before any yielding preflight
+            local called,result=pcall(api.begin,row.source,row)
+            if not called or not result or result.ok~=true then return fail('drain_release_refused_no_retry') end
+        end
+        api.schedule(poll)
+    end
+    function T.Begin()
+        if run then return false,'drain_already_latched' end
+        run={phase='draining',roster={},completed=0,started=api.now()}
+        if api.deadline then api.deadline(function()
+            if run.phase=='draining' then fail('drain_timeout_no_retry') end
+        end) end
+        local value=roster()
+        if run.phase=='failed' then return false,run.reason end
+        if not value then fail('drain_roster_unavailable'); return false,run.reason end
+        run.roster=value
+        -- Preflight every owner before starting any release.
+        for _,row in ipairs(value) do
+            local ok,state=pcall(api.status,row.source)
+            if run.phase=='failed' then return false,run.reason end
+            if not ok or not state or state.sessionId~=row.sessionId
+                or (state.phase~='active' and state.phase~='parked') then
+                fail('drain_owner_not_idle'); return false,run.reason
+            end
+        end
+        api.schedule(poll)
+        return true
+    end
+    return T
+end
 -- Scheduling only. Existing one-use read tickets and sealed transition own I/O.
 function WeaponNativePeriodicWear.New(api)
     local states={}
@@ -74,6 +156,7 @@ local function enabled()
         and Config.CharacterAmmunitionEnabled==true and Config.CharacterAmmoTransportEnabled==true
 end
 local coordinator
+local drain
 local attachmentDisconnect={}
 local function attachmentEnabled()
     return enabled() and Config.NativeAlphaLifecycleWearEnabled==true and type(GetConvarInt)=='function'
@@ -108,6 +191,7 @@ end
 local adapters={
     enabled=enabled,
     prepare=function(source,intent)
+        if drain and drain.IsLatched() and intent.action~='shutdown' then return denied('native_global_shutdown_latched') end
         local attachmentChange=intent.action=='attachment-install' or intent.action=='attachment-remove'
         if intent.action~='dry-run' and intent.action~='shutdown' and intent.action~='equip' and intent.action~='unequip' and intent.action~='options' and intent.action~='repair' and intent.action~='maintenance' and not attachmentChange then return denied('invalid_equipment_action') end
         if attachmentChange and not attachmentEnabled() then return denied('native_attachment_transactions_disabled') end
@@ -116,7 +200,7 @@ local adapters={
         if intent.periodic==true and (intent.action~='maintenance' or Config.NativeAlphaPeriodicWearEnabled~=true) then return denied('native_periodic_wear_disabled') end
         local session=CoreAdapter.ResolveSession(source)
         local state=WeaponCharacterAmmoDispatcher.Status(source)
-        if not session or not session.ok or session.value.characterId~=Config.NativeAlphaCharacterId
+        if not session or not session.ok or not WeaponNativeEnrollment.Allows(Config,session.value.characterId)
             or not state or state.phase~='active' or state.busy or not same(state.identity,
                 {characterId=session.value.characterId,sessionId=session.value.sessionId,epoch=state.identity and state.identity.epoch}) then
             return denied('active_scoped_native_owner_required')
@@ -319,7 +403,7 @@ local adapters={
         return {ok=true,value={identity=bound,spec=spec}}
     end,
     current=function(source,identity)
-        return enabled() and identity.characterId==Config.NativeAlphaCharacterId
+        return enabled() and WeaponNativeEnrollment.Allows(Config,identity.characterId)
             and CoreAdapter.IsSessionCurrent(source,identity.sessionId,identity.characterId)==true
     end,
     released=function(source,identity)
@@ -486,7 +570,7 @@ exports('ReadNativeMaintenanceAuditSpec',function(target,itemId)
     local session=CoreAdapter.ResolveSession(target)
     local state=WeaponCharacterAmmoDispatcher.Status(target)
     local transition=coordinator.Status(target)
-    if not session or not session.ok or session.value.characterId~=Config.NativeAlphaCharacterId
+    if not session or not session.ok or not WeaponNativeEnrollment.Allows(Config,session.value.characterId)
         or not state or state.phase~='active' or state.busy or not identity(state.identity)
         or (transition and transition.phase~='active') then return denied('maintenance_audit_owner_required') end
     local bound=copy(state.identity)
@@ -579,7 +663,7 @@ function WeaponNativeEquipmentBindings.Attach(source,bundle)
         bundle.equipmentTransition={ticket=request.ticket,oldEpoch=request.identity.epoch}
     end
 end
-function WeaponNativeEquipmentBindings.IsStopping(source) return stopping[source]~=nil end
+function WeaponNativeEquipmentBindings.IsStopping(source) return stopping[source]~=nil or (drain and drain.IsLatched()) or false end
 exports('ValidateNativeEquipmentCommit',function(context,spec)
     -- Inventory cannot manufacture or reuse an intent after the writing phase.
     return GetInvokingResource()=='feather-inventory' and enabled()
@@ -712,6 +796,56 @@ RegisterCommand('WeaponNativePrepareStop',function(source,args)
     local result=coordinator.Begin(tonumber(args[1]),{action='shutdown'})
     print('[WeaponNativePrepareStop] '..(result.ok and 'STARTED; wait for PASS before stopping' or 'REFUSED '..tostring(result.error.code)))
 end,true)
+drain=WeaponNativeShutdownDrain.New({
+    now=GetGameTimer,
+    deadline=function(fn) SetTimeout(90000,fn) end,
+    schedule=function(fn) SetTimeout(500,fn) end,
+    roster=function()
+        if not enabled() or Config.NativeAlphaLifecycleWearEnabled~=true
+            or not WeaponNativeEnrollment.Validate(Config)
+            or GetResourceState('feather-weapons-native-proof')~='stopped' then return nil end
+        local rows={}
+        for _,raw in ipairs(GetPlayers()) do
+            local target=tonumber(raw)
+            local session=CoreAdapter.ResolveSession(target)
+            -- An unresolved connected player may be entering a scoped character.
+            if not session or not session.ok or type(session.value)~='table' then return nil end
+            local state=WeaponCharacterAmmoDispatcher.Status(target)
+            if WeaponNativeEnrollment.Allows(Config,session.value.characterId) or state then
+                local bound=stopping[target] or (state and state.identity)
+                if not identity(bound) or bound.characterId~=session.value.characterId
+                    or bound.sessionId~=session.value.sessionId then return nil end
+                rows[#rows+1]={source=target,characterId=bound.characterId,sessionId=bound.sessionId,epoch=bound.epoch}
+            end
+        end
+        return rows
+    end,
+    status=function(target)
+        local transition=coordinator.Status(target)
+        if transition and transition.phase~='active' then return transition end
+        local state=WeaponCharacterAmmoDispatcher.Status(target)
+        if not state or state.phase~='active' or state.busy or pending[target] or wearPending[target]
+            or uiPending[target] or logoutPending[target] then return nil end
+        return {phase='active',sessionId=state.identity and state.identity.sessionId}
+    end,
+    begin=function(target,bound) return coordinator.Begin(target,{action='shutdown',scope=bound}) end,
+    report=function(state)
+        print('[WeaponNativePrepareStopAll] '..(state.phase=='ready' and 'PASS all scoped connected owners sealed/released; ready to stop resource'
+            or 'FAIL '..tostring(state.reason)..'; do not stop or retry; admission remains latched')
+            ..' completed='..state.completed..' total='..state.total)
+    end,
+})
+RegisterCommand('WeaponNativePrepareStopAll',function(source,args)
+    if source~=0 or not enabled() then return end
+    if not args or #args~=0 then return print('[WeaponNativePrepareStopAll] REFUSED no arguments expected') end
+    local ok,reason=drain.Begin()
+    print('[WeaponNativePrepareStopAll] '..(ok and 'STARTED; admission latched; wait for aggregate PASS before stopping'
+        or 'REFUSED '..tostring(reason)))
+end,true)
+RegisterCommand('WeaponNativeShutdownStatus',function(source,args)
+    if source~=0 or not enabled() or not args or #args~=0 then return end
+    print('[WeaponNativeShutdownStatus] '..json.encode(drain.Status()))
+end,true)
 RegisterCommand('WeaponNativeRepair',function(source,args)
     if source~=0 or not enabled() or Config.NativeAlphaRepairEnabled~=true
         or GetResourceState('feather-weapons-native-proof')~='stopped' then return end
@@ -731,7 +865,7 @@ RegisterCommand('WeaponNativeRepairStatus',function(source,args)
         local state=WeaponCharacterAmmoDispatcher.Status(target)
         local session=CoreAdapter.ResolveSession(target)
         if not state or state.phase~='active' or state.busy or not identity(state.identity)
-            or not session or not session.ok or session.value.characterId~=Config.NativeAlphaCharacterId
+            or not session or not session.ok or not WeaponNativeEnrollment.Allows(Config,session.value.characterId)
             or session.value.characterId~=state.identity.characterId or session.value.sessionId~=state.identity.sessionId then return nil end
         local scope=copy(state.identity)
         local context={actorSource=target,characterId=scope.characterId,sessionId=scope.sessionId}
@@ -787,7 +921,7 @@ RegisterCommand('WeaponNativeArmAttachmentDisconnect',function(source,args)
     end
     local state=WeaponCharacterAmmoDispatcher.Status(target)
     if not state or state.phase~='active' or state.busy or not identity(state.identity)
-        or state.identity.characterId~=Config.NativeAlphaCharacterId
+        or not WeaponNativeEnrollment.Allows(Config,state.identity.characterId)
         or not CoreAdapter.IsSessionCurrent(target,state.identity.sessionId,state.identity.characterId)
         or (coordinator.Status(target) and coordinator.Status(target).phase~='active') then
         return print('[WeaponNativeArmAttachmentDisconnect] REFUSED current scoped idle owner required')
@@ -810,7 +944,7 @@ RegisterCommand('WeaponNativeAttachmentStatus',function(source,args)
         local state=WeaponCharacterAmmoDispatcher.Status(target)
         local session=CoreAdapter.ResolveSession(target)
         if not state or state.phase~='active' or state.busy or not session or not session.ok
-            or state.identity.characterId~=Config.NativeAlphaCharacterId or state.identity.sessionId~=session.value.sessionId
+            or not WeaponNativeEnrollment.Allows(Config,state.identity.characterId) or state.identity.sessionId~=session.value.sessionId
             or state.identity.characterId~=session.value.characterId then return nil end
         local scope=copy(state.identity)
         local context={actorSource=target,characterId=scope.characterId,sessionId=scope.sessionId}
@@ -840,7 +974,7 @@ local function requestWear(target,itemId,automatic)
     local status=WeaponCharacterAmmoDispatcher.Status(target)
     local transition=coordinator.Status(target)
     if wearPending[target] or not status or status.phase~='active' or status.busy
-        or not identity(status.identity) or status.identity.characterId~=Config.NativeAlphaCharacterId
+        or not identity(status.identity) or not WeaponNativeEnrollment.Allows(Config,status.identity.characterId)
         or (transition and transition.phase~='active') then return false end
     sequence=sequence+1
     local request={ticket=('wear:%s:%s:%s'):format(target,GetGameTimer(),sequence),identity=copy(status.identity),itemId=itemId,periodic=automatic==true}
@@ -905,7 +1039,7 @@ periodic=WeaponNativePeriodicWear.New({
     interval=function() return Config.NativeAlphaPeriodicWearIntervalMs or 60000 end,now=GetGameTimer,
     status=function(target)
         local status=WeaponCharacterAmmoDispatcher.Status(target)
-        return status and status.identity and status.identity.characterId==Config.NativeAlphaCharacterId and status or nil
+        return status and status.identity and WeaponNativeEnrollment.Allows(Config,status.identity.characterId) and status or nil
     end,
     busy=function(target)
         local state=coordinator.Status(target)
@@ -950,7 +1084,7 @@ function WeaponNativeEquipmentBindings.RetireSession(target,sessionId)
     end
 end
 function WeaponNativeEquipmentBindings.ReconcileSession(target,context)
-    if not enabled() or type(context)~='table' or context.characterId~=Config.NativeAlphaCharacterId
+    if not enabled() or type(context)~='table' or not WeaponNativeEnrollment.Allows(Config,context.characterId)
         or not CoreAdapter.IsSessionCurrent(target,context.sessionId,context.characterId) then return denied('recovery_session_required') end
     local state=coordinator.Status(target)
     if state and not state.sessionId then return denied('recovery_transition_identity_pending') end

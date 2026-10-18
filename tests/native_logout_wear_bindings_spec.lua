@@ -1,3 +1,4 @@
+dofile('shared/constants.lua') -- shared enrollment dependency from normal manifest
 local events,registered,timers={},{},{}
 Config={DevMode=true,NativeAlphaRuntime=true,CharacterAmmunitionEnabled=true,CharacterAmmoTransportEnabled=true,
  NativeAlphaLifecycleWearEnabled=true,NativeAlphaCharacterId='Jane'}

@@ -263,9 +263,9 @@ function WeaponCharacterAmmoCreationNative.Scoped(ped,identity,prepareDual,clean
     end
     local guidIdentity
     local savedAttachments=Config.DevMode==true and Config.NativeAlphaRuntime==true
-        and expected.characterId==Config.NativeAlphaCharacterId and type(GetConvarInt)=='function'
+        and WeaponNativeEnrollment.Allows(Config,expected.characterId) and type(GetConvarInt)=='function'
         and GetConvarInt('feather_native_saved_attachments',0)==1
-    if Config.DevMode==true and Config.NativeAlphaRuntime==true and expected.characterId==Config.NativeAlphaCharacterId
+    if Config.DevMode==true and Config.NativeAlphaRuntime==true and WeaponNativeEnrollment.Allows(Config,expected.characterId)
         and type(GetConvarInt)=='function' and GetConvarInt('feather_native_guid_ownership',0)==1 then
         guidIdentity=WeaponNativeGuidIdentity.New({current=current,hash=joaat,
             exists=function(handle) local value=DoesEntityExist(handle); return value==true or value==1 end,

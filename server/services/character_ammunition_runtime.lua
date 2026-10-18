@@ -114,7 +114,7 @@ end
 -- server reservations; this never proves old native copies were cleaned up.
 function S.ReconcileSession(source,identity)
     if not enabled() or Config.DevMode~=true or Config.NativeAlphaRuntime~=true or type(identity)~='table'
-        or identity.characterId~=Config.NativeAlphaCharacterId
+        or not WeaponNativeEnrollment.Allows(Config,identity.characterId)
         or not CoreAdapter.IsSessionCurrent(source,identity.sessionId,identity.characterId) then return failure('recovery_current_scope_required') end
     local stale={}
     for target,bound in pairs(loadouts) do
@@ -287,7 +287,7 @@ local function deathPlan(source,report)
         return nil
     end
     if not bound then return nil,'death_wear_loadout_required' end
-    if Config.DevMode~=true or Config.NativeAlphaRuntime~=true or bound.characterId~=Config.NativeAlphaCharacterId
+    if Config.DevMode~=true or Config.NativeAlphaRuntime~=true or not WeaponNativeEnrollment.Allows(Config,bound.characterId)
         or bound.invalid then return nil,'death_wear_scope_required' end
     local live=runtime.Get(source)
     if not live or live.phase~='active' or type(report)~='table' or report.characterId~=live.characterId
@@ -377,7 +377,7 @@ exports('ValidateCharacterAmmoRuntimeOperation',function(context,operation,spec)
         or runtime.IsOperationCurrent(context,operation,spec)~=true then return false end
     if type(spec)=='table' and spec.finalWear~=nil then
         if operation~='observe' or Config.NativeAlphaLifecycleWearEnabled~=true or Config.DevMode~=true
-            or Config.NativeAlphaRuntime~=true or context.characterId~=Config.NativeAlphaCharacterId then return false end
+            or Config.NativeAlphaRuntime~=true or not WeaponNativeEnrollment.Allows(Config,context.characterId) then return false end
         local medical=readMedical(context.actorSource,context)
         return medical and medical.lifeState=='dead' and medical.revision==spec.finalWear.medicalRevision
             and medical.episodeId==spec.finalWear.episodeId and runtime.IsOperationCurrent(context,operation,spec)==true or false

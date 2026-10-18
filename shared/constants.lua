@@ -1,3 +1,36 @@
+-- Pure enrollment policy. Callers must still enforce runtime, DevMode, session,
+-- epoch and ownership authorization. No automatic/global enrollment or grants.
+WeaponNativeEnrollment={}
+function WeaponNativeEnrollment.Validate(config)
+    if type(config)~='table' then return nil,'native_enrollment_config_required' end
+    local members,count={},0
+    local single=config.NativeAlphaCharacterId
+    -- Preserve the existing explicit single-character contract.
+    if single~=nil then
+        if type(single)~='string' or #single<1 or #single>128 then return nil,'native_enrollment_single_invalid' end
+        members[single]=true; count=1
+    end
+    local additional=config.NativeAlphaAdditionalCharacters
+    if additional~=nil then
+        if type(additional)~='table' then return nil,'native_enrollment_list_invalid' end
+        for id,allowed in pairs(additional) do
+            if type(id)~='string' or allowed~=true or #id~=36
+                or not id:match('^%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x$') then
+                return nil,'native_enrollment_entry_invalid'
+            end
+            if not members[id] then members[id]=true; count=count+1 end
+            if count>2 then return nil,'native_enrollment_limit_exceeded' end
+        end
+    end
+    if count==0 then return nil,'native_enrollment_empty' end
+    return members
+end
+function WeaponNativeEnrollment.Allows(config,characterId)
+    if type(characterId)~='string' then return false end
+    local members=WeaponNativeEnrollment.Validate(config)
+    return members~=nil and members[characterId]==true
+end
+
 WeaponConstants = {
     ContractVersion = 1,
     MetadataSchemaVersion = 2,

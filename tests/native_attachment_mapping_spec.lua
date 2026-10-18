@@ -1,3 +1,4 @@
+dofile('shared/constants.lua') -- shared enrollment dependency from normal manifest
 Config={}
 dofile('shared/definitions/ammunition.lua')
 dofile('shared/definitions/attachments.lua')

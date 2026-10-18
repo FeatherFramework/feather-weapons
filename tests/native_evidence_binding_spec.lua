@@ -1,3 +1,4 @@
+dofile('shared/constants.lua') -- shared enrollment dependency from normal manifest
 Config={DevMode=true,NativeAlphaRuntime=true,NativeAlphaCharacterId='Jane',CharacterAmmunitionEnabled=true,
  CharacterAmmoTransportEnabled=true,Ownership={trustedResources={admin=true},authorization={holdAction='hold',releaseAction='release'}}}
 local function clone(v) if type(v)~='table' then return v end; local t={}; for k,x in pairs(v) do t[k]=clone(x) end; return t end

@@ -1,3 +1,4 @@
+dofile('shared/constants.lua') -- shared enrollment dependency from normal manifest
 dofile('shared/character_ammunition.lua'); dofile('shared/character_ammunition_runtime.lua')
 dofile('shared/character_ammunition_loadout_lease.lua')
 local function copy(v) if type(v)~='table' then return v end; local out={}; for k,x in pairs(v) do out[k]=copy(x) end; return out end

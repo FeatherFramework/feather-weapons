@@ -1,4 +1,7 @@
 -- Interleaved real coordinator, mocked provider/native boundaries. Not live SQL.
+dofile('shared/constants.lua')
+local secondCharacter='e5e9955d-c29e-11f1-9ae2-e0d55eaa2deb'
+Config={NativeAlphaCharacterId='Jane',NativeAlphaAdditionalCharacters={[secondCharacter]=true}}
 dofile('server/services/native_equipment_transition.lua')
 local function copy(v)
     if type(v)~='table' then return v end
@@ -7,7 +10,7 @@ end
 for _,outcome in ipairs({'confirmed','refused','uncertain'}) do
     local identities={
         [11]={characterId='Jane',sessionId='jane-session',epoch='jane-epoch'},
-        [22]={characterId='Other',sessionId='other-session',epoch='other-epoch'}}
+        [22]={characterId=secondCharacter,sessionId='other-session',epoch='other-epoch'}}
     local sessions={[11]='jane-session',[22]='other-session'}
     local pending,contexts,specs,commits,rebuilds={},{},{},{[11]=0,[22]=0},{[11]=0,[22]=0}
     local coordinator
@@ -17,7 +20,7 @@ for _,outcome in ipairs({'confirmed','refused','uncertain'}) do
             return {ok=true,value={identity=copy(identities[source]),spec={characterId=identities[source].characterId,
                 action='unequip',expected={weapon={itemId=source*10,revision=1}}}}}
         end,
-        current=function(source,scope) return sessions[source]==scope.sessionId end,
+        current=function(source,scope) return sessions[source]==scope.sessionId and WeaponNativeEnrollment.Allows(Config,scope.characterId) end,
         released=function() return true end,
         ticket=function(source) return 'ticket:'..source end,
         requestRelease=function(source,request) pending[source]=copy(request); return true end,
@@ -77,7 +80,7 @@ end
 print('Multiplayer transition isolation PASS (two interleaved players, cross-ticket/source refusal, per-player overlap, late confirmed/refused/unknown outcomes, cancellation and source reuse; mocked provider)')
 
 local now=0
-local identity={[11]={characterId='Jane',sessionId='s11',epoch='e11'},[22]={characterId='Other',sessionId='s22',epoch='e22'}}
+local identity={[11]={characterId='Jane',sessionId='s11',epoch='e11'},[22]={characterId=secondCharacter,sessionId='s22',epoch='e22'}}
 local busy,requests={},{}
 local sampler=WeaponNativePeriodicWear.New({enabled=function() return true end,now=function() return now end,
     interval=function() return 60000 end,

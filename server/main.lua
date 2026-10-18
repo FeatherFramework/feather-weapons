@@ -24,7 +24,7 @@ CreateThread(function()
     if Config.CharacterAmmunitionEnabled==true or Config.CharacterAmmoTransportEnabled==true then
         if Config.CharacterAmmunitionEnabled~=true or Config.CharacterAmmoTransportEnabled~=true
             or Config.DevMode~=true or Config.NativeAlphaRuntime~=true
-            or type(Config.NativeAlphaCharacterId)~='string' or Config.NativeAlphaCharacterId=='' then
+            or not WeaponNativeEnrollment.Validate(Config) then
             FailStartup('native_cutover_not_ready: explicit scoped alpha configuration required')
             return
         end

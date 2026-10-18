@@ -66,7 +66,7 @@ function WeaponCharacterAmmoNativeOwner.New(dependencies)
                 or lease~=owned or not owned or owned.cleaned or phase~='started' or not state or state.phase~='active'
                 or state.runtimeBusy or state.receiving or state.quiescing or not ammo or ammo.phase~='active'
                 or ammo.pending or ammo.closing or ammo.deathClosing or not baseline
-                or baseline.characterId~=Config.NativeAlphaCharacterId or baseline.epoch~=owned.identity.epoch
+                or not WeaponNativeEnrollment.Allows(Config,baseline.characterId) or baseline.epoch~=owned.identity.epoch
                 or baseline.sessionId~=owned.identity.sessionId or not current(owned.identity,owned.ped) then return false end
             for _,amount in pairs(baseline.pools or {}) do if amount~=0 then return false end end
             return true

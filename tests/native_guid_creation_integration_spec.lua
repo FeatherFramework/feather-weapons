@@ -1,3 +1,4 @@
+dofile('shared/constants.lua') -- shared enrollment dependency from normal manifest
 dofile('client/character_maintenance_native.lua')
 dofile('client/character_ammunition_creation_native.lua')
 Config={DevMode=true,NativeAlphaRuntime=true,NativeAlphaCharacterId='Jane',CharacterAmmunitionEnabled=true,CharacterAmmoTransportEnabled=true}

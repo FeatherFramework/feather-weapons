@@ -168,7 +168,7 @@ function WeaponEvidenceService.NativeChange(context,request,resource,held)
     local itemId=tonumber(request.itemInstanceId)
     local characterId=CoreAdapter.NormalizeCharacterId(request.characterId or context.characterId)
     if not Trusted(resource) or not itemId or itemId<1 or itemId%1~=0 or itemId==math.huge
-        or characterId~=Config.NativeAlphaCharacterId or type(held)~='boolean'
+        or not WeaponNativeEnrollment.Allows(Config,characterId) or type(held)~='boolean'
         or nativeReservations[itemId] then return NativeDenied('native_evidence_scope_or_overlap') end
     local session=CoreAdapter.ResolveSession(context.actorSource)
     if not session or not session.ok or session.value.characterId~=characterId
@@ -231,13 +231,13 @@ function WeaponEvidenceService.NativeStatus(target,itemId)
         or Config.CharacterAmmoTransportEnabled~=true or type(target)~='number' or target<1 or target%1~=0 or target==math.huge
         or type(itemId)~='number' or itemId<1 or itemId%1~=0 or itemId==math.huge then return NativeDenied('native_evidence_status_scope') end
     local session=CoreAdapter.ResolveSession(target)
-    if not session or not session.ok or session.value.characterId~=Config.NativeAlphaCharacterId then
+    if not session or not session.ok or not WeaponNativeEnrollment.Allows(Config,session.value.characterId) then
         return NativeDenied('native_evidence_status_current_actor_required')
     end
     local context={actorSource=target,characterId=session.value.characterId,sessionId=session.value.sessionId}
     local function current()
         return Config.DevMode==true and Config.NativeAlphaRuntime==true and Config.CharacterAmmunitionEnabled==true
-            and Config.CharacterAmmoTransportEnabled==true and context.characterId==Config.NativeAlphaCharacterId
+            and Config.CharacterAmmoTransportEnabled==true and WeaponNativeEnrollment.Allows(Config,context.characterId)
             and CoreAdapter.IsSessionCurrent(target,context.sessionId,context.characterId)==true
     end
     if not current() then return NativeDenied('native_evidence_status_session_changed') end
