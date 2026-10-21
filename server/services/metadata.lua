@@ -1,142 +1,97 @@
+-- Native-only item metadata. Old clip/reserve documents are rejected, not imported.
 WeaponMetadata = {}
-
--- Opted-in carriers keep one authoritative total per ammunition definition.
--- The legacy clip/reserve fields are only a projection of the selected pool.
-function WeaponMetadata.EnsureAmmunitionPools(metadata, definition)
-    if definition.multiTypeAmmunition ~= true then return end
-    if metadata.ammo.pools == nil then
-        metadata.ammo.pools = {
-            [metadata.ammo.type or definition.ammunitionType] =
-                (tonumber(metadata.ammo.loaded) or 0) + (tonumber(metadata.ammo.reserve) or 0)
-        }
-    end
-    if definition.family ~= 'throwing_knife' and metadata.ammo.clips == nil then
-        metadata.ammo.clips = {
-            [metadata.ammo.type or definition.ammunitionType] = metadata.ammo.loaded or 0
-        }
-    end
+local function throwable(definition) return definition.id=='throwable_tomahawk' end
+local function utilityEnabled(definition)
+    return WeaponNativeUtilityCatalog and WeaponNativeUtilityCatalog.Enabled() and WeaponNativeUtilityItem
+        and WeaponNativeUtilityCatalog.Resolve(definition)~=nil
 end
-
-function WeaponMetadata.ProjectAmmunitionPool(metadata, definition, ammunitionType, reportedLoaded)
-    WeaponMetadata.EnsureAmmunitionPools(metadata, definition)
-    local total = metadata.ammo.pools[ammunitionType] or 0
-    metadata.ammo.pools[ammunitionType] = total
-    local loaded = math.min(definition.capacity, total)
-    if metadata.ammo.clips and metadata.ammo.clips[ammunitionType] ~= nil then
-        loaded = math.min(loaded, metadata.ammo.clips[ammunitionType])
-    end
-    -- Firearm checkpoints must preserve the actual cylinder/clip, not refill
-    -- it merely because reserve ammunition remains in this pool.
-    if reportedLoaded ~= nil then
-        loaded = math.min(definition.capacity, total, math.max(0, math.floor(reportedLoaded)))
-    end
-    metadata.ammo.type = ammunitionType
-    metadata.ammo.loaded = loaded
-    metadata.ammo.reserve = total - loaded
-    metadata.ammo.chambered = loaded > 0
-    if metadata.ammo.clips then metadata.ammo.clips[ammunitionType] = loaded end
+local function throwableEnabled()
+    return WeaponNativeThrowablePolicy and WeaponNativeThrowablePolicy.Enabled() and WeaponNativeThrowableItem
 end
-
-function WeaponMetadata.SaveSelectedAmmunitionPool(metadata, definition)
-    if definition.multiTypeAmmunition ~= true then return end
-    WeaponMetadata.EnsureAmmunitionPools(metadata, definition)
-    metadata.ammo.pools[metadata.ammo.type or definition.ammunitionType] =
-        (tonumber(metadata.ammo.loaded) or 0) + (tonumber(metadata.ammo.reserve) or 0)
-    if metadata.ammo.clips then
-        metadata.ammo.clips[metadata.ammo.type or definition.ammunitionType] = metadata.ammo.loaded
-    end
+local function melee(definition)
+    return definition.id=='melee_knife' or (WeaponNativeMeleeCatalog and WeaponNativeMeleeCatalog.Resolve(definition)~=nil)
 end
-
-local function NormalizeMaintenance(value)
-    value = type(value) == "table" and value or {}
-    local function Unit(number)
-        return math.max(0.0, math.min(1.0, tonumber(number) or 0.0))
-    end
-    return {
-        degradation = Unit(value.degradation),
-        permanentDegradation = Unit(value.permanentDegradation),
-        damage = Unit(value.damage),
-        dirt = Unit(value.dirt),
-        soot = Unit(value.soot)
-    }
+local function meleeEnabled(definition)
+    return WeaponNativeKnife and ((definition.id=='melee_knife' and WeaponNativeKnife.Enabled())
+        or (WeaponNativeMeleeCatalog and WeaponNativeMeleeCatalog.Enabled() and WeaponNativeMeleeCatalog.Resolve(definition)~=nil))
 end
-
 function WeaponMetadata.Build(definition, options)
-    options = type(options) == "table" and options or {}
-    local metadata = {
-        schemaVersion = WeaponConstants.MetadataSchemaVersion,
-        weaponDefinitionId = definition.id,
-        serialNumber = options.serialNumber,
-        condition = tonumber(options.condition) or definition.condition.maximum,
-        maintenance = NormalizeMaintenance(options.maintenance),
-        quality = tonumber(options.quality) or 100,
-        ammo = {
-            type = options.ammunitionType or definition.ammunitionType,
-            loaded = tonumber(options.loadedAmmo) or 0,
-            reserve = tonumber(options.reserveAmmo) or 0,
-            chambered = options.chambered == true
-        },
-        attachments = options.attachments or {},
-        cosmetics = options.cosmetics or {},
-        flags = {
-            stolen = options.stolen == true,
-            evidence = options.evidence == true,
-            disabled = options.disabled == true
-        },
-        provenance = options.provenance or {}
-    }
-
-    WeaponMetadata.EnsureAmmunitionPools(metadata, definition)
-    local valid, errors = WeaponValidation.Metadata(metadata, definition)
-    if not valid then
-        return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Generated weapon metadata is invalid", errors)
+    options=type(options)=='table' and options or {}
+    if options.loadedAmmo~=nil or options.reserveAmmo~=nil or options.chambered~=nil then
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID,'Item-owned ammunition fields are not supported')
     end
-    local attachments = DefinitionRegistry.ValidateAttachmentSet(definition.id, metadata.attachments)
-    if not attachments.ok then return attachments end
-    return WeaponResult.Ok(metadata)
-end
-
-function WeaponMetadata.Validate(metadata, definition, correlationId)
-    if type(metadata)=='table' and type(metadata.ammo)=='table' and metadata.ammo.ownership=='character' then
-        if Config.CharacterAmmunitionEnabled~=true then
-            return WeaponResult.Error(WeaponErrors.ITEM_INVALID,'Character ammunition integration is disabled',nil,correlationId)
+    if definition.slot=='utility' then
+        if not utilityEnabled(definition) or options.ammo~=nil or options.ammunitionType~=nil
+            or options.maintenance~=nil or options.attachments~=nil or options.cosmetics~=nil then
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID,'Native utility disabled or unsupported item fields')
         end
-        local checked,reason,errors=WeaponCharacterAmmoItem.Validate(metadata,definition)
-        if not checked then return WeaponResult.Error(WeaponErrors.ITEM_INVALID,reason,errors,correlationId) end
-        local attachments=DefinitionRegistry.ValidateAttachmentSet(definition.id,checked.attachments)
-        if not attachments.ok then return attachments end
+        local checked,why=WeaponNativeUtilityItem.Build(definition,{serialNumber=options.serialNumber,
+            condition=options.condition,quality=options.quality,provenance=options.provenance,
+            flags={stolen=options.stolen==true,evidence=options.evidence==true,disabled=options.disabled==true}})
+        if not checked then return WeaponResult.Error(WeaponErrors.ITEM_INVALID,why) end
+        return WeaponResult.Ok(checked)
+    end
+    if throwable(definition) then
+        if not throwableEnabled() or options.ammunitionType~=nil or options.ammo~=nil
+            or options.maintenance~=nil or options.attachments~=nil or options.cosmetics~=nil then
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID,'Native throwable disabled or unsupported item fields')
+        end
+        local checked,why=WeaponNativeThrowableItem.Build(WeaponDefinitionCatalog,{serialNumber=options.serialNumber,
+            condition=options.condition,quality=options.quality,provenance=options.provenance,
+            flags={stolen=options.stolen==true,evidence=options.evidence==true,disabled=options.disabled==true}})
+        if not checked then return WeaponResult.Error(WeaponErrors.ITEM_INVALID,why) end
+        return WeaponResult.Ok(checked)
+    end
+    if melee(definition) then
+        if not meleeEnabled(definition) then
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID,'Native knife support is disabled')
+        end
+        if options.ammunitionType~=nil or options.maintenance~=nil or options.ammo~=nil
+            or options.attachments~=nil or options.cosmetics~=nil then
+            return WeaponResult.Error(WeaponErrors.ITEM_INVALID,'Knife ammunition/maintenance/customization is not supported')
+        end
+        local checked,why=WeaponNativeKnife.Build(definition,{serialNumber=options.serialNumber,condition=options.condition,
+            quality=options.quality,provenance=options.provenance,
+            flags={stolen=options.stolen==true,evidence=options.evidence==true,disabled=options.disabled==true}})
+        if not checked then return WeaponResult.Error(WeaponErrors.ITEM_INVALID,why) end
+        return WeaponResult.Ok(checked)
+    end
+    local metadata={
+        schemaVersion=WeaponConstants.MetadataSchemaVersion,weaponDefinitionId=definition.id,
+        serialNumber=options.serialNumber,condition=options.condition or 100,quality=options.quality or 100,
+        maintenance=options.maintenance or {degradation=0.0,permanentDegradation=0.0,damage=0.0,dirt=0.0,soot=0.0},
+        ammo={ownership='character',type=options.ammunitionType or definition.ammunitionType},
+        attachments=options.attachments or {},cosmetics=options.cosmetics or {},
+        flags={stolen=options.stolen==true,evidence=options.evidence==true,disabled=options.disabled==true},
+        provenance=options.provenance or {}
+    }
+    return WeaponMetadata.Validate(metadata,definition)
+end
+function WeaponMetadata.Validate(metadata,definition,correlationId)
+    if Config.CharacterAmmunitionEnabled~=true or Config.CharacterAmmoTransportEnabled~=true then
+        return WeaponResult.Error(WeaponErrors.ITEM_INVALID,'Native firearm metadata is disabled',nil,correlationId)
+    end
+    if definition.slot=='utility' then
+        if not utilityEnabled(definition) then return WeaponResult.Error(WeaponErrors.ITEM_INVALID,'Native utility support is disabled') end
+        local checked,why=WeaponNativeUtilityItem.Validate(metadata,definition)
+        if not checked then return WeaponResult.Error(WeaponErrors.ITEM_INVALID,why,nil,correlationId) end
         return WeaponResult.Ok(checked,correlationId)
     end
-    -- Retire only the explicitly rejected candidate's empty, unselected key.
-    -- Never discard nonzero ownership or silently change a retired selection.
-    if definition.id == 'throwable_throwing_knives' and type(metadata) == 'table'
-        and type(metadata.ammo) == 'table' and type(metadata.ammo.pools) == 'table'
-        and metadata.ammo.type ~= 'ammo_throwing_knives_improved'
-        and metadata.ammo.pools.ammo_throwing_knives_improved == 0 then
-        metadata.ammo.pools.ammo_throwing_knives_improved = nil
+    if throwable(definition) then
+        if not throwableEnabled() then return WeaponResult.Error(WeaponErrors.ITEM_INVALID,'Native throwable support is disabled') end
+        local checked,why=WeaponNativeThrowableItem.Validate(metadata,WeaponDefinitionCatalog)
+        if not checked then return WeaponResult.Error(WeaponErrors.ITEM_INVALID,why,nil,correlationId) end
+        return WeaponResult.Ok(checked,correlationId)
     end
-    if type(metadata) == "table" and type(metadata.ammo) == "table"
-        and metadata.ammo.reserve == nil then
-        metadata.ammo.reserve = 0
+    if melee(definition) then
+        if not meleeEnabled(definition) then return WeaponResult.Error(WeaponErrors.ITEM_INVALID,'Native melee support is disabled') end
+        local checked,why=WeaponNativeKnife.Validate(metadata,definition)
+        if not checked then return WeaponResult.Error(WeaponErrors.ITEM_INVALID,why,nil,correlationId) end
+        return WeaponResult.Ok(checked,correlationId)
     end
-    if type(metadata) == "table" and metadata.maintenance ~= nil then
-        metadata.maintenance = NormalizeMaintenance(metadata.maintenance)
-    end
-    if type(metadata) == "table" and type(metadata.ammo) == "table"
-        and metadata.ammo.pools == nil then
-        -- Only import already-valid legacy metadata. A malformed existing pool
-        -- must fail validation instead of being overwritten by a projection.
-        local legacyValid = WeaponValidation.Metadata(metadata, definition)
-        if legacyValid then WeaponMetadata.EnsureAmmunitionPools(metadata, definition) end
-    end
-    local valid, errors = WeaponValidation.Metadata(metadata, definition)
-    if not valid then
-        return WeaponResult.Error(WeaponErrors.ITEM_INVALID, "Weapon item metadata is invalid", errors, correlationId)
-    end
-    local attachments = DefinitionRegistry.ValidateAttachmentSet(definition.id, metadata.attachments)
-    if not attachments.ok then
-        attachments.correlationId = correlationId
-        return attachments
-    end
-    return WeaponResult.Ok(metadata, correlationId)
+    local checked,reason,errors=WeaponCharacterAmmoItem.Validate(metadata,definition)
+    if not checked then return WeaponResult.Error(WeaponErrors.ITEM_INVALID,reason,errors,correlationId) end
+    local attachments=DefinitionRegistry.ValidateAttachmentSet(definition.id,checked.attachments)
+    if not attachments.ok then return attachments end
+    return WeaponResult.Ok(checked,correlationId)
 end

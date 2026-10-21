@@ -28,8 +28,9 @@ Config.CharacterAmmoTransportEnabled=false; checkNative()
 Config.CharacterAmmunitionEnabled=false; Config.CharacterAmmoTransportEnabled=true; checkNative()
 assert(legacyReads==0)
 Config.CharacterAmmoTransportEnabled=false
-assert(WeaponOwnershipService.Destroy({},request,'feather-weapons').error.code=='legacy-read')
-assert(WeaponEvidenceService.Hold({},request,'feather-weapons').error.code=='legacy-transaction')
+assert(WeaponOwnershipService.Destroy({},request,'feather-weapons').error.code=='conflict')
+assert(WeaponEvidenceService.Hold({},request,'feather-weapons').error.code=='conflict')
+assert(legacyReads==0,'disabled flags must not restore obsolete administrative writes')
 for _,id in ipairs({-1,0,1.5,math.huge,0/0}) do
  local invalid={characterId='Jane',itemInstanceId=id,serialNumber='SERIAL'}
  assert(WeaponOwnershipService.Destroy({},invalid,'feather-weapons').error.code=='invalid')
@@ -47,4 +48,4 @@ local caps=WeaponAPI.GetCapabilities()
 assert(caps.ready and caps.features.durableProvenance and caps.features.ownershipTransitionEvents)
 assert(caps.features.evidenceHolds==false and caps.features.destruction==false
  and caps.features.administrativeHoldGuards and caps.features.productionReady==false)
-print('Native administrative refusal PASS (hold/release/destroy, either cutover flag, trust, no legacy side effects/context mutation, legacy dispatch retained)')
+print('Native administrative refusal PASS (hold/release/destroy, flags off cannot select old writes, trust/context preserved)')

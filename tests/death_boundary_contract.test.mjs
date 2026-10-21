@@ -1,6 +1,6 @@
 import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
-const source = readFileSync(new URL('../client/main.lua', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../tests/archive/client/main.lua', import.meta.url), 'utf8');
 assert.match(source, /if dead == true or dead == 1 then SuspendForDeath\(\)/);
 assert.match(source, /if not deathBoundary and LifeStateSuspended\(\)/);
 assert.match(source, /FlushFirearmPools\(callback, deathBoundary\)/);

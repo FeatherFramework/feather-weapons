@@ -32,7 +32,7 @@ end
 exports={['feather-core']={GetSessionContext=function() return {ok=true,value={characterId=character,sessionId='s'}} end,
     IsSessionCurrent=function() return current end},['feather-inventory']={initiate=function() return api end,
     GetCharacterFirearmRuntimeSnapshot=function() return {ok=true,value={characterId=jane,revision=0,pools=pools,equipment={}}} end}}
-dofile('server/jane_ammunition_zero.lua')
+dofile('tests/archive/server/jane_ammunition_zero.lua')
 local run=commands.WeaponJaneZero
 run(1,{'1',jane}); assert(#sent==0)
 scope='0'; run(0,{'1',jane}); assert(#sent==0)
@@ -88,7 +88,7 @@ print('Jane automatic saved-primary login server PASS (console arm, new Core ses
 
 -- Core validation may yield: overlapping hints cannot dispatch twice and the
 -- ambient CFX source cannot redirect the captured console-authorized target.
-dofile('server/jane_ammunition_zero.lua')
+dofile('tests/archive/server/jane_ammunition_zero.lua')
 coreSession='before-second-login'
 commands.WeaponJanePrimaryLogin(0,{'1',jane})
 coreSession='second-login'
@@ -110,7 +110,7 @@ exports['feather-core'].IsSessionCurrent=ordinaryCurrent
 print('Jane login yielded Core/source capture barrier PASS')
 
 for _,bad in ipairs({'revision','ammo','slot'}) do
-    dofile('server/jane_ammunition_zero.lua')
+    dofile('tests/archive/server/jane_ammunition_zero.lua')
     coreSession='arm-'..bad
     commands.WeaponJanePrimaryLogin(0,{'1',jane})
     local before=#sent
@@ -127,7 +127,7 @@ print('Jane login exact baseline refusal PASS (revision, nonzero ammo, extra slo
 
 -- Resource-start ingress has no console arm, but still requires independent
 -- Core identity, exact opt-in and the current immutable saved ledger9 plan.
-dofile('server/jane_ammunition_zero.lua')
+dofile('tests/archive/server/jane_ammunition_zero.lua')
 local startupScope='0'
 GetConvar=function(name) return name=='feather_jane_primary_startup' and startupScope or scope end
 beltRevision=9; coreSession='startup-session'

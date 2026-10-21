@@ -1,5 +1,15 @@
 # Standard Lasso live gate
 
+2026-10-20 native ownership port evidence: reuse the 2026-10-02 tester-reported
+rope/release/switch/nonconsumption gameplay acceptance below. The current native
+path retains WEAPON_LASSO and the zero-ammo grant behavior; it does not add custom
+rope mechanics. Current item171rev0 (not historical item124) passed issuance replay,
+exact GUID cleanup, normal-menu re-equip, post-restart restoration, death/doctor,
+normal logout/relogin and unchanged observer checks on Oct19-20. No gameplay rerun
+is required solely for this port. The numbered commands below are HISTORICAL,
+not deployment or grant instructions for the current native-only system. Broader
+crash/multiplayer transfer and other utility models are not accepted by this gate.
+
 Candidate: `utility_lasso` / `weapon_lasso` / `WEAPON_LASSO`.
 Dedicated `utility` equipment slot maps to Inventory `weapon_utility`.
 No ammunition item, pool or consumption. Uses the existing ammunition-free equipment contract, including its maintenance/repair policy; no custom rope mechanics.

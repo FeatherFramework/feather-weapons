@@ -13,7 +13,7 @@ local function scenario(mode)
         Read=function() return {ok=ready,value={characterId=jane,sessionId='session',ped=1}} end}
     if mode=='foreign' then identity.characterId='original' end
     if mode=='disabled' then Config.CharacterAmmoTransportEnabled=true end
-    dofile('client/jane_ammunition_startup.lua')
+    dofile('tests/archive/client/jane_ammunition_startup.lua')
     assert(coroutine.resume(worker) and #sends==0)
     if mode=='foreign' or mode=='disabled' then assert(coroutine.status(worker)=='dead'); return end
     if mode=='changed' then identity.sessionId='other' elseif mode=='lost' then identity=nil
@@ -26,7 +26,7 @@ local function scenario(mode)
 end
 for _,mode in ipairs({'success','foreign','disabled','changed','lost','timeout'}) do scenario(mode) end
 -- All manifest paths exist; normal production manifest does not load the gate.
-local file=assert(io.open('fxmanifest.jane-startup.lua')); local manifest=file:read('*a'); file:close()
+local file=assert(io.open('tests/archive/fxmanifest.jane-startup.lua')); local manifest=file:read('*a'); file:close()
 for path in manifest:gmatch("'([^']+%.lua)'") do local entry=assert(io.open(path)); entry:close() end
 file=assert(io.open('fxmanifest.lua')); local normal=file:read('*a'); file:close()
 assert(not normal:find('jane_ammunition_startup.lua',1,true))

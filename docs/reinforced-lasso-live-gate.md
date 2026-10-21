@@ -1,5 +1,19 @@
 # Reinforced Lasso live gate
 
+2026-10-20 native-only port: original tester-reported rope/release/switch gameplay
+below is reusable evidence, not a reason to repeat those mechanics. New two-slot
+identity/ownership/transition policy preserves existing item/native/slot names and
+requires explicit unequip before switching. Conflicting saved assignments now fail
+closed; no automatic clearing/reconciliation is restored. Independent replicated
+feather_native_lasso_reinforced defaults0 and requires existing utility admission.
+Automated current-port tests pass. As of 2026-10-20, scoped native-only issuance/
+replay, family conflict refusal, explicit switching, exact cleanup, Inventory menu
+equip/slot display, Weapons restart, death seal/doctor and normal new-session
+restoration are live accepted. John172rev0 is the reinforced carrier; last observed
+ledger16/Tomahawk1 and firearm155rev4/158rev5. This is not broad crash/production
+acceptance. Numbered commands below are
+historical, NOT deployment or grant instructions for this native-only port.
+
 Candidate: utility_lasso_reinforced / weapon_lasso_reinforced / WEAPON_LASSO_REINFORCED.
 The second utility slot maps to Inventory weapon_utility_secondary; automatic equip uses either free utility slot.
 Policy: only one Lasso-family carrier can be equipped at a time. Unequip before switching.

@@ -20,7 +20,7 @@ local function reset()
     print = function(message) logs[#logs + 1] = message end
     CreateThread = function(fn) thread = coroutine.create(fn) end
     Wait = function() coroutine.yield() end
-    dofile('client/dev_shot_death.lua')
+    dofile('tests/archive/client/dev_shot_death.lua')
 end
 local function step() local ok, err = coroutine.resume(thread); assert(ok, err) end
 reset()
@@ -44,5 +44,5 @@ reset(); state.selectedHash = 20; command(0, {'1', 'longguns'}); step()
 state.selectedHash = 21; total = 5; step(); assert(killed == 0)
 reset(); command(0, {'1', 'invalid'}); assert(thread == nil)
 reset(); Config.DevMode = false; command = nil
-dofile('client/dev_shot_death.lua'); assert(command == nil)
+dofile('tests/archive/client/dev_shot_death.lua'); assert(command == nil)
 io.write('PASS shot-death trigger, cancel, context, timeout, increase, mismatch, args, dev gate\n')

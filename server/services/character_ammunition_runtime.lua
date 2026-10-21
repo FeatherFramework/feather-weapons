@@ -61,7 +61,10 @@ function S.OpenLoadout(source,catalog,policy)
     if loadouts[source] then return failure('native_loadout_release_required') end
     -- Preserve the exact policy/catalog used before the Inventory export yields.
     catalog,policy=copy(catalog),copy(policy)
-    local registry,reason=WeaponCharacterAmmoCatalog.Build(catalog,policy)
+    local registry,reason
+    if WeaponNativeThrowablePolicy and WeaponNativeThrowablePolicy.Enabled() then
+        registry,reason=WeaponNativeThrowablePolicy.RegistryFromLimits(catalog,policy)
+    else registry,reason=WeaponCharacterAmmoCatalog.Build(catalog,policy) end
     if not registry then return failure(reason) end
     local reservation=opening[source]
     local resolved=CoreAdapter.ResolveSession(source)
@@ -87,18 +90,58 @@ function S.OpenLoadout(source,catalog,policy)
     plan,reason=WeaponCharacterAmmoMaterialization.Build(snapshot.value.equipment,catalog,registry,
         {characterId=session.characterId,sessionId=session.sessionId,epoch=epoch})
     if not plan then return failure(reason) end
+    local knife,melee
+    if type(GetConvarInt)=='function' and GetConvarInt('feather_native_melee',0)==1 then
+        if not WeaponNativeMeleeCatalog or type(snapshot.value.meleeEquipment)~='table'
+            or snapshot.value.knifeEquipment~=nil then return failure('native_melee_components_not_ready') end
+        melee,reason=WeaponNativeMeleeCatalog.Project(snapshot.value.meleeEquipment,catalog,plan.identity)
+        if not melee then return failure(reason) end
+    elseif snapshot.value.meleeEquipment~=nil then return failure('native_melee_gate_changed')
+    elseif type(GetConvarInt)=='function' and GetConvarInt('feather_native_knife',0)==1 then
+        if not WeaponNativeKnife or type(snapshot.value.knifeEquipment)~='table' then return failure('native_knife_components_not_ready') end
+        knife,reason=WeaponNativeKnife.Assigned(snapshot.value.knifeEquipment,catalog.weapons.melee_knife,plan.identity)
+        if knife==nil then return failure(reason) end
+        if knife==false then knife=nil end
+    elseif snapshot.value.knifeEquipment~=nil then return failure('native_knife_gate_changed') end
+    local throwableSnapshot,throwable
+    if WeaponNativeThrowablePolicy and WeaponNativeThrowablePolicy.Enabled() then
+        if not WeaponNativeThrowableItem or type(snapshot.value.throwableEquipment)~='table'
+            or registry.limits.ammo_tomahawk_regular~=1 then return failure('native_throwable_components_not_ready') end
+        throwableSnapshot=copy(snapshot.value.throwableEquipment)
+        if throwableSnapshot.revision~=snapshot.value.revision or type(throwableSnapshot.pools)~='table'
+            or type(snapshot.value.pools)~='table' then return failure('native_throwable_ledger_changed') end
+        for id in pairs(registry.limits) do
+            if throwableSnapshot.pools[id]~=snapshot.value.pools[id] then return failure('native_throwable_ledger_changed') end
+        end
+        throwable,reason=WeaponNativeThrowableItem.Assigned(throwableSnapshot,catalog,plan.identity,registry.limits)
+        if throwable==nil then return failure(reason) end
+    elseif snapshot.value.throwableEquipment~=nil then return failure('native_throwable_gate_changed') end
+    local utilitySnapshot,utility
+    if type(GetConvarInt)=='function' and GetConvarInt('feather_native_utility',0)==1 then
+        if not WeaponNativeUtilityItem or type(snapshot.value.utilityEquipment)~='table' then return failure('native_utility_components_not_ready') end
+        utilitySnapshot=copy(snapshot.value.utilityEquipment)
+        utility,reason=WeaponNativeUtilityItem.AssignedSnapshot(utilitySnapshot,catalog,plan.identity)
+        if utility==nil then return failure(reason) end
+        if utility==false then utility=nil end
+    elseif snapshot.value.utilityEquipment~=nil then return failure('native_utility_gate_changed') end
     local opened
     opened,reason=runtime.Open({source=source,characterId=session.characterId,sessionId=session.sessionId},
         snapshot.value,registry.limits,epoch)
     if not opened then return failure(reason) end
     loadouts[source]={sessionId=session.sessionId,characterId=session.characterId,epoch=epoch,registry=registry,catalog=catalog,
-        lease=WeaponCharacterAmmoLoadoutLease.New(plan),equipment=copy(snapshot.value.equipment)}
+        lease=WeaponCharacterAmmoLoadoutLease.New(plan,knife,melee,throwableSnapshot,registry.limits,utilitySnapshot),equipment=copy(snapshot.value.equipment),
+        throwableSnapshot=throwable and copy(throwableSnapshot) or nil}
     local items={}
     for _,item in ipairs(plan.items) do items[#items+1]={itemId=item.itemInstanceId,revision=item.itemRevision} end
+    if knife then items[#items+1]={itemId=knife.row.id,revision=knife.row.revision} end
+    if melee then for _,entry in ipairs(melee.items) do items[#items+1]={itemId=entry.row.id,revision=entry.row.revision} end end
+    if throwable then items[#items+1]={itemId=throwable.row.id,revision=throwable.row.revision} end
+    if utility then for _,tool in ipairs(utility.items or {utility}) do items[#items+1]={itemId=tool.row.id,revision=tool.row.revision} end end
     recoverySnapshots[source]={characterId=session.characterId,sessionId=session.sessionId,epoch=epoch,
         policy='last_durable_snapshot',ledgerRevision=snapshot.value.revision,itemRevisions=items,
         prior=copy(retirements[session.characterId]),economicReplay=false,nativeAdoption=false}
-    return {ok=true,value={runtime=opened,creation=plan,names=copy(registry.names),limits=copy(registry.limits)}}
+    return {ok=true,value={runtime=opened,creation=plan,knife=copy(knife),melee=copy(melee),
+        throwable=throwable and copy(throwableSnapshot) or nil,utility=copy(utility),names=copy(registry.names),limits=copy(registry.limits)}}
 end
 function S.ReadRecoveryStatus(source)
     local value=recoverySnapshots[source]
@@ -251,6 +294,10 @@ local function commit(request,method)
     local ok,result=pcall(function() return exports['feather-inventory'][method](exports['feather-inventory'],request.context,request.spec) end)
     if bound then bound.providerOutcome=ok and type(result)=='table' and (result.ok==true and 'confirmed' or result.ok==false and 'refused') or 'uncertain' end
     local value,reason=runtime.Complete(request.context,ok and result or {ok=false})
+    if value and bound and loadouts[request.context.actorSource]==bound and bound.epoch==request.context.runtimeEpoch then
+        if method=='ReconcileNativeThrowablePickup' then bound.nativePickupCredit=nil
+        elseif type(result.value.nativePickupSpend)=='table' then bound.nativePickupCredit=copy(result.value.nativePickupSpend) end
+    end
     return value and {ok=true,value=value} or failure(reason)
 end
 function S.Observe(source,report)
@@ -260,8 +307,33 @@ function S.Observe(source,report)
     if request.unchanged then return {ok=true,value=request.value} end
     return commit(request,'ObserveCharacterAmmunition')
 end
+function S.NativePickup(source,report)
+    if not enabled() or Config.DevMode~=true or Config.NativeAlphaRuntime~=true
+        or type(GetConvarInt)~='function' or GetConvarInt('feather_native_throwable_pickup',0)~=1
+        or not WeaponNativeThrowablePolicy or not WeaponNativeThrowablePolicy.Enabled()
+        or not WeaponNativeThrowableRecovery then return failure('native_pickup_disabled') end
+    report=copy(report)
+    local bound=loadouts[source]
+    if not bound or not bound.nativePickupCredit or not bound.throwableSnapshot then return failure('native_pickup_credit_required') end
+    local checked=S.ValidateLoadout(source)
+    if not checked.ok or loadouts[source]~=bound then return failure('native_pickup_loadout_changed') end
+    local live=runtime.Get(source)
+    if not live or type(report)~='table' then return failure('native_pickup_runtime_required') end
+    local snapshot=copy(bound.throwableSnapshot)
+    snapshot.revision=live.revision; snapshot.pools=copy(live.pools)
+    report.phase='active' -- the server runtime, not a client phase flag, is authority
+    local plan,why=WeaponNativeThrowableRecovery.NativePickupPlan(bound.nativePickupCredit,live,snapshot,
+        report,bound.catalog,bound.registry.limits)
+    if not plan then return failure(why) end
+    local request; request,why=runtime.PrepareNativePickup(source,report,plan)
+    if not request then return failure(why) end
+    return commit(request,'ReconcileNativeThrowablePickup')
+end
 function S.Transfer(source,report,id,amount,operationId)
     if not enabled() then return failure('character_ammunition_disabled') end
+    -- Throwable quantities require retiring/rebuilding the owned native carrier;
+    -- never trust the client's matching refusal as the economic boundary.
+    if id=='ammo_tomahawk_regular' then return failure('throwable_transfer_requires_rebuild') end
     if loadouts[source] then
         local live=runtime.Get(source)
         if not live or type(report)~='table' or report.epoch~=live.epoch
@@ -301,7 +373,9 @@ local function deathPlan(source,report)
     end
     local wear=WeaponCharacterLifecycleWear.DeathReport(report.deathWear)
     if not wear or wear.epoch~=live.epoch or wear.medicalRevision~=medical.revision then return nil,'death_wear_revision_required' end
-    local called,snapshot=pcall(function() return exports['feather-inventory']:ReadNativeEquipmentTransition(context,nil) end)
+    local called,snapshot=pcall(function()
+        return exports['feather-inventory']:ReadNativeEquipmentTransition(context,nil,bound.registry.limits)
+    end)
     if not called or not snapshot or not snapshot.ok or loadouts[source]~=bound then return nil,'death_wear_snapshot_unavailable' end
     local valid=bound.lease.Validate(snapshot.value,bound.catalog,bound.registry)
     if not valid then return nil,'death_wear_loadout_changed' end
@@ -315,11 +389,15 @@ local function deathPlan(source,report)
 end
 function S.CheckpointAndSeal(source,report)
     if not enabled() then return failure('character_ammunition_disabled') end
+    local function refused(code)
+        print(('[WeaponNativeCheckpointAndSeal] REFUSED source=%s code=%s'):format(tostring(source),tostring(code)))
+        return failure(code)
+    end
     local wear,reason=deathPlan(source,report)
-    if reason then return failure(reason) end
+    if reason then return refused(reason) end
     local request
     request,reason=runtime.PrepareFinalObservation(source,report,wear)
-    if not request then return failure(reason) end
+    if not request then return refused(reason) end
     if request.unchanged then return {ok=true,value=request.value} end
     -- Final reductions must commit before the old epoch is eligible for reset.
     -- Complete seals in the same pure transition that accepts the DB result.
@@ -375,6 +453,12 @@ end
 exports('ValidateCharacterAmmoRuntimeOperation',function(context,operation,spec)
     if GetInvokingResource()~='feather-inventory' or not enabled()
         or runtime.IsOperationCurrent(context,operation,spec)~=true then return false end
+    if operation=='pickup' then
+        if Config.DevMode~=true or Config.NativeAlphaRuntime~=true or type(GetConvarInt)~='function'
+            or GetConvarInt('feather_native_throwable_pickup',0)~=1 then return false end
+        local medical=readMedical(context.actorSource,context)
+        return medical and medical.lifeState=='alive' and runtime.IsOperationCurrent(context,operation,spec)==true or false
+    end
     if type(spec)=='table' and spec.finalWear~=nil then
         if operation~='observe' or Config.NativeAlphaLifecycleWearEnabled~=true or Config.DevMode~=true
             or Config.NativeAlphaRuntime~=true or not WeaponNativeEnrollment.Allows(Config,context.characterId) then return false end

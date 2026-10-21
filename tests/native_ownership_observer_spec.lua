@@ -8,7 +8,7 @@ WeaponResult={Ok=function(value) return {ok=true,value=value} end,
 WeaponErrors={ITEM_INVALID='invalid'}
 local metadata={weaponDefinitionId='repeater_carbine',serialNumber='SERIAL',
  maintenance={dirt=0.2},attachments={{definitionId='carbine_wide_sight',slot='sight'}}}
-InventoryAdapter={ResolveWeaponDefinitionId=function(id) return id==39 and 'repeater_carbine' or nil end,
+WeaponNativeOwnershipReader={ResolveWeaponDefinitionId=function(id) return id==39 and 'repeater_carbine' or nil end,
  GetInstance=function() return {ok=true,value={metadata=metadata,metadataRevision=12}} end,
  GetCharacterInventory=function() return {ok=true,value={id=2}} end}
 CoreAdapter={NormalizeCharacterId=function(value) return value end}
@@ -37,7 +37,6 @@ assert(result.value.serialNumber=='SERIAL' and result.value.revision==13)
 assert(metadata.maintenance.dirt==0.2 and metadata.attachments[1].definitionId=='carbine_wide_sight')
 assert(#records==#emitted and registered['Feather:Inventory:ItemMoved'])
 Config.CharacterAmmunitionEnabled=true; Config.CharacterAmmoTransportEnabled=true
-WeaponNativeOwnershipReader=InventoryAdapter
 InventoryAdapter=setmetatable({},{__index=function() error('native observer may not use legacy provider') end})
 local later=move(2,8,'storage')
 assert(later.ok and later.value.revision==13 and later.value.observedRevision==12

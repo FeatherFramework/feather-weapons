@@ -15,7 +15,7 @@ local function scenario(change,disable,timeout)
         Identity=function() return {characterId=jane,sessionId=session} end,
         Read=function() return {ok=ready,value={characterId=jane,sessionId=session,ped=1}} end,
     }
-    dofile('client/jane_ammunition_zero.lua')
+    dofile('tests/archive/client/jane_ammunition_zero.lua')
     local arm=events['feather-weapons:jane-zero:login-arm']
     local activate=handlers['feather-character:client:runtime-ready.v1']
     source=1; arm('old'); activate({characterId=jane}); assert(#threads==0)

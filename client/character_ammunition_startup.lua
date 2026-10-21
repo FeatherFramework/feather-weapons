@@ -1,4 +1,4 @@
--- Development-only normal-manifest host. Disabled defaults keep legacy startup.
+-- Native-only scoped host. Disabled or incomplete configuration never selects another runtime.
 CreateThread(function()
     if Config.CharacterAmmunitionEnabled~=true or Config.CharacterAmmoTransportEnabled~=true then return end
     if Config.DevMode~=true or Config.NativeAlphaRuntime~=true

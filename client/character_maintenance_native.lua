@@ -275,9 +275,17 @@ end
 -- Independent copy identity. This is not a model scan/adoption policy: only a
 -- GUID captured from the exact created entity may authorize its representation.
 WeaponNativeGuidIdentity={}
-function WeaponNativeGuidIdentity.New(api)
+function WeaponNativeGuidIdentity.New(api,observationPoints)
     local bindings=setmetatable({},{__mode='k'})
     local points={0,1,2,3,9,10}
+    if observationPoints~=nil then
+        assert(type(observationPoints)=='table' and #observationPoints>0 and #observationPoints<=32,'Bounded native identity points required')
+        points={}; local seen={}
+        for _,point in ipairs(observationPoints) do
+            assert(type(point)=='number' and point%1==0 and point>=0 and point<=31 and not seen[point],'Unique native identity points required')
+            points[#points+1]=point; seen[point]=true
+        end
+    end
     local function key(value)
         return type(value)=='string' and #value==32 and value:match('^[0-9a-f]+$')
             and value~=string.rep('0',32)
@@ -334,6 +342,10 @@ function WeaponNativeGuidIdentity.New(api)
         return bound.entity
     end
     function T.Has(record) return bindings[record]~=nil end
+    function T.MatchesCaptured(record,identity,guid)
+        local bound=bindings[record]
+        return bound~=nil and matches(bound,record,identity) and key(guid)~=nil and guid==bound.guid
+    end
     return T
 end
 local fields={'degradation','permanentDegradation','damage','dirt','soot'}

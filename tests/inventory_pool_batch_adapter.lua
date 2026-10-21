@@ -1,4 +1,4 @@
-local file = assert(io.open('server/adapters/feather_inventory.lua', 'r'))
+local file = assert(io.open('tests/archive/server/adapters/feather_inventory.lua', 'r'))
 local source = file:read('*a') file:close()
 local body = assert(source:match('(function FeatherInventoryProvider.Transaction%([%s%S]-)\nfunction FeatherInventoryProvider.MutateWeaponMetadataBatch'))
 local items = { [86] = { id = 86, inventoryId = 1, metadataRevision = 1, metadata = { total = 8 } },

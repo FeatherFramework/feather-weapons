@@ -1,4 +1,4 @@
-local file = assert(io.open('client/main.lua', 'r'))
+local file = assert(io.open('tests/archive/client/main.lua', 'r'))
 local source = file:read('*a')
 file:close()
 local helper = assert(source:match('(local function AddWeaponElement%([%s%S]-)\nlocal function OpenWeaponPage'))

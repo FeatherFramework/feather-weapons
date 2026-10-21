@@ -36,7 +36,7 @@ end}
 exports=setmetatable({['feather-inventory']={GetNativeIssuanceContract=function() return {contractVersion=1,ready=true} end,
  IssueNativeFirearmOnce=function(_,ctx,spec)
  assert(registered.ValidateNativeIssuance(ctx,spec))
- local forged=clone(spec); forged.metadata.ammo.loaded=99
+ local forged=clone(spec); forged.metadata.serialNumber='forged'
  assert(not registered.ValidateNativeIssuance(ctx,forged),'ticket binds exact immutable metadata')
  if receipt then
   if receipt.fingerprint~=spec.fingerprint then return WeaponResult.Error('conflict','payload changed') end
@@ -45,7 +45,7 @@ exports=setmetatable({['feather-inventory']={GetNativeIssuanceContract=function(
  writes=writes+1
  local v={itemInstanceId=200,inventoryId=2,revision=0,characterId='Jane',definitionId=spec.definitionId,
   itemName=spec.itemName,serialNumber=spec.metadata.serialNumber,metadata=clone(spec.metadata)}
- assert(WeaponCharacterAmmoItem.Validate(v.metadata,WeaponDefinitionCatalog.weapons.revolver_cattleman))
+ assert(WeaponMetadata.Validate(v.metadata,WeaponDefinitionCatalog.weapons[spec.definitionId]).ok)
  receipt={fingerprint=spec.fingerprint,value=v}
  if lost then error('reply lost after durable commit') end
  return WeaponResult.Ok(clone(v))
@@ -57,6 +57,12 @@ local function issue(overrides,resource)
  return IssuanceService.Issue({},req,resource or 'feather-weapons')
 end
 enabled=0; assert(not issue().ok and writes==0)
+enabled=1
+Config.CharacterAmmunitionEnabled=false; Config.CharacterAmmoTransportEnabled=false
+InventoryAdapter=setmetatable({}, {__index=function() error('obsolete issuer must never be used') end})
+assert(not issue().ok and writes==0,'flags off must refuse rather than create an old-format weapon')
+Config.CharacterAmmunitionEnabled=true; assert(not issue().ok and writes==0)
+Config.CharacterAmmoTransportEnabled=true
 enabled=1; stopping=true; assert(not issue().ok and writes==0); stopping=false
 current=false; assert(not issue().ok); current=true
 assert(not issue(nil,'untrusted').ok)
@@ -71,3 +77,87 @@ readFails=false; assert(issue().ok and writes==1 and recorded==1)
 assert(not issue({provenance={reference='changed'}}).ok and writes==1)
 caller='untrusted'; assert(not registered.ValidateNativeIssuance({},{}))
 print('Native issuance PASS (real metadata validation, gates, immutable ticket, lost-reply durable replay, provenance recovery, payload conflict; mocked Inventory)')
+dofile('shared/native_knife.lua')
+caller='feather-inventory'
+Config.NativeAlphaLifecycleWearEnabled=true
+enabled=0
+assert(not issue({definitionId='melee_knife',requestId='knife-v1'}).ok)
+enabled=1
+assert(not issue({definitionId='melee_knife'}).ok,'firearm request key cannot deliver a knife')
+receipt=nil; recorded=0; local before=writes
+local knife=issue({definitionId='melee_knife',requestId='knife-v1'})
+assert(knife.ok and knife.value.metadata.ammo==nil and knife.value.metadata.maintenance==nil and writes==before+1)
+assert(knife.value.itemName=='weapon_melee_knife' and recorded==1)
+local replay=issue({definitionId='melee_knife',requestId='knife-v1'})
+assert(replay.ok and replay.value.replayed and writes==before+1 and recorded==1)
+assert(not issue({definitionId='melee_machete',requestId='other'}).ok,'no broad melee admission')
+assert(not issue({definitionId='melee_knife',requestId='knife-v1',ammo={}}).ok)
+Config.NativeAlphaLifecycleWearEnabled=false
+assert(not issue({definitionId='melee_knife',requestId='knife-v1'}).ok,'incomplete knife config refuses even replay')
+print('knife issuance PASS (real ammo-free metadata, default-off, durable request replay, definition conflict, single provenance; mocked Inventory)')
+dofile('shared/native_melee_catalog.lua')
+Config.NativeAlphaLifecycleWearEnabled=true
+for _,name in ipairs({'melee_knife','melee_machete','melee_hammer','melee_cleaver','melee_hatchet'}) do
+ receipt=nil; recorded=0; local count=writes
+ local issued=issue({definitionId=name,requestId='melee-'..name})
+ assert(issued.ok and writes==count+1 and issued.value.metadata.weaponDefinitionId==name)
+ assert(issued.value.metadata.ammo==nil and issued.value.metadata.maintenance==nil)
+ local replayed=issue({definitionId=name,requestId='melee-'..name})
+ assert(replayed.ok and replayed.value.replayed and writes==count+1 and recorded==1)
+ assert(not issue({definitionId=name,requestId='melee-'..name,ammo={}}).ok)
+end
+enabled=0; assert(not issue({definitionId='melee_hatchet',requestId='off'}).ok)
+print('five-model melee issuance PASS (canonical ammo-free items, receipt replay, pristine-only and gate refusal)')
+for _,path in ipairs({'shared/character_ammunition_catalog.lua','shared/character_ammunition_policy.lua',
+ 'shared/native_throwable_policy.lua','shared/native_throwable_item.lua'}) do dofile(path) end
+enabled=0; assert(not issue({definitionId='throwable_tomahawk',requestId='tom-v1'}).ok)
+enabled=1; receipt=nil; recorded=0; local count=writes
+local tom=issue({definitionId='throwable_tomahawk',requestId='tom-v1'})
+assert(tom.ok and writes==count+1 and tom.value.metadata.ammo.ownership=='character')
+assert(tom.value.metadata.ammo.type=='ammo_tomahawk_regular' and tom.value.metadata.ammo.quantity==nil
+ and tom.value.metadata.maintenance==nil)
+assert(issue({definitionId='throwable_tomahawk',requestId='tom-v1'}).value.replayed and writes==count+1)
+assert(not issue({definitionId='throwable_tomahawk_ancient',requestId='ancient-v1'}).ok and writes==count+1)
+assert(not issue({definitionId='throwable_tomahawk',requestId='tom-v1',loadedAmmo=1}).ok)
+enabled=0; assert(not issue({definitionId='throwable_tomahawk',requestId='tom-v1'}).ok)
+print('Tomahawk issuance PASS: exact gated regular carrier, canonical receipt replay, no native/equipment/ammo grant, no variants')
+dofile('shared/native_utility_catalog.lua'); dofile('shared/native_utility_item.lua')
+assert(not issue({definitionId='utility_lasso',requestId='lasso-v1'}).ok,'utility defaults off')
+enabled=1; receipt=nil; recorded=0; local lassoBefore=writes
+lost=true
+assert(not issue({definitionId='utility_lasso',requestId='lasso-v1'}).ok and writes==lassoBefore+1 and recorded==0,
+ 'lost utility issuance reply cannot be treated as a missing item')
+local originalSerial=receipt.value.serialNumber
+assert(receipt.fingerprint:find('native-utility-v1',1,true))
+lost=false
+local lasso=issue({definitionId='utility_lasso',requestId='lasso-v1'})
+assert(lasso.ok and lasso.value.replayed and writes==lassoBefore+1 and recorded==1)
+assert(lasso.value.itemName=='weapon_lasso' and lasso.value.itemInstanceId==200
+ and lasso.value.serialNumber==originalSerial and lasso.value.metadata.ammo==nil
+ and lasso.value.metadata.maintenance==nil)
+assert(issue({definitionId='utility_lasso',requestId='lasso-v1'}).ok and writes==lassoBefore+1 and recorded==1)
+assert(not issue({definitionId='utility_lasso',requestId='lasso-v1',provenance={reference='changed'}}).ok)
+assert(not issue({definitionId='utility_camera',requestId='camera-v1'}).ok)
+assert(not issue({definitionId='utility_lasso',requestId='lasso-v1',ammo={}}).ok)
+enabled=0; assert(not issue({definitionId='utility_lasso',requestId='lasso-v1'}).ok and writes==lassoBefore+1)
+print('lasso issuance PASS: exact default-off utility policy, lost-reply replay preserves item/serial/provenance, no ammo or variant admission; mocked Inventory')
+dofile('shared/native_lasso_policy.lua')
+local reinforcedGate=0
+GetConvarInt=function(name)
+ if name=='feather_native_lasso_reinforced' then return reinforcedGate end
+ return enabled
+end
+enabled=1; receipt=nil; recorded=0; local reinforcedBefore=writes
+assert(not issue({definitionId='utility_lasso_reinforced',requestId='reinforced-v1'}).ok and writes==reinforcedBefore)
+reinforcedGate=1; lost=true
+assert(not issue({definitionId='utility_lasso_reinforced',requestId='reinforced-v1'}).ok and writes==reinforcedBefore+1)
+local reinforcedSerial=receipt.value.serialNumber
+lost=false
+local reinforced=issue({definitionId='utility_lasso_reinforced',requestId='reinforced-v1'})
+assert(reinforced.ok and reinforced.value.replayed and writes==reinforcedBefore+1 and recorded==1)
+assert(reinforced.value.itemName=='weapon_lasso_reinforced' and reinforced.value.serialNumber==reinforcedSerial
+ and reinforced.value.metadata.ammo==nil and reinforced.value.metadata.maintenance==nil)
+assert(not issue({definitionId='utility_lasso_reinforced',requestId='reinforced-v1',provenance={reference='changed'}}).ok)
+reinforcedGate=0
+assert(not issue({definitionId='utility_lasso_reinforced',requestId='reinforced-v1'}).ok and writes==reinforcedBefore+1)
+print('reinforced lasso issuance PASS: independent gate, exact item/serial lost-reply replay and no new economic grants; mocked Inventory')

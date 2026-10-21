@@ -25,7 +25,7 @@ local function scenario(nonzero,foreign,removeFails)
             removed=removed+1; return not removeFails
         end}
     end}
-    dofile('client/jane_ammunition_zero.lua')
+    dofile('tests/archive/client/jane_ammunition_zero.lua')
     local plan={identity={characterId=jane,sessionId='s',epoch='e'},items={{itemInstanceId=112,itemRevision=1,
         definitionId='revolver_cattleman',point=2}}}
     source=1; begin(plan); assert(created==0,'client-origin begin forbidden')

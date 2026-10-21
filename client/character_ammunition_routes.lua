@@ -131,9 +131,13 @@ function WeaponCharacterAmmoClientBindings.New(enforceInput)
 end
 -- Assembles the concrete adapters, but still does not call Start. The caller
 -- must provide owned creation and explicitly own the activation lifecycle.
-function WeaponCharacterAmmoClientBindings.Bootstrap(creation,owned)
+function WeaponCharacterAmmoClientBindings.Bootstrap(creation,owned,knife,melee,throwable,utility)
     local api,enforce=WeaponCharacterAmmoClientBindings.NativeAdapters(creation,owned)
     if not api then return nil,enforce end
+    api.knife=knife -- supplied only by the same concrete native owner
+    api.melee=melee
+    api.throwable=throwable
+    api.utility=utility
     local bindings,reason=WeaponCharacterAmmoClientBindings.New(enforce)
     if not bindings then return nil,reason end
     return WeaponCharacterAmmoClientBootstrap.New(api,bindings)

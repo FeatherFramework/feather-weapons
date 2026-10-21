@@ -18,8 +18,8 @@ for _, file in ipairs({ 'config.lua', 'shared/constants.lua', 'shared/errors.lua
     'shared/definitions/ammunition.lua', 'shared/definitions/attachments.lua',
     'shared/definitions/weapons.lua', 'shared/validation.lua',
     'server/services/definition_registry.lua', 'server/services/metadata.lua',
-    'server/services/runtime.lua', 'server/services/equip.lua', 'server/services/ammo.lua',
-    'server/services/reconciliation.lua' }) do
+    'tests/archive/server/services/runtime.lua', 'tests/archive/server/services/equip.lua', 'tests/archive/server/services/ammo.lua',
+    'tests/archive/server/services/reconciliation.lua' }) do
     dofile(file)
 end
 Config.DevMode = false

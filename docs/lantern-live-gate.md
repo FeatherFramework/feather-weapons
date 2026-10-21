@@ -1,5 +1,16 @@
 # Lantern status: Davy supported, Standard retired
 
+2026-10-20 native-only port: original Davy lighting/wheel/switching evidence below
+is reusable. Strict Davy policy, two-utility snapshot/lease/owner composition and
+conditional transitions are implemented under default0 feather_native_davy_lantern.
+Existing item/native names and zero ammunition are preserved. Automated tests pass;
+scoped new-port live ownership gates passed on 2026-10-20: issued173rev0/replay,
+coexistence with reinforced172, exact removal/menu re-equip, prepared restart,
+death/doctor and normal new-session restoration with unchanged observer balances
+and wear. See native-davy-lantern-alpha-gate.md; no repeat issuance/test requested.
+Historical reconciliation/grant instructions below are not native-only port
+instructions: do not clear saved assignments or adopt/remove untracked copies.
+
 Standard Lantern (utility_lantern / WEAPON_MELEE_LANTERN) failed wheel testing,
 even with Lasso unequipped, despite matching metadata and native ownership.
 It is removed from the active catalog and fresh-install seeds. The old add_lantern.sql

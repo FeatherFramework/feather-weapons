@@ -6,7 +6,7 @@ Citizen = { InvokeNative = function(native, _, hash, amount)
     assert(native == 0xB6CFEC32E3742779)
     pools[hash] = pools[hash] - amount
 end }
-dofile('client/native_weapon_coordinator.lua')
+dofile('tests/archive/client/native_weapon_coordinator.lua')
 local catalog = {
     weapons = { revolver = { ammunitionTypes = { 'regular', 'express' } },
         knives = { ammunitionTypes = { 'poison' } } },

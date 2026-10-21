@@ -52,7 +52,7 @@ WeaponCharacterAmmoCreationNative={New=function(_,current)
  finish=function() return true end,remove=function() removed=removed+1; return true end}
 end}
 TriggerServerEvent=function(_,kind,report) acks[#acks+1]={kind=kind,report=report} end
-dofile('client/jane_ammunition_economic.lua')
+dofile('tests/archive/client/jane_ammunition_economic.lua')
 local reply=events['feather-weapons:jane-economic:reply']
 local function baseline(revision,amount,phase)
  local pools={}; for id in pairs(registry.limits) do pools[id]=id=='ammo_revolver_regular' and amount or 0 end

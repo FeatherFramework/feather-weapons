@@ -41,6 +41,23 @@ function WeaponCharacterAmmoClient.New()
     end
     function C.Prepare(currentPed,pools,worldReady) return prepare(currentPed,pools,worldReady,false) end
     function C.PrepareFinal(currentPed,pools,worldReady) return prepare(currentPed,pools,worldReady,true) end
+    function C.PrepareNativePickup(currentPed,pools,worldReady)
+        if phase~='active' then return nil,'pickup_not_active' end
+        if currentPed~=ped then phase='suspended'; pending=nil; return nil,'ped_changed' end
+        if worldReady~=true or pending then return nil,'pickup_world_or_request_pending' end
+        local observed=WeaponCharacterAmmunition.Validate(pools,limits)
+        if not observed or limits.ammo_tomahawk_regular~=1 or baseline.pools.ammo_tomahawk_regular~=0
+            or observed.ammo_tomahawk_regular~=1 then return nil,'pickup_one_unit_increase_required' end
+        for id in pairs(limits) do
+            if pools[id]==nil or (id~='ammo_tomahawk_regular' and observed[id]~=baseline.pools[id]) then
+                return nil,'pickup_other_pool_changed'
+            end
+        end
+        sequence=sequence+1
+        local report=copy(baseline); report.pools=copy(observed); report.phase=nil
+        pending={id=sequence,kind='pickup',report=report,expected={revision=baseline.revision+1,pools=copy(observed)}}
+        return copy(pending)
+    end
     function C.PrepareTransfer(currentPed,pools,worldReady,ammunitionId,amount,operationId)
         if phase~='active' then return nil,'not_active' end
         if currentPed~=ped then phase='suspended'; pending=nil; return nil,'ped_changed' end
