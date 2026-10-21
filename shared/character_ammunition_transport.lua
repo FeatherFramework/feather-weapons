@@ -2,7 +2,8 @@
 -- No baseline/open endpoint. Transfers require an already active runtime.
 WeaponCharacterAmmoTransport={}
 local function valid(kind,id,report)
-    if kind~='restore' and kind~='observe' and kind~='seal' and kind~='cleanup' and kind~='transfer' then return false end
+    if kind~='restore' and kind~='observe' and kind~='seal' and kind~='cleanup' and kind~='transfer' and kind~='pickup' then return false end
+    if kind=='pickup' and type(report)=='table' and (report.transfer~=nil or report.nativePickupPlan~=nil) then return false end
     if type(report)=='table' and report.deathWear~=nil then
         if kind~='seal' or not WeaponCharacterLifecycleWear.DeathReport(report.deathWear) then return false end
     end
@@ -28,7 +29,7 @@ local function valid(kind,id,report)
     return count>0
 end
 function WeaponCharacterAmmoTransport.Server(api)
-    local methods={restore='ConfirmRestore',observe='Observe',seal='CheckpointAndSeal',cleanup='ConfirmCleanup',transfer='Transfer'}
+    local methods={restore='ConfirmRestore',observe='Observe',seal='CheckpointAndSeal',cleanup='ConfirmCleanup',transfer='Transfer',pickup='NativePickup'}
     api.register(function(source,kind,id,report)
         if api.enabled()~=true or not valid(kind,id,report) then return end
         local epoch=report.epoch

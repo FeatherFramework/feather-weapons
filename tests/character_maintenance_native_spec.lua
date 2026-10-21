@@ -39,10 +39,17 @@ GetWeaponDegradation=function() return state.degradation end
 GetWeaponPermanentDegradation=function() return state.permanentDegradation end
 GetWeaponDamage=function() return state.damage end
 GetWeaponDirt=function() return state.dirt end; GetWeaponSoot=function() return state.soot end
-SetWeaponDegradation=function(_,v) state.degradation=v end
-SetWeaponDamage=function(_,v) state.damage=v end
-SetWeaponDirt=function(_,v) state.dirt=v end; SetWeaponSoot=function(_,v) state.soot=v end
+SetWeaponDegradation=function(_,v) assert(math.type(v)=='float'); state.degradation=v end
+SetWeaponDamage=function(_,v) assert(math.type(v)=='float'); state.damage=v end
+SetWeaponDirt=function(_,v) assert(math.type(v)=='float'); state.dirt=v end
+SetWeaponSoot=function(_,v) assert(math.type(v)=='float'); state.soot=v end
 local scoped=WeaponCharacterMaintenanceNative.Scoped(1,function() return true end)
 assert(scoped.Apply(record,{},target))
+-- Whole-number JSON/default/fixture values must cross the concrete native bridge
+-- as floats, not merely compare equal numerically in a Lua-only adapter mock.
+state={degradation=0.0,permanentDegradation=0.0,damage=0.0,dirt=0.2,soot=0.0}
+assert(scoped.Apply(record,{},{degradation=1,permanentDegradation=0,damage=0,dirt=0.2,soot=0}))
+assert(state.degradation==1.0 and state.damage==0.0 and state.dirt==0.2)
+assert(scoped.Apply(record,{},{degradation=0,permanentDegradation=0,damage=0,dirt=0,soot=0}))
 entity=11; assert(not scoped.Read(record,{}),'same hash is not owned-copy authority')
 print('character_maintenance_native_spec PASS (exact entity, copy replacement/lifecycle refusal, permanent mismatch, independent readback; native mocks)')

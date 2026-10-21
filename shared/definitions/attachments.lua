@@ -492,7 +492,7 @@ for id,row in pairs(observed) do
 end
 local function scopedFlag(name)
     return Config and Config.DevMode==true and Config.NativeAlphaRuntime==true
-        and type(Config.NativeAlphaCharacterId)=='string' and Config.NativeAlphaCharacterId~=''
+        and WeaponNativeEnrollment.Validate(Config)~=nil
         and type(GetConvarInt)=='function' and GetConvarInt(name,0)==1
 end
 local function representativeEnabled() return scopedFlag('feather_native_representative_attachments') end

@@ -94,7 +94,7 @@ function WeaponCharacterAmmoMaterialization.Validate(plan,registry,baseline)
         end
         if next(item.attachments) then
             if not Config or Config.DevMode~=true or Config.NativeAlphaRuntime~=true
-                or plan.identity.characterId~=Config.NativeAlphaCharacterId or type(GetConvarInt)~='function'
+                or not WeaponNativeEnrollment.Allows(Config,plan.identity.characterId) or type(GetConvarInt)~='function'
                 or GetConvarInt('feather_native_saved_attachments',0)~=1 or GetConvarInt('feather_native_guid_ownership',0)~=1 then
                 return nil,'creation_customization_not_implemented'
             end

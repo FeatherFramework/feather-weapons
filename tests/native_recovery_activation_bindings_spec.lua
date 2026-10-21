@@ -1,3 +1,4 @@
+dofile('shared/constants.lua') -- shared enrollment dependency from normal manifest
 Config={CharacterAmmunitionEnabled=true,CharacterAmmoTransportEnabled=true,DevMode=true,NativeAlphaRuntime=true,NativeAlphaCharacterId='Jane'}
 dofile('shared/definitions/ammunition.lua'); dofile('shared/definitions/weapons.lua')
 dofile('shared/character_ammunition_catalog.lua'); dofile('shared/character_ammunition_policy.lua')

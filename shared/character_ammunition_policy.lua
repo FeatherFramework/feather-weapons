@@ -20,5 +20,13 @@ function WeaponCharacterAmmoPolicy.Limits()
     local copy={}; for id,cap in pairs(limits) do copy[id]=cap end; return copy
 end
 function WeaponCharacterAmmoPolicy.Build(catalog)
-    return WeaponCharacterAmmoCatalog.Build(catalog,WeaponCharacterAmmoPolicy.Limits())
+    local registry,why=WeaponCharacterAmmoCatalog.Build(catalog,WeaponCharacterAmmoPolicy.Limits())
+    if not registry then return nil,why end
+    if WeaponNativeThrowablePolicy and WeaponNativeThrowablePolicy.Enabled() then
+        local candidate
+        candidate,why=WeaponNativeThrowablePolicy.Preview(catalog,registry)
+        if not candidate then return nil,why end
+        return candidate.registry
+    end
+    return registry
 end

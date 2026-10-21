@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 
-const source = readFileSync(new URL('../client/main.lua', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../tests/archive/client/main.lua', import.meta.url), 'utf8');
 const start = source.indexOf('local function RestoreApprovedNativePair(');
 const end = source.indexOf('local function NativePairAvailable(', start);
 assert.ok(start >= 0 && end > start);

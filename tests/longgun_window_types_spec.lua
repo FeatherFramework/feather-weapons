@@ -28,7 +28,7 @@ FeatherGuidWeapons = {ResolveExisting = function(name) return {guid = name} end,
     SelectExistingAmmo = function(_, name, ammo) selected[name] = hashes[ammo]; return true end}
 FeatherNativeWeaponCoordinator = {RestorePoolTotals = function() totals[1], totals[2] = 8, 4 end}
 dofile('shared/ammunition_pools.lua')
-dofile('client/firearm_pools.lua')
+dofile('tests/archive/client/firearm_pools.lua')
 local catalog = {ammunition = {regular = {nativeAmmoName = 'regular'}, express = {nativeAmmoName = 'express'}}, weapons = {}}
 local slots = {}
 for slot, name in pairs({shoulder = 'carbine', back = 'lancaster'}) do

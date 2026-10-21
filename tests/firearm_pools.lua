@@ -12,7 +12,7 @@ FeatherGuidWeapons = { SelectExistingAmmo = function() return true end,
     ResolveExisting = function() return { guid = 'test' } end }
 FeatherNativeWeaponCoordinator = { RestorePoolTotals = function() end }
 dofile('shared/ammunition_pools.lua')
-dofile('client/firearm_pools.lua')
+dofile('tests/archive/client/firearm_pools.lua')
 local catalog = { weapons = { gun = { family = 'revolver', capacity = 6,
     ammunitionTypes = { 'regular', 'express' } } },
     ammunition = { regular = { nativeAmmoName = 'regular' }, express = { nativeAmmoName = 'express' } } }

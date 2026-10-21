@@ -5,29 +5,6 @@ local function Trusted(resource)
         and ((Config.Ownership or {}).trustedResources or {})[resource] == true
 end
 
-local function Authorize(context, operation, item)
-    local settings = (Config.Ownership or {}).authorization or {}
-    if settings.enabled ~= true then return WeaponResult.Ok(true, context.correlationId) end
-    local action = operation == 'hold' and settings.holdAction or settings.releaseAction
-    if not context.actorSource or type(action) ~= 'string' or action == '' then
-        return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID,
-            'Evidence authorization is not configured', nil, context.correlationId)
-    end
-    local ok, result = pcall(function()
-        return exports['feather-core']:Authorize(action, {
-            source = context.actorSource, correlationId = context.correlationId,
-            subject = { operation = operation, itemInstanceId = item.id,
-                serialNumber = item.metadata.serialNumber }
-        })
-    end)
-    if not ok or type(result) ~= 'table' or not result.ok
-        or type(result.value) ~= 'table' or result.value.allowed ~= true then
-        return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID,
-            'This character is not authorized for evidence operations', nil, context.correlationId)
-    end
-    return WeaponResult.Ok(true, context.correlationId)
-end
-
 function WeaponEvidenceService.SetHold(context, request, invokingResource, held)
     context = type(context) == 'table' and context or {}
     request = type(request) == 'table' and request or {}
@@ -41,67 +18,14 @@ function WeaponEvidenceService.SetHold(context, request, invokingResource, held)
         return WeaponResult.Error(WeaponErrors.ITEM_INVALID,
             'Character, item instance, and expected serial are required', nil, context.correlationId)
     end
-    if Config.CharacterAmmunitionEnabled==true or Config.CharacterAmmoTransportEnabled==true then
-        if WeaponEvidenceService.NativeChange then
-            local result=WeaponEvidenceService.NativeChange(context,request,invokingResource,held)
-            result.correlationId=context.correlationId
-            return result
-        end
-        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
-            'Evidence mutation is not available on the native host; no change was requested',
-            {reason='native_evidence_not_implemented',operation=held and 'hold' or 'release'},context.correlationId)
+    if WeaponEvidenceService.NativeChange then
+        local result=WeaponEvidenceService.NativeChange(context,request,invokingResource,held)
+        result.correlationId=context.correlationId
+        return result
     end
-    if WeaponRuntime.FindLeaseByItem(itemId) then
-        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
-            'Unequip the weapon before changing its evidence state', nil, context.correlationId)
-    end
-    context.characterId, context.resource = characterId, invokingResource
-    context.reason = held and 'evidence_hold' or 'evidence_release'
-    local committed = InventoryAdapter.Transaction(context, function(tx)
-        local item = tx:GetItemForUpdate(itemId)
-        if not item then return WeaponResult.Error(WeaponErrors.ITEM_NOT_OWNED,
-            'Weapon is not owned by the target character', nil, context.correlationId) end
-        local definition = DefinitionRegistry.Get('weapon', item.metadata and item.metadata.weaponDefinitionId)
-        if not definition.ok then return definition end
-        local valid = WeaponMetadata.Validate(item.metadata, definition.value, context.correlationId)
-        if not valid.ok then return valid end
-        if item.metadata.serialNumber ~= serial then
-            return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
-                'Weapon serial changed before evidence mutation', nil, context.correlationId)
-        end
-        if item.metadata.flags.evidence == held then
-            return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
-                held and 'Weapon is already held as evidence' or 'Weapon is not held as evidence',
-                nil, context.correlationId)
-        end
-        local authorized = Authorize(context, held and 'hold' or 'release', item)
-        if not authorized.ok then return authorized end
-        local metadata = json.decode(json.encode(item.metadata))
-        metadata.flags.evidence = held
-        if not tx:SetMetadata(item.id, metadata, item.metadataRevision) then
-            return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
-                'Weapon metadata changed during evidence mutation', nil, context.correlationId)
-        end
-        return { item = item, metadata = metadata, definitionId = definition.value.id }
-    end)
-    if not committed.ok then return committed end
-    local value = committed.value
-    local fact = {
-        operation = held and 'evidence_hold' or 'evidence_release',
-        transitionType = held and 'evidence_hold' or 'evidence_release', outcome = 'committed',
-        itemInstanceId = itemId, definitionId = value.definitionId, serialNumber = serial,
-        revision = tonumber(value.item.metadataRevision) + 1,
-        fromInventoryId = value.item.inventoryId, toInventoryId = value.item.inventoryId,
-        fromCharacterId = characterId, toCharacterId = characterId,
-        actorSource = context.actorSource, actorCharacterId = context.actorCharacterId,
-        reason = context.reason, resource = invokingResource,
-        correlationId = context.correlationId, occurredAt = os.time(), metadata = value.metadata
-    }
-    local recorded = WeaponProvenanceService.Record(fact)
-    if not recorded.ok then return recorded end
-    fact.eventId = recorded.value.eventId
-    TriggerEvent('Feather:Weapons:EvidenceStateCommitted', fact)
-    return WeaponResult.Ok(fact, context.correlationId)
+    return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+        'Evidence mutation is not available on the native host; no change was requested',
+        {reason='native_evidence_not_implemented',operation=held and 'hold' or 'release'},context.correlationId)
 end
 
 -- Native path has its own reservations, never the legacy mutation provider.
@@ -168,7 +92,7 @@ function WeaponEvidenceService.NativeChange(context,request,resource,held)
     local itemId=tonumber(request.itemInstanceId)
     local characterId=CoreAdapter.NormalizeCharacterId(request.characterId or context.characterId)
     if not Trusted(resource) or not itemId or itemId<1 or itemId%1~=0 or itemId==math.huge
-        or characterId~=Config.NativeAlphaCharacterId or type(held)~='boolean'
+        or not WeaponNativeEnrollment.Allows(Config,characterId) or type(held)~='boolean'
         or nativeReservations[itemId] then return NativeDenied('native_evidence_scope_or_overlap') end
     local session=CoreAdapter.ResolveSession(context.actorSource)
     if not session or not session.ok or session.value.characterId~=characterId
@@ -231,13 +155,13 @@ function WeaponEvidenceService.NativeStatus(target,itemId)
         or Config.CharacterAmmoTransportEnabled~=true or type(target)~='number' or target<1 or target%1~=0 or target==math.huge
         or type(itemId)~='number' or itemId<1 or itemId%1~=0 or itemId==math.huge then return NativeDenied('native_evidence_status_scope') end
     local session=CoreAdapter.ResolveSession(target)
-    if not session or not session.ok or session.value.characterId~=Config.NativeAlphaCharacterId then
+    if not session or not session.ok or not WeaponNativeEnrollment.Allows(Config,session.value.characterId) then
         return NativeDenied('native_evidence_status_current_actor_required')
     end
     local context={actorSource=target,characterId=session.value.characterId,sessionId=session.value.sessionId}
     local function current()
         return Config.DevMode==true and Config.NativeAlphaRuntime==true and Config.CharacterAmmunitionEnabled==true
-            and Config.CharacterAmmoTransportEnabled==true and context.characterId==Config.NativeAlphaCharacterId
+            and Config.CharacterAmmoTransportEnabled==true and WeaponNativeEnrollment.Allows(Config,context.characterId)
             and CoreAdapter.IsSessionCurrent(target,context.sessionId,context.characterId)==true
     end
     if not current() then return NativeDenied('native_evidence_status_session_changed') end

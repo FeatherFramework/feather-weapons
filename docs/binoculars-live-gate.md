@@ -1,5 +1,16 @@
 # Binoculars and combined melee/utility live gate
 
+2026-10-20 native-only port: original gameplay evidence below is reusable.
+A strict Standard Binoculars profile and third-slot Inventory/collection/transition
+integration are implemented under default0 feather_native_binoculars;193 Weapons Lua
+specs and full Inventory suite pass. Scoped new-port ownership gates passed
+2026-10-20: issued174rev0/replay, coexistence beside172/173, isolated cleanup/menu
+re-equip, prepared restart, death/doctor and normal new-session restoration.
+All three drawable; John ammo/wear and Jane observer baseline preserved.
+See native-binoculars-alpha-gate.md for gate-off deployment/read-only baseline.
+Commands below are historical,
+not native-only port instructions; do not reuse historical item128 as current ownership.
+
 Candidate: utility_binoculars / weapon_kit_binoculars / WEAPON_KIT_BINOCULARS.
 Third persistent utility slot: utility_tertiary -> weapon_utility_tertiary.
 No ammo or custom viewing controls. Existing maintenance contract is retained.

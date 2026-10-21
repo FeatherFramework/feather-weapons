@@ -1,5 +1,15 @@
 # Standard Camera live gate
 
+2026-10-20 native-only port: original equipment-only evidence below is reusable.
+Strict Standard Camera profile and fourth-slot ownership/transition integration
+implemented under default0 feather_native_camera;197 Weapons Lua specs/full Inventory
+suite pass. Scoped live new-port equipment gates passed2026-10-20: issued175/replay,
+four-utility coexistence, exact cleanup/menu re-equip, prepared restart, death/doctor
+and new-session restoration; four drawable and John/Jane ammo/wear preserved.
+See native-camera-alpha-gate.md; no repeated issuance/test requested.
+Historical instructions below are not native-only deployment commands; do not
+assume historical item133 is currently owned by John.
+
 utility_camera / weapon_kit_camera / WEAPON_KIT_CAMERA.
 Fourth logical utility position: utility_quaternary -> weapon_utility_quaternary.
 No ammo, film item, unlock writes, custom camera controls or photo storage added.

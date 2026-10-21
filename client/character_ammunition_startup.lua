@@ -1,8 +1,8 @@
--- Development-only normal-manifest host. Disabled defaults keep legacy startup.
+-- Native-only scoped host. Disabled or incomplete configuration never selects another runtime.
 CreateThread(function()
     if Config.CharacterAmmunitionEnabled~=true or Config.CharacterAmmoTransportEnabled~=true then return end
     if Config.DevMode~=true or Config.NativeAlphaRuntime~=true
-        or type(Config.NativeAlphaCharacterId)~='string' or Config.NativeAlphaCharacterId=='' then
+        or not WeaponNativeEnrollment.Validate(Config) then
         print('[feather-weapons] native alpha startup refused: explicit scoped configuration required')
         return
     end
@@ -14,7 +14,7 @@ CreateThread(function()
         if Config.CharacterAmmunitionEnabled~=true or Config.CharacterAmmoTransportEnabled~=true
             or Config.NativeAlphaRuntime~=true or Config.DevMode~=true then return end
         local result=WeaponCharacterAmmoWorldContext.Read()
-        if result.ok==true and result.value.characterId==Config.NativeAlphaCharacterId then
+        if result.ok==true and WeaponNativeEnrollment.Allows(Config,result.value.characterId) then
             local owner,reason=WeaponCharacterAmmoNativeOwner.New()
             if not owner then print('[feather-weapons] native alpha owner refused: '..tostring(reason)); return end
             WeaponCharacterAmmoActiveOwner=owner

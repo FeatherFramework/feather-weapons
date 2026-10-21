@@ -1,3 +1,4 @@
+-- HISTORICAL TEST FIXTURE ONLY. Never deploy this as the resource manifest.
 -- TEMPORARY server-only test manifest: deploy as fxmanifest.lua only for this gate.
 -- Restore the normal manifest before any other Weapons work.
 fx_version 'cerulean'
@@ -12,5 +13,5 @@ shared_scripts {
     'shared/character_ammunition_catalog.lua',
     'shared/character_ammunition_policy.lua'
 }
-server_script 'server/jane_ammunition_readonly.lua'
+server_script 'tests/archive/server/jane_ammunition_readonly.lua'
 dependencies { 'feather-core', 'feather-inventory' }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-const source = readFileSync(new URL('../client/main.lua', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../tests/archive/client/main.lua', import.meta.url), 'utf8');
 const page = source.slice(source.indexOf('local function BuildAmmunitionPage('), source.indexOf('local function BuildAmmunitionMenu('));
 assert.match(page, /'dropdown', \{ key = 'selected-ammo'/);
 assert.match(page, /value = selected\.ammunitionType, options = options, persist = false/);

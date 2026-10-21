@@ -29,8 +29,7 @@ end
 
 local function CharacterInventoryId(characterId, correlationId)
     if not characterId then return nil end
-    local reader=(Config.CharacterAmmunitionEnabled==true and Config.CharacterAmmoTransportEnabled==true)
-        and WeaponNativeOwnershipReader or InventoryAdapter
+    local reader=WeaponNativeOwnershipReader
     local inventory = reader.GetCharacterInventory({
         correlationId = correlationId
     }, characterId)
@@ -83,8 +82,7 @@ end
 function WeaponOwnershipService.HandleCommittedMove(payload)
     if type(payload) ~= "table" then return nil end
     if tostring(payload.fromInventoryId) == tostring(payload.toInventoryId) then return nil end
-    local reader=(Config.CharacterAmmunitionEnabled==true and Config.CharacterAmmoTransportEnabled==true)
-        and WeaponNativeOwnershipReader or InventoryAdapter
+    local reader=WeaponNativeOwnershipReader
     if not reader then return nil end
     local definitionId = reader.ResolveWeaponDefinitionId(payload.definitionId)
     if not definitionId then return nil end
@@ -144,13 +142,12 @@ function WeaponOwnershipService.HandleCommittedMove(payload)
         occurredAt = tonumber(payload.occurredAt) or os.time()
     }
 
-    local source, slot = WeaponRuntime.FindLeaseByItem(payload.instanceId)
     local nativeBound=false
     if WeaponCharacterAmmoService and type(WeaponCharacterAmmoService.IsNativeItemBound)=='function' then
         nativeBound=WeaponCharacterAmmoService.IsNativeItemBound(tonumber(payload.instanceId))==true
     end
     fact.nativeLeaseViolation=nativeBound
-    fact.activeLeaseViolation = source ~= nil or nativeBound
+    fact.activeLeaseViolation = nativeBound
     if fact.activeLeaseViolation then
         diagnostics.leaseViolations = diagnostics.leaseViolations + 1
     end
@@ -159,15 +156,6 @@ function WeaponOwnershipService.HandleCommittedMove(payload)
             tostring(payload.instanceId),tostring(payload.fromInventoryId),tostring(payload.toInventoryId)))
         -- Diagnostic only: never invoke the legacy reconciler for a native lease.
     end
-    if source then
-        fact.activeSource = source
-        fact.activeSlot = slot
-        print(("[feather-weapons] CRITICAL equipped weapon moved item=%s source=%s slot=%s from=%s to=%s"):format(
-            tostring(payload.instanceId), tostring(source), tostring(slot),
-            tostring(payload.fromInventoryId), tostring(payload.toInventoryId)))
-        if ReconciliationService then ReconciliationService.Force(source) end
-    end
-
     RecordCommittedFact(fact)
     if Config.DevMode then
         print(("[feather-weapons] ownership transition item=%s serial=%s definition=%s from=%s/%s to=%s/%s type=%s reason=%s"):format(
@@ -189,33 +177,6 @@ function WeaponOwnershipService.GetDiagnostics()
     }
 end
 
-local function AuthorizeDestruction(context, item)
-    local settings = (Config.Ownership or {}).authorization or {}
-    if settings.enabled ~= true then return WeaponResult.Ok(true, context.correlationId) end
-    if not context.actorSource or type(settings.destroyAction) ~= "string"
-        or settings.destroyAction == "" then
-        return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID,
-            "Weapon destruction authorization is not configured", nil, context.correlationId)
-    end
-    local called, decision = pcall(function()
-        return exports["feather-core"]:Authorize(settings.destroyAction, {
-            source = context.actorSource,
-            correlationId = context.correlationId,
-            subject = {
-                operation = "destroy",
-                itemInstanceId = item.id,
-                serialNumber = item.metadata and item.metadata.serialNumber
-            }
-        })
-    end)
-    if not called or type(decision) ~= "table" or decision.ok ~= true
-        or type(decision.value) ~= "table" or decision.value.allowed ~= true then
-        return WeaponResult.Error(WeaponErrors.AUTHORIZATION_INVALID,
-            "This character is not authorized to destroy weapons", nil, context.correlationId)
-    end
-    return WeaponResult.Ok(true, context.correlationId)
-end
-
 function WeaponOwnershipService.Destroy(context, request, invokingResource)
     context = type(context) == "table" and context or {}
     request = type(request) == "table" and request or {}
@@ -234,67 +195,9 @@ function WeaponOwnershipService.Destroy(context, request, invokingResource)
             "Character, item instance, and expected serial are required", nil, context.correlationId)
     end
 
-    if Config.CharacterAmmunitionEnabled==true or Config.CharacterAmmoTransportEnabled==true then
-        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
-            'Weapon destruction is not available on the native host; no deletion was requested',
-            {reason='native_destruction_not_implemented'},context.correlationId)
-    end
-
-    context.characterId = characterId
-    context.actorCharacterId = CoreAdapter.NormalizeCharacterId(context.actorCharacterId)
-    context.reason = CleanText(context.reason or "weapon_destruction", 64)
-    context.resource = invokingResource
-    local itemResult = InventoryAdapter.GetItemForCharacter(context, itemInstanceId)
-    if not itemResult.ok then return itemResult end
-    local item = itemResult.value
-    local definitionId = item.metadata and item.metadata.weaponDefinitionId
-    local definition = DefinitionRegistry.Get("weapon", definitionId)
-    if not definition.ok then return definition end
-    local valid = WeaponMetadata.Validate(item.metadata, definition.value, context.correlationId)
-    if not valid.ok then return valid end
-    if item.metadata.serialNumber ~= expectedSerial then
-        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
-            "Weapon serial changed before destruction", {
-                expectedSerial = expectedSerial,
-                actualSerial = item.metadata.serialNumber
-            }, context.correlationId)
-    end
-    local activeSource, activeSlot = WeaponRuntime.FindLeaseByItem(itemInstanceId)
-    if activeSource then
-        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
-            "Unequip the weapon before destroying it", {
-                source = activeSource,
-                slot = activeSlot
-            }, context.correlationId)
-    end
-    local allowed, reason = WeaponOwnershipService.EvaluateAdministrativeHold(item.metadata)
-    if not allowed then
-        return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT, reason, nil, context.correlationId)
-    end
-    local authorized = AuthorizeDestruction(context, item)
-    if not authorized.ok then return authorized end
-
-    local destroyed = InventoryAdapter.DestroyInstance(context, item)
-    if not destroyed.ok then return destroyed end
-    local fact = {
-        operation = "destroy",
-        transitionType = "destruction",
-        outcome = "committed",
-        itemInstanceId = item.id,
-        definitionId = definitionId,
-        serialNumber = item.metadata.serialNumber,
-        revision = item.metadataRevision,
-        fromInventoryId = item.inventoryId,
-        fromCharacterId = characterId,
-        actorSource = context.actorSource,
-        actorCharacterId = context.actorCharacterId,
-        reason = context.reason,
-        resource = context.resource,
-        correlationId = context.correlationId,
-        occurredAt = os.time()
-    }
-    RecordCommittedFact(fact)
-    return WeaponResult.Ok(fact, context.correlationId)
+    return WeaponResult.Error(WeaponErrors.OPERATION_CONFLICT,
+        'Weapon destruction is not available on the native host; no deletion was requested',
+        {reason='native_destruction_not_implemented'},context.correlationId)
 end
 
 function WeaponOwnershipService.CheckDestructionContract()

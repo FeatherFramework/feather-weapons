@@ -30,7 +30,7 @@ inventory.MutateCharacterAmmunition=denied
 exports={['feather-core']={GetSessionContext=function() return {ok=true,value={characterId=character,sessionId='s'}} end,
     IsSessionCurrent=function() return current end},['feather-inventory']=inventory}
 local originalPrint=print; print=function(line) output[#output+1]=line end
-dofile('server/jane_ammunition_readonly.lua')
+dofile('tests/archive/server/jane_ammunition_readonly.lua')
 local run=commands.WeaponJaneAmmoRead
 run(1,{'1',jane}); assert(reads==0)
 run(0,{'1','original'}); assert(reads==0)
@@ -47,7 +47,7 @@ inventory.GetCharacterAmmunitionSnapshot=function() current=false; return snapsh
 run(0,{'1',jane})
 assert(reads==5 and output[#output]:find('FAIL',1,true),'world loss stops second read')
 print=originalPrint
-local file=assert(io.open('fxmanifest.jane-readonly.lua')); local manifest=file:read('*a'); file:close()
+local file=assert(io.open('tests/archive/fxmanifest.jane-readonly.lua')); local manifest=file:read('*a'); file:close()
 assert(not manifest:find('client_script',1,true) and not manifest:find('server/main.lua',1,true))
 assert(not manifest:find('DB.lua',1,true),'isolated test resource cannot issue SQL')
 print('Jane server-only export read gate PASS (isolated manifest, exact identity, canonical zero snapshot, context loss; mocked CFX)')

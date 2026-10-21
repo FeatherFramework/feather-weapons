@@ -27,7 +27,8 @@ local function request(kind,itemId,action,slot,scope,attachmentId)
     if pending then return failure('equipment_action_in_flight') end
     if type(itemId)~='number' or itemId<1 or itemId%1~=0 or itemId==math.huge then return failure('invalid_equipment_item') end
     local bound=current()
-    if not bound or (kind~='options' and not same(scope,bound)) then return failure('equipment_panel_expired_reopen') end
+    if not bound then return failure('native_equipment_owner_not_ready') end
+    if kind~='options' and not same(scope,bound) then return failure('equipment_panel_expired_reopen') end
     if kind=='attachment-change' and action~='install' and action~='remove' then return failure('invalid_attachment_action') end
     if attachmentId~=nil and (type(attachmentId)~='string' or #attachmentId<1 or #attachmentId>100) then return failure('invalid_attachment_id') end
     sequence=sequence+1

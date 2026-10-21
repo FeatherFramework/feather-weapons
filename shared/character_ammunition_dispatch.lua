@@ -118,6 +118,7 @@ function WeaponCharacterAmmoDispatch.New(api)
     end
     function T.ConfirmRestore(source,report) return request(source,report,'restoring','active','ConfirmRestore') end
     function T.Observe(source,report) return request(source,report,'active','active','Observe') end
+    function T.NativePickup(source,report) return request(source,report,'active','active','NativePickup') end
     function T.Transfer(source,report)
         if type(report)~='table' or type(report.transfer)~='table' then return err('invalid_transfer') end
         return request(source,report,'active','restoring','Transfer')

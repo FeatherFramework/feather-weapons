@@ -7,6 +7,9 @@ function WeaponCharacterAmmoNativeOwner.New(dependencies)
         ped=PlayerPedId,
         dual=WeaponCharacterAmmoDualNative.New,
         creation=WeaponCharacterAmmoCreationNative.Scoped,
+        knife=WeaponNativeKnifeOwner and WeaponNativeKnifeOwner.Scoped,
+        throwable=WeaponNativeThrowableAdapter and WeaponNativeThrowableAdapter.Scoped,
+        utility=WeaponNativeUtilityAdapter and WeaponNativeUtilityAdapter.Scoped,
         bootstrap=WeaponCharacterAmmoClientBindings.Bootstrap,
     }
     for _,name in ipairs({'context','ped','dual','creation','bootstrap'}) do
@@ -41,6 +44,15 @@ function WeaponCharacterAmmoNativeOwner.New(dependencies)
         end,function()
             if lease~=owned or not current(expected,ped) then return nil,'native_owner_cleanup_world_changed' end
             if owned.records and #owned.records>0 then return nil,'native_owner_copies_remain' end
+            if owned.knifeAttempted and (not owned.knife or owned.knife.Status().phase~='released') then
+                return nil,'native_owner_knife_cleanup_required'
+            end
+            if owned.throwableAttempted and (not owned.throwable or owned.throwable.Status().phase~='released') then
+                return nil,'native_owner_throwable_cleanup_required'
+            end
+            if owned.utilityAttempted and (not owned.utility or owned.utility.Status().phase~='released') then
+                return nil,'native_owner_utility_cleanup_required'
+            end
             local removed,why=true,nil
             if dual then removed,why=dual.Cleanup() end
             if removed==true then owned.cleaned=true end
@@ -54,6 +66,106 @@ function WeaponCharacterAmmoNativeOwner.New(dependencies)
         assert(lease and lease.adapter==adapter and not lease.cleaned,'native_owner_tracking_mismatch')
         lease.records=records -- Session mutates this exact list during cleanup.
     end
+    local function knife(ped,identity)
+        local owned=lease
+        if Config.DevMode~=true or Config.NativeAlphaRuntime~=true or GetConvarInt('feather_native_knife',0)~=1
+            or not owned or owned.cleaned or owned.knifeAttempted or owned.ped~=ped
+            or type(identity)~='table' or type(d.knife)~='function' then return nil,'native_knife_owner_unavailable' end
+        for _,key in ipairs({'characterId','sessionId','epoch'}) do
+            if identity[key]~=owned.identity[key] then return nil,'native_knife_owner_changed' end
+        end
+        owned.knifeAttempted=true
+        local value,why=d.knife(ped,owned.identity,function(check)
+            return lease==owned and not owned.cleaned and current(owned.identity,ped)
+                and check.characterId==owned.identity.characterId and check.sessionId==owned.identity.sessionId
+                and check.epoch==owned.identity.epoch
+        end)
+        owned.knife=value
+        return value,why
+    end
+    local function melee(ped,identity,approval)
+        local owned=lease
+        if Config.DevMode~=true or Config.NativeAlphaRuntime~=true or GetConvarInt('feather_native_melee',0)~=1
+            or not WeaponNativeMeleeOwner or not WeaponNativeMeleeCatalog or not owned or owned.cleaned
+            or owned.knifeAttempted or owned.ped~=ped or type(identity)~='table' or type(d.knife)~='function' then
+            return nil,'native_melee_owner_unavailable'
+        end
+        for _,key in ipairs({'characterId','sessionId','epoch'}) do
+            if identity[key]~=owned.identity[key] then return nil,'native_melee_owner_changed' end
+        end
+        local checked,why=WeaponNativeMeleeCatalog.ValidateApproval(approval,WeaponDefinitionCatalog,identity)
+        if not checked then return nil,why end
+        owned.knifeAttempted=true -- same parent ownership/cleanup barrier, not a second lease
+        local function live(check)
+            return GetConvarInt('feather_native_melee',0)==1 and lease==owned and not owned.cleaned
+                and current(owned.identity,ped) and check.characterId==owned.identity.characterId
+                and check.sessionId==owned.identity.sessionId and check.epoch==owned.identity.epoch
+        end
+        local value
+        value,why=WeaponNativeMeleeOwner.New(checked,WeaponDefinitionCatalog,identity,function(def,bound)
+            return d.knife(ped,bound,live,def)
+        end,live)
+        owned.knife=value
+        return value,why
+    end
+    local function throwable(ped,identity,sealed,registry)
+        local owned=lease
+        if Config.DevMode~=true or Config.NativeAlphaRuntime~=true or GetConvarInt('feather_native_throwable',0)~=1
+            or not owned or owned.cleaned or owned.throwableAttempted or owned.ped~=ped
+            or type(identity)~='table' or type(d.throwable)~='function' then return nil,'native_throwable_owner_unavailable' end
+        for _,key in ipairs({'characterId','sessionId','epoch'}) do
+            if identity[key]~=owned.identity[key] then return nil,'native_throwable_owner_changed' end
+        end
+        owned.throwableAttempted=true
+        local value,why=d.throwable(ped,owned.identity,function(check)
+            return lease==owned and not owned.cleaned and GetConvarInt('feather_native_throwable',0)==1
+                and current(owned.identity,ped) and check.characterId==owned.identity.characterId
+                and check.sessionId==owned.identity.sessionId and check.epoch==owned.identity.epoch
+        end,sealed,WeaponDefinitionCatalog,registry)
+        owned.throwable=value; return value,why
+    end
+    local function utility(ped,identity,sealed,definition)
+        local owned=lease
+        if definition and definition.id=='native_utility_collection' then
+            if not WeaponNativeUtilityCatalog.DavyEnabled() or not WeaponNativeUtilityCollection then return nil,'native_davy_lantern_disabled' end
+            return WeaponNativeUtilityCollection.New(utility,ped,identity,sealed)
+        end
+        if Config.DevMode~=true or Config.NativeAlphaRuntime~=true or GetConvarInt('feather_native_utility',0)~=1
+            or not owned or owned.cleaned or owned.ped~=ped
+            or type(identity)~='table' or type(d.utility)~='function' then return nil,'native_utility_owner_unavailable' end
+        for _,key in ipairs({'characterId','sessionId','epoch'}) do
+            if identity[key]~=owned.identity[key] then return nil,'native_utility_owner_changed' end
+        end
+        definition=definition or WeaponDefinitionCatalog.weapons.utility_lasso
+        owned.utilityModels=owned.utilityModels or {}
+        if owned.utilityModels[definition.id] or (owned.utilityAttempted and not WeaponNativeUtilityCatalog.DavyEnabled()) then return nil,'native_utility_owner_unavailable' end
+        owned.utilityModels[definition.id]=true
+        local reinforced=definition.id=='utility_lasso_reinforced'
+        local davy=definition.id=='utility_davy_lantern'
+        local binoculars=definition.id=='utility_binoculars'
+        local camera=definition.id=='utility_camera'
+        if camera and not WeaponNativeUtilityCatalog.CameraEnabled() then return nil,'native_camera_disabled' end
+        if binoculars and not WeaponNativeUtilityCatalog.BinocularsEnabled() then return nil,'native_binoculars_disabled' end
+        if davy and not WeaponNativeUtilityCatalog.DavyEnabled() then return nil,'native_davy_lantern_disabled' end
+        if reinforced and GetConvarInt('feather_native_lasso_reinforced',0)~=1 then return nil,'native_reinforced_lasso_disabled' end
+        owned.utilityAttempted=true
+        local value,why=d.utility(ped,owned.identity,function(check)
+            return lease==owned and not owned.cleaned and GetConvarInt('feather_native_utility',0)==1
+                and (not reinforced or GetConvarInt('feather_native_lasso_reinforced',0)==1)
+                and (not davy or WeaponNativeUtilityCatalog.DavyEnabled())
+                and (not binoculars or WeaponNativeUtilityCatalog.BinocularsEnabled())
+                and (not camera or WeaponNativeUtilityCatalog.CameraEnabled())
+                and current(owned.identity,ped) and check.characterId==owned.identity.characterId
+                and check.sessionId==owned.identity.sessionId and check.epoch==owned.identity.epoch
+        end,sealed,definition)
+        if owned.utility and value then
+            local prior=owned.utility
+            owned.utility={Status=function()
+                return {phase=prior.Status().phase=='released' and value.Status().phase=='released' and 'released' or 'retained'}
+            end}
+        else owned.utility=value end
+        return value,why
+    end
     local T={}
     function T.ProbeGuidComponent(action)
         local owned=lease
@@ -66,7 +178,7 @@ function WeaponCharacterAmmoNativeOwner.New(dependencies)
                 or lease~=owned or not owned or owned.cleaned or phase~='started' or not state or state.phase~='active'
                 or state.runtimeBusy or state.receiving or state.quiescing or not ammo or ammo.phase~='active'
                 or ammo.pending or ammo.closing or ammo.deathClosing or not baseline
-                or baseline.characterId~=Config.NativeAlphaCharacterId or baseline.epoch~=owned.identity.epoch
+                or not WeaponNativeEnrollment.Allows(Config,baseline.characterId) or baseline.epoch~=owned.identity.epoch
                 or baseline.sessionId~=owned.identity.sessionId or not current(owned.identity,owned.ped) then return false end
             for _,amount in pairs(baseline.pools or {}) do if amount~=0 then return false end end
             return true
@@ -174,6 +286,9 @@ function WeaponCharacterAmmoNativeOwner.New(dependencies)
             return true
         end
         if not empty() then return nil,'stop_nonzero_or_unreadable_ammo_requires_orderly_release' end
+        if owned.utilityAttempted and (not owned.utility or owned.utility.Status().phase~='released') then
+            return nil,'stop_utility_requires_orderly_release'
+        end
         for i=#owned.records,1,-1 do
             if not empty() then return nil,'stop_cleanup_context_changed' end
             local called,removed=pcall(owned.adapter.remove,owned.records[i])
@@ -181,6 +296,14 @@ function WeaponCharacterAmmoNativeOwner.New(dependencies)
             table.remove(owned.records,i)
         end
         if not empty() then return nil,'stop_cleanup_context_changed' end
+        if owned.throwableAttempted and (not owned.throwable or owned.throwable.Status().phase~='released') then
+            return nil,'stop_throwable_requires_orderly_release'
+        end
+        if owned.knifeAttempted then
+            if not owned.knife then return nil,'stop_knife_cleanup_unconfirmed' end
+            local ok,removed=pcall(owned.knife.Release)
+            if not ok or removed~=true or owned.knife.Status().phase~='released' or not empty() then return nil,'stop_knife_cleanup_failed' end
+        end
         local called,cleaned=pcall(owned.adapter.cleanupSetup)
         if not called or cleaned~=true then return nil,'stop_owned_setup_cleanup_failed' end
         phase,reason='stopped','zero_ammo_owned_stop_cleanup'
@@ -190,7 +313,7 @@ function WeaponCharacterAmmoNativeOwner.New(dependencies)
         if phase~='dormant' then return nil,'native_owner_already_started' end
         if not enabled() then return nil,'character_ammunition_disabled' end
         phase='starting'
-        local called,value,why=pcall(d.bootstrap,create,track)
+        local called,value,why=pcall(d.bootstrap,create,track,knife,melee,throwable,utility)
         if not called or type(value)~='table' or type(value.Start)~='function'
             or type(value.Status)~='function' then
             phase,reason='failed',why or 'native_owner_bootstrap_failed'; return nil,reason

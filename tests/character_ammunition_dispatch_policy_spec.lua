@@ -1,3 +1,4 @@
+dofile('shared/constants.lua') -- shared enrollment dependency from normal manifest
 Config={CharacterAmmunitionEnabled=false,CharacterAmmoTransportEnabled=false}
 dofile('shared/character_ammunition_activation.lua')
 local providerReady=false

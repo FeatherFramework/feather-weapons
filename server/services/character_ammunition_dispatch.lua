@@ -55,7 +55,7 @@ WeaponCharacterAmmoActivationOwner=WeaponCharacterAmmoActivation.New({
         local result=CoreAdapter.ResolveSession(source)
         local identity=type(result)=='table' and result.ok==true and result.value or nil
         if Config.NativeAlphaRuntime~=true or Config.DevMode~=true or type(identity)~='table'
-            or identity.characterId~=Config.NativeAlphaCharacterId then return nil end
+            or not WeaponNativeEnrollment.Allows(Config,identity.characterId) then return nil end
         if type(WeaponCharacterAmmoService.ReconcileSession)=='function' then
             local reconciled=WeaponCharacterAmmoService.ReconcileSession(source,identity)
             if not reconciled or not reconciled.ok then return nil end

@@ -13,7 +13,7 @@ CoreAdapter = { ResolveSession = function()
 end }
 local runtime = { sessionId = 'test', slots = {} }
 WeaponRuntime = { Get = function() return runtime end }
-dofile('server/services/reconciliation.lua')
+dofile('tests/archive/server/services/reconciliation.lua')
 source = 1
 local handler = handlers['feather-weapons:server:client-ready']
 local pending = coroutine.create(handler)
@@ -47,7 +47,7 @@ assert(runtime.slots.utility_septenary.itemInstanceId == 96, 'Handshake preserve
 assert(runtime.slots.utility_octonary.itemInstanceId == 97, 'Handshake preserves eighth utility ownership')
 assert(handler() == nil and #events == 2, 'Repeated handshake works after readiness')
 -- A fresh service instance that never finishes startup must fail closed.
-dofile('server/services/reconciliation.lua')
+dofile('tests/archive/server/services/reconciliation.lua')
 local timeout = coroutine.create(handlers['feather-weapons:server:client-ready'])
 while coroutine.status(timeout) ~= 'dead' do assert(coroutine.resume(timeout)) end
 assert(#events == 2, 'Startup timeout must not publish partial state')

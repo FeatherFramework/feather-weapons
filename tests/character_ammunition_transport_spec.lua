@@ -69,3 +69,14 @@ for _,bad in ipairs({0,1.5,1001,math.huge,0/0}) do
     report.transfer.amount=bad; serverHandler(42,'transfer',9,report)
 end
 assert(transfers==1,'malformed economic deltas never reach authority')
+local pickups=0
+service.NativePickup=function(source,value)
+    assert(source==42 and value.characterId=='character')
+    pickups=pickups+1; return {ok=true,value={}}
+end
+local pickup={characterId='character',sessionId='session',epoch='epoch',revision=0,pools={ammo_tomahawk_regular=1}}
+serverHandler(42,'pickup',10,pickup); assert(pickups==1)
+pickup.nativePickupPlan={spendReceiptId='client-selected'}
+serverHandler(42,'pickup',11,pickup); assert(pickups==1,'client cannot submit a server pickup plan')
+pickup.nativePickupPlan=nil; pickup.transfer={amount=1}
+serverHandler(42,'pickup',12,pickup); assert(pickups==1,'pickup cannot smuggle a funding operation')

@@ -1,3 +1,4 @@
+dofile('shared/constants.lua') -- shared enrollment dependency from normal manifest
 local calls,threads={},{ }
 RegisterCommand=function() end
 CreateThread=function(fn) threads[#threads+1]=coroutine.create(fn) end
@@ -16,6 +17,9 @@ end
 Config={DevMode=true,CharacterAmmunitionEnabled=true,CharacterAmmoTransportEnabled=true}
 assert(not server() and #calls==0,'native flags alone are not an alpha startup authorization')
 Config.NativeAlphaRuntime=true; Config.NativeAlphaCharacterId='Jane'
+Config.CharacterAmmunitionEnabled=false; Config.CharacterAmmoTransportEnabled=false
+assert(not server() and #calls==0,'disabled flags cannot start the obsolete host')
+Config.CharacterAmmunitionEnabled=true; Config.CharacterAmmoTransportEnabled=true
 assert(server() and #calls==4 and calls[2]=='native-reader' and calls[3]=='provenance' and calls[4]=='native-guards')
 Config.DevMode=false; assert(not server() and #calls==4); Config.DevMode=true
 local readerInstall=WeaponNativeOwnershipReader.Install

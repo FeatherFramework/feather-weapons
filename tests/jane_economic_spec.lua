@@ -67,7 +67,7 @@ RegisterCommand=function(name,fn) commands[name]=fn end
 dofile('../feather-inventory/server/services/character_ammunition.lua')
 inv.MutateCharacterAmmunition=function(_,context,spec) return CharacterAmmunitionAPI.Mutate(context,spec,'feather-weapons') end
 inv.ObserveCharacterAmmunition=function(_,context,spec) return CharacterAmmunitionAPI.Observe(context,spec,'feather-weapons') end
-dofile('server/jane_ammunition_economic.lua')
+dofile('tests/archive/server/jane_ammunition_economic.lua')
 exports['feather-weapons'].ValidateCharacterAmmoRuntimeOperation=function(_,ctx,operation,spec)
  return registered.ValidateCharacterAmmoRuntimeOperation(ctx,operation,spec)
 end

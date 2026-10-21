@@ -1,7 +1,7 @@
 -- Dormant orchestration. The owner supplies world readiness, transport and lifecycle ticks.
 -- No threads/routes, weapon grants, clip writes or ammunition selection here.
 WeaponCharacterAmmoController={}
-function WeaponCharacterAmmoController.New(api)
+function WeaponCharacterAmmoController.New(api,pickupAck)
     local C=WeaponCharacterAmmoClient.New()
     local adapter,phase,closing=nil,'closed',false
     local deathClosing=false
@@ -37,6 +37,11 @@ function WeaponCharacterAmmoController.New(api)
                 phase=reason=='ped_changed' and 'suspended' or 'frozen'; return
             end
             phase=accepted.phase
+            if request.kind=='pickup' then
+                if closing or api.ready()~=true or type(pickupAck)~='function' then return fail('pickup_owner_ack_unavailable') end
+                local ok,value=pcall(pickupAck,accepted)
+                if not ok or value~=true then return fail('pickup_owner_rebind_unconfirmed') end
+            end
             if request.kind=='transfer' then
                 if closing or api.ready()~=true then return fail('transfer_world_changed') end
                 local restored,why=adapter.Restore(accepted,api.ped(),true)
@@ -67,7 +72,12 @@ function WeaponCharacterAmmoController.New(api)
         else pools,reason=adapter.Read(status.ped,true) end
         if not pools then return fail(reason) end
         local request
-        if closing then request,reason=C.PrepareFinal(status.ped,pools,true)
+        if not closing and Config and Config.DevMode==true and type(GetConvarInt)=='function'
+            and GetConvarInt('feather_native_throwable_pickup',0)==1
+            and status.baseline.pools.ammo_tomahawk_regular==0 and pools.ammo_tomahawk_regular==1 then
+            request,reason=C.PrepareNativePickup(status.ped,pools,true)
+            if request and type(api.block)=='function' then api.block(true) end
+        elseif closing then request,reason=C.PrepareFinal(status.ped,pools,true)
         else request,reason=C.Prepare(status.ped,pools,true) end
         if not request then return fail(reason) end
         if deathClosing and Config and Config.NativeAlphaLifecycleWearEnabled==true then

@@ -6,7 +6,7 @@ lua54 'yes'
 description 'The official weapon system for Feather framework.'
 author 'Feather Framework'
 name 'feather-weapons'
-version '0.17.0'
+version '0.17.1'
 
 shared_scripts {
     'config.lua',
@@ -23,6 +23,18 @@ shared_scripts {
     '/shared/character_ammunition_catalog.lua',
     '/shared/character_ammunition_policy.lua',
     '/shared/character_ammunition_item.lua',
+    '/shared/native_melee_catalog.lua',
+    '/shared/native_knife.lua',
+    '/shared/native_lasso_policy.lua',
+    '/shared/native_davy_lantern_policy.lua',
+    '/shared/native_binoculars_policy.lua',
+    '/shared/native_camera_policy.lua',
+    '/shared/native_utility_catalog.lua',
+    '/shared/native_utility_item.lua',
+    '/shared/native_utility_collection.lua',
+    '/shared/native_throwable_policy.lua',
+    '/shared/native_throwable_item.lua',
+    '/shared/native_throwable_recovery.lua',
     '/shared/character_attachments.lua',
     '/shared/character_maintenance.lua',
     '/shared/character_lifecycle_wear.lua',
@@ -36,10 +48,7 @@ shared_scripts {
 
 server_scripts {
     '@feather-mysql/lib/DB.lua',
-    '/server/imports.lua',
     '/server/adapters/core.lua',
-    '/server/adapters/inventory.lua',
-    '/server/adapters/feather_inventory.lua',
     '/server/services/character_ammunition_runtime.lua',
     '/server/adapters/character_ammunition_inventory.lua',
     '/server/services/character_ammunition_dispatch.lua',
@@ -47,24 +56,18 @@ server_scripts {
     '/server/services/native_equipment_transition.lua',
     '/server/services/definition_registry.lua',
     '/server/services/metadata.lua',
-    '/server/services/runtime.lua',
-    '/server/services/equip.lua',
-    '/server/services/ammo.lua',
-    '/server/services/maintenance.lua',
-    '/server/services/repair.lua',
     '/server/services/attachments.lua',
     '/server/services/provenance.lua',
     '/server/services/evidence.lua',
     '/server/services/ownership.lua',
     '/server/services/issuance.lua',
+    '/server/services/native_throwable_projectile_probe.lua',
     '/server/services/commands.lua',
-    '/server/services/reconciliation.lua',
     '/server/services/api.lua',
     '/server/main.lua'
 }
 
 client_scripts {
-    '/client/imports.lua',
     '/client/character_ammunition_native.lua',
     '/client/character_ammunition_controller.lua',
     '/client/character_ammunition_loadout.lua',
@@ -83,18 +86,19 @@ client_scripts {
     '/client/character_ammunition_driver.lua',
     '/client/character_ammunition_client_runtime.lua',
     '/client/character_ammunition_routes.lua',
+    '/client/native_knife_owner.lua',
+    '/client/native_melee_owner.lua',
+    '/client/native_throwable_owner.lua',
+    '/client/native_throwable_adapter.lua',
+    '/client/native_utility_owner.lua',
+    '/client/native_utility_collection.lua',
+    '/client/native_utility_adapter.lua',
     '/client/character_ammunition_native_owner.lua',
     '/client/character_ammunition_startup.lua',
     '/client/character_ammunition_actions.lua',
     '/client/native_equipment_actions.lua',
+    '/client/native_throwable_projectile_probe.lua',
     '/client/native_maintenance_checkpoint.lua',
-    '/client/guid_weapons.lua',
-    '/client/native_maintenance.lua',
-    '/client/native_weapon_coordinator.lua',
-    '/client/firearm_pools.lua',
-      '/client/main.lua',
-      '/client/dev_shot_death.lua',
-    '/client/native_probe.lua'
 }
 
 files {

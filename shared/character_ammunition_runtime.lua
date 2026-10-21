@@ -71,6 +71,36 @@ function WeaponCharacterAmmoRuntime.New(isCurrent)
     end
     function R.PrepareObservation(source,report) return prepareObservation(source,report,false) end
     function R.PrepareFinalObservation(source,report,finalWear) return prepareObservation(source,report,true,finalWear) end
+    -- `plan` is produced by the server recovery planner from its committed
+    -- receipt, never supplied by the client transport.
+    function R.PrepareNativePickup(source,report,plan)
+        local s=sessions[source]
+        if not match(s,report) then return nil,'stale_runtime' end
+        if s.phase~='active' or s.pending then return nil,'not_idle' end
+        if type(plan)~='table' or plan.version~=1 or plan.kind~='native_pickup_ledger_plan'
+            or plan.policy~='same_session_native_spend_credit_v1' or plan.units~=1
+            or type(plan.identity)~='table' or plan.identity.characterId~=s.characterId
+            or plan.identity.sessionId~=s.sessionId or plan.identity.epoch~=s.epoch
+            or plan.expectedRevision~=s.revision or plan.revision~=s.revision+1
+            or plan.requiresAtomicSpendClaim~=true or plan.requiresLedgerCAS~=true
+            or plan.looseInventoryDelta~=0 or plan.nativeAmmoDelta~=0
+            or plan.pickupCredits~=false or plan.originConfirmed~=false
+            or s.limits.ammo_tomahawk_regular~=1 then return nil,'native_pickup_plan_required' end
+        local pools=WeaponCharacterAmmunition.Validate(report.pools,s.limits)
+        if not pools or type(plan.pools)~='table' or s.pools.ammo_tomahawk_regular~=0
+            or pools.ammo_tomahawk_regular~=1 then return nil,'native_pickup_one_unit_required' end
+        for id in pairs(s.limits) do
+            if report.pools[id]==nil or plan.pools[id]~=pools[id]
+                or (id~='ammo_tomahawk_regular' and pools[id]~=s.pools[id]) then return nil,'native_pickup_other_pool_changed' end
+        end
+        for id in pairs(plan.pools) do if s.limits[id]==nil then return nil,'native_pickup_unknown_pool' end end
+        s.sequence=s.sequence+1
+        s.pending={ticket=s.epoch..':'..s.sequence,operation='pickup',nativePickupPlan=clone(plan),
+            proposed={characterId=s.characterId,revision=s.revision+1,pools=clone(pools),changed=true}}
+        return {context={actorSource=source,characterId=s.characterId,sessionId=s.sessionId,
+            runtimeEpoch=s.epoch,runtimeTicket=s.pending.ticket},spec={expectedRevision=s.revision,
+            pools=clone(pools),limits=clone(s.limits),nativePickupPlan=clone(plan)}}
+    end
     function R.PrepareTransfer(source,report,id,amount,operationId)
         local s=sessions[source]
         if not match(s,report) then return nil,'stale_runtime' end
@@ -107,6 +137,7 @@ function WeaponCharacterAmmoRuntime.New(isCurrent)
             return true
         end
         if not equal(spec.finalWear,s.pending.finalWear) then return false end
+        if not equal(spec.nativePickupPlan,s.pending.nativePickupPlan) then return false end
         if type(spec.limits)~='table' then return false end
         for id,limit in pairs(s.limits) do if spec.limits[id]~=limit then return false end end
         for id in pairs(spec.limits) do if s.limits[id]==nil then return false end end
