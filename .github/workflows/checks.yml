@@ -1,0 +1,46 @@
+name: Regression checks
+
+on:
+  pull_request:
+  push:
+    branches: [main, 'ci/automated-release-checks']
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: feather-weapons
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: feather-weapons
+      # Pin integration sources so unrelated upstream pushes cannot change a run.
+      - uses: actions/checkout@v4
+        with:
+          repository: FeatherFramework/feather-inventory
+          ref: 6cb10b732e67c20f0f4e99f56c70bed94d54cac1
+          path: feather-inventory
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: FeatherFramework/feather-character
+          ref: 044a80743f2c870b39f103ef50d519f39804a217
+          path: feather-character
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Lua test runtime
+        run: python -m pip install lupa==2.8
+      - name: Verify Lua regressions and runtime syntax
+        run: python tests/run_lua.py
+      - name: Verify JavaScript contracts
+        run: node --test tests/*.test.mjs

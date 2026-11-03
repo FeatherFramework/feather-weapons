@@ -84,6 +84,13 @@ Older dated guides are evidence history, not alternate supported runtime modes.
 
 ## Historical tests
 
+Current pull requests and pushes to main run `python tests/run_lua.py` with
+Lupa 2.8 (Lua 5.4), followed by `node --test tests/*.test.mjs` on Node 22.
+The runner checks runtime syntax and discovers current `tests/*spec.lua` files,
+running each in a fresh VM. It excludes the historical archive. This workflow
+does not publish, connect to a live database or certify native engine behavior;
+the recorded live acceptance gates remain separate.
+
 Retired scripts and temporary Jane manifests are isolated under
 [tests/archive](tests/archive/README.md). Do not deploy that directory or load it
 from the active manifest. Historical tests reproduce old evidence with mocks;
