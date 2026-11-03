@@ -4,19 +4,23 @@ dofile('shared/native_lasso_policy.lua')
 dofile('shared/native_davy_lantern_policy.lua')
 dofile('shared/native_binoculars_policy.lua')
 dofile('shared/native_camera_policy.lua')
+dofile('shared/native_advanced_camera_policy.lua')
+dofile('shared/native_improved_binoculars_policy.lua')
+dofile('shared/native_fishing_rod_policy.lua')
+dofile('shared/native_metal_detector_policy.lua')
 Config.DevMode=true; Config.NativeAlphaRuntime=true; Config.CharacterAmmunitionEnabled=true
 Config.CharacterAmmoTransportEnabled=true; Config.NativeAlphaLifecycleWearEnabled=true
-GetConvarInt=function(name) return (name=='feather_native_utility' or name=='feather_native_lasso_reinforced' or name=='feather_native_davy_lantern' or name=='feather_native_binoculars' or name=='feather_native_camera') and 1 or 0 end
+GetConvarInt=function(name) return (name=='feather_native_utility' or name=='feather_native_lasso_reinforced' or name=='feather_native_davy_lantern' or name=='feather_native_binoculars' or name=='feather_native_camera' or name=='feather_native_camera_advanced' or name=='feather_native_metal_detector' or name=='feather_native_fishing_rod' or name=='feather_native_binoculars_improved') and 1 or 0 end
 local def=WeaponDefinitionCatalog.weapons.utility_lasso
 local identity={characterId='john',sessionId='s',epoch='e'}
 local approval={identity=identity,equipmentSlot='weapon_utility',row={id=200,revision=0,itemName='weapon_lasso',
  metadata={schemaVersion=2,weaponDefinitionId='utility_lasso',serialNumber='L',condition=100,quality=100,
  flags={stolen=false,evidence=false,disabled=false},attachments={},cosmetics={},provenance={}}}}
-for _,mode in ipairs({'success','wrong_model','remove_failure','replacement_guid','stale_world','unreadable_presence','reinforced_success','davy_success','binoculars_success','camera_success'}) do
- local definition=mode=='camera_success' and WeaponDefinitionCatalog.weapons.utility_camera or mode=='binoculars_success' and WeaponDefinitionCatalog.weapons.utility_binoculars or mode=='davy_success' and WeaponDefinitionCatalog.weapons.utility_davy_lantern or mode=='reinforced_success' and WeaponDefinitionCatalog.weapons.utility_lasso_reinforced or def
+for _,mode in ipairs({'success','wrong_model','remove_failure','replacement_guid','stale_world','unreadable_presence','reinforced_success','davy_success','binoculars_success','camera_success','advanced_camera_success','metal_detector_success','fishing_rod_success','improved_binoculars_success'}) do
+ local definition=mode=='fishing_rod_success' and WeaponDefinitionCatalog.weapons.utility_fishing_rod or mode=='metal_detector_success' and WeaponDefinitionCatalog.weapons.utility_metal_detector or mode=='improved_binoculars_success' and WeaponDefinitionCatalog.weapons.utility_binoculars_improved or mode=='advanced_camera_success' and WeaponDefinitionCatalog.weapons.utility_camera_advanced or mode=='camera_success' and WeaponDefinitionCatalog.weapons.utility_camera or mode=='binoculars_success' and WeaponDefinitionCatalog.weapons.utility_binoculars or mode=='davy_success' and WeaponDefinitionCatalog.weapons.utility_davy_lantern or mode=='reinforced_success' and WeaponDefinitionCatalog.weapons.utility_lasso_reinforced or def
  local approved=approval
- if mode=='reinforced_success' or mode=='davy_success' or mode=='binoculars_success' or mode=='camera_success' then
-  approved={identity=identity,equipmentSlot=mode=='camera_success' and 'weapon_utility_quaternary' or mode=='binoculars_success' and 'weapon_utility_tertiary' or 'weapon_utility_secondary',row={id=201,revision=0,itemName=definition.itemName,
+ if mode=='reinforced_success' or mode=='davy_success' or mode=='binoculars_success' or mode=='camera_success' or mode=='advanced_camera_success' or mode=='metal_detector_success' or mode=='fishing_rod_success' or mode=='improved_binoculars_success' then
+  approved={identity=identity,equipmentSlot=mode=='fishing_rod_success' and 'weapon_utility_octonary' or mode=='metal_detector_success' and 'weapon_utility_septenary' or mode=='improved_binoculars_success' and 'weapon_utility_senary' or mode=='advanced_camera_success' and 'weapon_utility_quinary' or mode=='camera_success' and 'weapon_utility_quaternary' or mode=='binoculars_success' and 'weapon_utility_tertiary' or 'weapon_utility_secondary',row={id=201,revision=0,itemName=definition.itemName,
    metadata=assert(WeaponNativeUtilityItem.Build(definition,{serialNumber='R'}))}}
  end
  local has,removed,grants,removals,world,swapped=false,false,0,0,true,false

@@ -1,3 +1,4 @@
+WeaponMoveDelivery={Start=function() end}
 dofile('shared/constants.lua') -- shared enrollment dependency from normal manifest
 local calls,threads={},{ }
 RegisterCommand=function() end

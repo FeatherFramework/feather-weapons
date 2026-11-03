@@ -3,9 +3,17 @@ dofile('client/character_ammunition_session.lua')
 dofile('shared/character_ammunition_loadout_lease.lua')
 if NativeTestBinoculars then dofile('shared/native_binoculars_policy.lua') end
 if NativeTestCamera then dofile('shared/native_camera_policy.lua') end
+if NativeTestAdvancedCamera then dofile('shared/native_advanced_camera_policy.lua') end
+if NativeTestImprovedBinoculars then dofile('shared/native_improved_binoculars_policy.lua') end
+if NativeTestFishingRod then dofile('shared/native_fishing_rod_policy.lua') end
+if NativeTestMetalDetector then dofile('shared/native_metal_detector_policy.lua') end
 GetConvarInt=function(name) return (name=='feather_native_utility' or name=='feather_native_lasso_reinforced'
     or name=='feather_native_davy_lantern' or NativeTestBinoculars and name=='feather_native_binoculars'
-    or NativeTestCamera and name=='feather_native_camera') and 1 or 0 end
+    or NativeTestCamera and name=='feather_native_camera'
+    or NativeTestAdvancedCamera and name=='feather_native_camera_advanced'
+    or NativeTestMetalDetector and name=='feather_native_metal_detector'
+    or NativeTestFishingRod and name=='feather_native_fishing_rod'
+    or NativeTestImprovedBinoculars and name=='feather_native_binoculars_improved') and 1 or 0 end
 local U=WeaponNativeUtilityItem
 local function copy(v) if type(v)~='table' then return v end; local r={}; for k,x in pairs(v) do r[k]=copy(x) end; return r end
 local id={characterId='john',sessionId='s',epoch='e'}
@@ -13,8 +21,12 @@ local snapshot={characterId='john',expected={},equipment={}}
 local definitions={'utility_lasso_reinforced','utility_davy_lantern'}
 if NativeTestBinoculars then definitions[3]='utility_binoculars' end
 if NativeTestCamera then definitions[4]='utility_camera' end
+if NativeTestAdvancedCamera then definitions[5]='utility_camera_advanced' end
+if NativeTestImprovedBinoculars then definitions[6]='utility_binoculars_improved' end
+if NativeTestFishingRod then definitions[8]='utility_fishing_rod' end
+if NativeTestMetalDetector then definitions[7]='utility_metal_detector' end
 for n,definition in ipairs(definitions) do
-    local slot=({'utility','utility_secondary','utility_tertiary','utility_quaternary'})[n]
+    local slot=({'utility','utility_secondary','utility_tertiary','utility_quaternary','utility_quinary','utility_senary','utility_septenary','utility_octonary'})[n]
     local def=WeaponDefinitionCatalog.weapons[definition]
     snapshot.equipment[slot]={id=171+n,revision=0,itemName=def.itemName,metadata=assert(U.Build(def,{serialNumber='S'..n}))}
     snapshot.expected['weapon_'..slot]={itemId=171+n,revision=0}
@@ -26,6 +38,8 @@ local lease=WeaponCharacterAmmoLoadoutLease.New(plan,nil,nil,nil,{},snapshot)
 assert(lease.Contains(172) and lease.Contains(173) and lease.Contains(155))
 if NativeTestBinoculars then assert(lease.Contains(174)) end
 if NativeTestCamera then assert(lease.Contains(175)) end
+if NativeTestAdvancedCamera then assert(lease.Contains(176)) end
+if NativeTestImprovedBinoculars then assert(lease.Contains(177)) end
 assert(lease.Validate({characterId='john',equipment={},utilityEquipment=snapshot},WeaponDefinitionCatalog,{}))
 local changed=copy(snapshot); changed.equipment.utility_secondary.metadata.serialNumber='changed'
 assert(not lease.Validate({characterId='john',equipment={},utilityEquipment=changed},WeaponDefinitionCatalog,{}))

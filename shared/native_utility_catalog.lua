@@ -8,6 +8,22 @@ function WeaponNativeUtilityCatalog.Enabled()
         and GetConvarInt('feather_native_utility',0)==1 or false
 end
 function WeaponNativeUtilityCatalog.Resolve(def)
+    if type(def)=='table' and def.id=='utility_fishing_rod' then
+        if not WeaponNativeUtilityCatalog.FishingRodEnabled() then return nil,'native_fishing_rod_disabled' end
+        return WeaponNativeFishingRodPolicy.Resolve(def)
+    end
+    if type(def)=='table' and def.id=='utility_metal_detector' then
+        if not WeaponNativeUtilityCatalog.MetalDetectorEnabled() then return nil,'native_metal_detector_disabled' end
+        return WeaponNativeMetalDetectorPolicy.Resolve(def)
+    end
+    if type(def)=='table' and def.id=='utility_binoculars_improved' then
+        if not WeaponNativeUtilityCatalog.ImprovedBinocularsEnabled() then return nil,'native_improved_binoculars_disabled' end
+        return WeaponNativeImprovedBinocularsPolicy.Resolve(def)
+    end
+    if type(def)=='table' and def.id=='utility_camera_advanced' then
+        if not WeaponNativeUtilityCatalog.AdvancedCameraEnabled() then return nil,'native_advanced_camera_disabled' end
+        return WeaponNativeAdvancedCameraPolicy.Resolve(def)
+    end
     if type(def)=='table' and def.id=='utility_camera' then
         if not WeaponNativeUtilityCatalog.CameraEnabled() then return nil,'native_camera_disabled' end
         return WeaponNativeCameraPolicy.Resolve(def)
@@ -54,7 +70,19 @@ function WeaponNativeUtilityCatalog.Slots()
     if WeaponNativeUtilityCatalog.ReinforcedEnabled() or WeaponNativeUtilityCatalog.DavyEnabled() then slots.weapon_utility_secondary='utility_secondary' end
     if WeaponNativeUtilityCatalog.BinocularsEnabled() then slots.weapon_utility_tertiary='utility_tertiary' end
     if WeaponNativeUtilityCatalog.CameraEnabled() then slots.weapon_utility_quaternary='utility_quaternary' end
+    if WeaponNativeUtilityCatalog.AdvancedCameraEnabled() then slots.weapon_utility_quinary='utility_quinary' end
+    if WeaponNativeUtilityCatalog.ImprovedBinocularsEnabled() then slots.weapon_utility_senary='utility_senary' end
+    if WeaponNativeUtilityCatalog.MetalDetectorEnabled() then slots.weapon_utility_septenary='utility_septenary' end
+    if WeaponNativeUtilityCatalog.FishingRodEnabled() then slots.weapon_utility_octonary='utility_octonary' end
     return slots
+end
+function WeaponNativeUtilityCatalog.ImprovedBinocularsEnabled()
+    return WeaponNativeImprovedBinocularsPolicy~=nil and WeaponNativeUtilityCatalog.AdvancedCameraEnabled()
+        and GetConvarInt('feather_native_binoculars_improved',0)==1 or false
+end
+function WeaponNativeUtilityCatalog.AdvancedCameraEnabled()
+    return WeaponNativeAdvancedCameraPolicy~=nil and WeaponNativeUtilityCatalog.CameraEnabled()
+        and GetConvarInt('feather_native_camera_advanced',0)==1 or false
 end
 function WeaponNativeUtilityCatalog.CameraEnabled()
     return WeaponNativeCameraPolicy~=nil and WeaponNativeUtilityCatalog.BinocularsEnabled()
@@ -67,4 +95,14 @@ end
 function WeaponNativeUtilityCatalog.DavyEnabled()
     return WeaponNativeDavyLanternPolicy~=nil and WeaponNativeUtilityCatalog.Enabled()
         and GetConvarInt('feather_native_davy_lantern',0)==1 or false
+end
+
+function WeaponNativeUtilityCatalog.MetalDetectorEnabled()
+    return WeaponNativeMetalDetectorPolicy~=nil and WeaponNativeUtilityCatalog.ImprovedBinocularsEnabled()
+        and GetConvarInt('feather_native_metal_detector',0)==1 or false
+end
+
+function WeaponNativeUtilityCatalog.FishingRodEnabled()
+    return WeaponNativeFishingRodPolicy~=nil and WeaponNativeUtilityCatalog.ImprovedBinocularsEnabled()
+        and GetConvarInt('feather_native_fishing_rod',0)==1 or false
 end

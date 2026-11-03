@@ -9,6 +9,9 @@ vector3=function(x,y,z) return {x=x,y=y,z=z} end
 GetGameTimer=function() return 100 end
 GetResourceState=function() return 'started' end
 GetConvarInt=function() return 0 end
+SetConvar=function() end
+LoadResourceFile=function() return nil end
+SaveResourceFile=function() return true end
 GetCurrentResourceName=function() return 'feather-weapons' end
 joaat=function() return 1 end
 local events,commands,public,threads={},{},{},{}
