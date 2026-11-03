@@ -3,7 +3,7 @@ name: Regression checks
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, 'ci/automated-release-checks']
 
 permissions:
   contents: read
