@@ -87,6 +87,10 @@ function U.ValidateApproval(approval,def,bound)
         or not identity(approval.identity) or not WeaponNativeUtilityCatalog.Slots()[approval.equipmentSlot] then return nil,'utility_approval_required' end
     if (approval.equipmentSlot=='weapon_utility_tertiary')~=(def.id=='utility_binoculars') then return nil,'utility_profile_slot_mismatch' end
     if (approval.equipmentSlot=='weapon_utility_quaternary')~=(def.id=='utility_camera') then return nil,'utility_profile_slot_mismatch' end
+    if (approval.equipmentSlot=='weapon_utility_quinary')~=(def.id=='utility_camera_advanced') then return nil,'utility_profile_slot_mismatch' end
+    if (approval.equipmentSlot=='weapon_utility_senary')~=(def.id=='utility_binoculars_improved') then return nil,'utility_profile_slot_mismatch' end
+    if (approval.equipmentSlot=='weapon_utility_octonary')~=(def.id=='utility_fishing_rod') then return nil,'utility_profile_slot_mismatch' end
+    if (approval.equipmentSlot=='weapon_utility_septenary')~=(def.id=='utility_metal_detector') then return nil,'utility_profile_slot_mismatch' end
     for _,k in ipairs({'characterId','sessionId','epoch'}) do
         if approval.identity[k]~=bound[k] then return nil,'utility_approval_world_changed' end
     end

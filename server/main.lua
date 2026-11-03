@@ -33,6 +33,7 @@ CreateThread(function()
     if not readerReady then FailStartup(readerReason); return end
     local provenance=WeaponProvenanceService.Start()
     if not provenance.ok then FailStartup(provenance.error.message,provenance.error.details); return end
+    WeaponMoveDelivery.Start()
     local installed,reason=WeaponCharacterAmmoInventoryProvider.Install()
     if not installed then FailStartup(reason); return end
     print('[feather-weapons] scoped native-only firearms host ready; no legacy fallback')

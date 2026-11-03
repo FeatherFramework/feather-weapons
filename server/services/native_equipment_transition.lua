@@ -145,6 +145,26 @@ local function copy(value)
 end
 
 -- Concrete normal-host composition; Inventory owns conditional SQL writes.
+-- A one-shot diagnostic uses the normal dry-run seal/rebuild, then submits a
+-- competing request and an invalid-ticket acknowledgement in the same turn.
+-- It never pauses SQL, bypasses admission or changes the reserved operation.
+function WeaponNativeEquipmentTransition.ProbeOverlap(coordinator,target,bound)
+    local first=coordinator.Begin(target,{action='dry-run'})
+    if not first or not first.ok then return first end
+    local before=coordinator.Status(target)
+    if not before or before.phase~='releasing' then return denied('overlap_probe_not_in_release') end
+    local competing=coordinator.Begin(target,{action='dry-run'})
+    local stale=coordinator.Released(target,'',copy(bound)) -- real tickets are never empty
+    local after=coordinator.Status(target)
+    if not competing or competing.ok or not competing.error
+        or competing.error.code~='equipment_transition_in_flight'
+        or not stale or stale.ok or not after or after.phase~=before.phase
+        or after.sessionId~=before.sessionId or after.commitOutcome~=before.commitOutcome then
+        return denied('overlap_probe_boundary_failed')
+    end
+    return {ok=true,value={competingRefused=true,staleAcknowledgementRefused=true,
+        phase=after.phase,noEquipmentWriteRequested=true,restorePending=true}}
+end
 local function InstallDryRun()
 WeaponNativeEquipmentBindings={}
 WeaponNativeEquipmentBindings.RecoveryContract=1
@@ -250,7 +270,8 @@ local adapters={
             return {ok=true,value={identity=bound,spec=spec}}
         end
         if (intent.slot=='weapon_utility' or intent.slot=='weapon_utility_secondary' or intent.slot=='weapon_utility_tertiary'
-            or intent.slot=='weapon_utility_quaternary') and (intent.action=='equip' or intent.action=='unequip') then
+            or intent.slot=='weapon_utility_quaternary' or intent.slot=='weapon_utility_quinary'
+            or intent.slot=='weapon_utility_septenary' or intent.slot=='weapon_utility_octonary' or intent.slot=='weapon_utility_senary') and (intent.action=='equip' or intent.action=='unequip') then
             if GetConvarInt('feather_native_utility',0)~=1 or not WeaponNativeUtilityItem
                 or Config.NativeAlphaLifecycleWearEnabled~=true then return denied('native_utility_disabled') end
             local checked=WeaponCharacterAmmoService.ValidateLoadout(source)
@@ -273,6 +294,10 @@ local adapters={
                 or (spec.davyFamily and not WeaponNativeUtilityCatalog.DavyEnabled())
                 or (spec.binocularsFamily and not WeaponNativeUtilityCatalog.BinocularsEnabled())
                 or (spec.cameraFamily and not WeaponNativeUtilityCatalog.CameraEnabled())
+                or (spec.advancedCameraFamily and not WeaponNativeUtilityCatalog.AdvancedCameraEnabled())
+                or (spec.metalDetectorFamily and not WeaponNativeUtilityCatalog.MetalDetectorEnabled())
+                or (spec.fishingRodFamily and not WeaponNativeUtilityCatalog.FishingRodEnabled())
+                or (spec.improvedBinocularsFamily and not WeaponNativeUtilityCatalog.ImprovedBinocularsEnabled())
                 or not CoreAdapter.IsSessionCurrent(source,bound.sessionId,bound.characterId) then return denied('native_owner_changed') end
             return {ok=true,value={identity=bound,spec=spec}}
         end
@@ -355,6 +380,26 @@ local adapters={
                 slotOverview[#slotOverview+1]={slot='weapon_utility_quaternary',label='Utility 4',
                     state=row and (row.itemId==intent.itemId and 'selected' or 'occupied') or 'open',itemId=row and row.itemId}
             end
+            if WeaponNativeUtilityCatalog and WeaponNativeUtilityCatalog.AdvancedCameraEnabled() then
+                local row=value.expected.weapon_utility_quinary
+                slotOverview[#slotOverview+1]={slot='weapon_utility_quinary',label='Utility 5',
+                    state=row and (row.itemId==intent.itemId and 'selected' or 'occupied') or 'open',itemId=row and row.itemId}
+            end
+            if WeaponNativeUtilityCatalog and WeaponNativeUtilityCatalog.ImprovedBinocularsEnabled() then
+                local row=value.expected.weapon_utility_senary
+                slotOverview[#slotOverview+1]={slot='weapon_utility_senary',label='Utility 6',
+                    state=row and (row.itemId==intent.itemId and 'selected' or 'occupied') or 'open',itemId=row and row.itemId}
+            end
+            if WeaponNativeUtilityCatalog and WeaponNativeUtilityCatalog.MetalDetectorEnabled() then
+                local row=value.expected.weapon_utility_septenary
+                slotOverview[#slotOverview+1]={slot='weapon_utility_septenary',label='Utility 7',
+                    state=row and (row.itemId==intent.itemId and 'selected' or 'occupied') or 'open',itemId=row and row.itemId}
+            end
+            if WeaponNativeUtilityCatalog and WeaponNativeUtilityCatalog.FishingRodEnabled() then
+                local row=value.expected.weapon_utility_octonary
+                slotOverview[#slotOverview+1]={slot='weapon_utility_octonary',label='Utility 8',
+                    state=row and (row.itemId==intent.itemId and 'selected' or 'occupied') or 'open',itemId=row and row.itemId}
+            end
             if value.candidate.metadata and value.candidate.metadata.weaponDefinitionId=='throwable_tomahawk' then
                 if not WeaponNativeThrowablePolicy or not WeaponNativeThrowablePolicy.Enabled() or not WeaponNativeThrowableItem then
                     return denied('native_throwable_disabled')
@@ -376,7 +421,11 @@ local adapters={
                 or value.candidate.metadata.weaponDefinitionId=='utility_lasso_reinforced'
                 or value.candidate.metadata.weaponDefinitionId=='utility_davy_lantern'
                 or value.candidate.metadata.weaponDefinitionId=='utility_binoculars'
-                or value.candidate.metadata.weaponDefinitionId=='utility_camera') then
+                or value.candidate.metadata.weaponDefinitionId=='utility_camera'
+                or value.candidate.metadata.weaponDefinitionId=='utility_camera_advanced'
+                or value.candidate.metadata.weaponDefinitionId=='utility_metal_detector'
+                or value.candidate.metadata.weaponDefinitionId=='utility_fishing_rod'
+                or value.candidate.metadata.weaponDefinitionId=='utility_binoculars_improved') then
                 if not WeaponNativeUtilityCatalog or not WeaponNativeUtilityCatalog.Enabled() or not WeaponNativeUtilityItem then
                     return denied('native_utility_disabled')
                 end
@@ -385,11 +434,15 @@ local adapters={
                 local utilitySlots={'weapon_utility','weapon_utility_secondary'}
                 if WeaponNativeUtilityCatalog.BinocularsEnabled() then utilitySlots[#utilitySlots+1]='weapon_utility_tertiary' end
                 if WeaponNativeUtilityCatalog.CameraEnabled() then utilitySlots[#utilitySlots+1]='weapon_utility_quaternary' end
+                if WeaponNativeUtilityCatalog.AdvancedCameraEnabled() then utilitySlots[#utilitySlots+1]='weapon_utility_quinary' end
+                if WeaponNativeUtilityCatalog.ImprovedBinocularsEnabled() then utilitySlots[#utilitySlots+1]='weapon_utility_senary' end
+                if WeaponNativeUtilityCatalog.MetalDetectorEnabled() then utilitySlots[#utilitySlots+1]='weapon_utility_septenary' end
+                if WeaponNativeUtilityCatalog.FishingRodEnabled() then utilitySlots[#utilitySlots+1]='weapon_utility_octonary' end
                 for _,slot in ipairs(utilitySlots) do
                   for _,action in ipairs({'equip','unequip'}) do
                     local proposal={action=action,slot=slot,itemId=action=='equip' and intent.itemId or nil,selectedItemId=intent.itemId}
                     if WeaponNativeUtilityItem.Prepare(value,def,bound,proposal) then
-                        local label=({weapon_utility='Utility',weapon_utility_secondary='Utility 2',weapon_utility_tertiary='Utility 3',weapon_utility_quaternary='Utility 4'})[slot]
+                        local label=({weapon_utility='Utility',weapon_utility_secondary='Utility 2',weapon_utility_tertiary='Utility 3',weapon_utility_quaternary='Utility 4',weapon_utility_quinary='Utility 5',weapon_utility_septenary='Utility 7',weapon_utility_octonary='Utility 8',weapon_utility_senary='Utility 6'})[slot]
                         options[#options+1]={action=action,slot=slot,label=(action=='equip' and 'Equip' or 'Unequip')..' — '..label}
                     end
                   end
@@ -671,7 +724,11 @@ local adapters={
                 or (spec.lassoFamily and not WeaponNativeUtilityCatalog.ReinforcedEnabled())
                 or (spec.davyFamily and not WeaponNativeUtilityCatalog.DavyEnabled())
                 or (spec.binocularsFamily and not WeaponNativeUtilityCatalog.BinocularsEnabled())
-                or (spec.cameraFamily and not WeaponNativeUtilityCatalog.CameraEnabled()) then
+                or (spec.cameraFamily and not WeaponNativeUtilityCatalog.CameraEnabled())
+                or (spec.advancedCameraFamily and not WeaponNativeUtilityCatalog.AdvancedCameraEnabled())
+                or (spec.metalDetectorFamily and not WeaponNativeUtilityCatalog.MetalDetectorEnabled())
+                or (spec.fishingRodFamily and not WeaponNativeUtilityCatalog.FishingRodEnabled())
+                or (spec.improvedBinocularsFamily and not WeaponNativeUtilityCatalog.ImprovedBinocularsEnabled()) then
                 return denied('native_utility_commit_disabled')
             end
             return exports['feather-inventory']:CommitNativeUtilityEquipment(context,spec)
@@ -805,6 +862,18 @@ local adapters={
     end,
 }
 coordinator=WeaponNativeEquipmentTransition.New(adapters)
+-- Development orchestrator uses the same coordinator, never console parsing or
+-- a parallel equipment implementation. It cannot request economic writes.
+function WeaponNativeEquipmentBindings.AcceptanceTransition(target,overlap)
+    if not enabled() or not (GetConvarInt('feather_native_acceptance_suite',0)==1
+        or (overlap~=true and GetConvarInt('feather_native_restart_suite',0)==1))
+        or GetResourceState('feather-weapons-native-proof')~='stopped' then return denied('acceptance_disabled') end
+    local state=WeaponCharacterAmmoDispatcher.Status(target)
+    if not state or state.phase~='active' or state.busy or not identity(state.identity) then return denied('active_owner_required') end
+    return overlap and WeaponNativeEquipmentTransition.ProbeOverlap(coordinator,target,copy(state.identity))
+        or coordinator.Begin(target,{action='dry-run'})
+end
+function WeaponNativeEquipmentBindings.AcceptanceStatus(target) return coordinator.Status(target) end
 exports('ReadNativeMaintenanceAuditSpec',function(target,itemId)
     if GetInvokingResource()~='feather-inventory' or not enabled() or Config.NativeAlphaMaintenanceEnabled~=true
         or type(itemId)~='number' or itemId<1 or itemId%1~=0 or itemId==math.huge then return denied('maintenance_audit_denied') end
@@ -868,6 +937,10 @@ RegisterNetEvent('feather-weapons:server:native-equipment-ui',function(id,kind,i
     if WeaponNativeUtilityCatalog and WeaponNativeUtilityCatalog.Slots().weapon_utility_secondary then slots.weapon_utility_secondary=true end
     if WeaponNativeUtilityCatalog and WeaponNativeUtilityCatalog.Slots().weapon_utility_tertiary then slots.weapon_utility_tertiary=true end
     if WeaponNativeUtilityCatalog and WeaponNativeUtilityCatalog.Slots().weapon_utility_quaternary then slots.weapon_utility_quaternary=true end
+    if WeaponNativeUtilityCatalog and WeaponNativeUtilityCatalog.Slots().weapon_utility_quinary then slots.weapon_utility_quinary=true end
+    if WeaponNativeUtilityCatalog and WeaponNativeUtilityCatalog.Slots().weapon_utility_senary then slots.weapon_utility_senary=true end
+    if WeaponNativeUtilityCatalog and WeaponNativeUtilityCatalog.Slots().weapon_utility_octonary then slots.weapon_utility_octonary=true end
+    if WeaponNativeUtilityCatalog and WeaponNativeUtilityCatalog.Slots().weapon_utility_septenary then slots.weapon_utility_septenary=true end
     if WeaponNativeMeleeCatalog and WeaponNativeMeleeCatalog.Enabled() then
         for _,slot in pairs(WeaponNativeMeleeCatalog.Slots()) do slots[slot]=true end
     end
@@ -1034,6 +1107,21 @@ RegisterCommand('WeaponNativeEquipmentDryRun',function(source,args)
     local target=tonumber(args and args[1])
     local result=coordinator.Begin(target,{action='dry-run'})
     print('[WeaponNativeEquipmentDryRun] '..(result.ok and 'STARTED; no equipment write requested' or 'REFUSED '..tostring(result.error.code)))
+end,true)
+RegisterCommand('WeaponNativeOverlapProbe',function(source,args)
+    if source~=0 or not enabled() or GetConvarInt('feather_native_overlap_probe',0)~=1
+        or GetResourceState('feather-weapons-native-proof')~='stopped' then return end
+    if not args or #args~=1 then return print('[WeaponNativeOverlapProbe] REFUSED current-server-id required') end
+    local target=tonumber(args[1])
+    if not target or target<1 or target%1~=0 then return print('[WeaponNativeOverlapProbe] REFUSED current-server-id required') end
+    SetConvar('feather_native_overlap_probe','0') -- consume before any yielding admission
+    local state=WeaponCharacterAmmoDispatcher.Status(target)
+    if not state or state.phase~='active' or state.busy or not identity(state.identity) then
+        return print('[WeaponNativeOverlapProbe] REFUSED active idle native owner required; opt-in consumed')
+    end
+    local result=WeaponNativeEquipmentTransition.ProbeOverlap(coordinator,target,copy(state.identity))
+    print('[WeaponNativeOverlapProbe] '..(result and result.ok and 'PASS boundary checks; await normal restore ' or 'FAIL inspect before retry ')
+        ..json.encode(result))
 end,true)
 RegisterCommand('WeaponNativeEquipmentChange',function(source,args)
     if source~=0 or not enabled() or GetResourceState('feather-weapons-native-proof')~='stopped' then return end
@@ -1460,6 +1548,11 @@ function WeaponNativeEquipmentTransition.New(api)
         elseif type(committed)=='table' and committed.ok==true then
             state.commitOutcome='confirmed'
             state.committed=not (type(committed.value)=='table' and committed.value.unchanged==true)
+        elseif type(committed)=='table' and committed.ok==false and
+            (committed.outcome=='unknown' or (type(committed.error)=='table' and
+                (committed.error.code=='transaction_outcome_unknown' or
+                 (type(committed.error.details)=='table' and committed.error.details.outcome=='unknown')))) then
+            state.commitOutcome='uncertain'
         elseif type(committed)=='table' and committed.ok==false then state.commitOutcome='refused'
         else state.commitOutcome='uncertain' end
         if states[source]~=state or state.phase~='writing' then return denied('equipment_commit_lifecycle_changed') end

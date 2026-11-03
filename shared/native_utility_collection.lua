@@ -21,7 +21,7 @@ function U.ValidateCollection(approval,catalog,bound)
     for key in pairs(approval) do if key~='items' then return nil,'utility_collection_required' end end
     local count=0
     for key in pairs(approval.items) do
-        if type(key)~='number' or key%1~=0 or key<1 or key>(WeaponNativeUtilityCatalog.CameraEnabled() and 4 or WeaponNativeUtilityCatalog.BinocularsEnabled() and 3 or 2) then return nil,'utility_collection_required' end
+        if type(key)~='number' or key%1~=0 or key<1 or key>(WeaponNativeUtilityCatalog.FishingRodEnabled() and 8 or WeaponNativeUtilityCatalog.MetalDetectorEnabled() and 7 or WeaponNativeUtilityCatalog.ImprovedBinocularsEnabled() and 6 or WeaponNativeUtilityCatalog.AdvancedCameraEnabled() and 5 or WeaponNativeUtilityCatalog.CameraEnabled() and 4 or WeaponNativeUtilityCatalog.BinocularsEnabled() and 3 or 2) then return nil,'utility_collection_required' end
         count=count+1
     end
     if count<1 or count~=#approval.items then return nil,'utility_collection_required' end
@@ -32,8 +32,9 @@ function U.ValidateCollection(approval,catalog,bound)
         local profile=def and WeaponNativeUtilityCatalog.Resolve(def)
         local valid,why=def and U.ValidateApproval(entry,def,bound)
         if not valid or not profile then return nil,why or 'utility_definition_required' end
-        if slots[entry.equipmentSlot] or ids[row.id] or families[profile.family] then return nil,'utility_family_or_assignment_conflict' end
-        slots[entry.equipmentSlot],ids[row.id],families[profile.family]=true,true,true
+        local group=profile.ownershipGroup or profile.family
+        if slots[entry.equipmentSlot] or ids[row.id] or families[group] then return nil,'utility_family_or_assignment_conflict' end
+        slots[entry.equipmentSlot],ids[row.id],families[group]=true,true,true
         result.items[#result.items+1]=valid
     end
     table.sort(result.items,function(a,b) return a.equipmentSlot<b.equipmentSlot end)
@@ -43,12 +44,18 @@ function U.AssignedSnapshot(snapshot,catalog,bound)
     if not WeaponNativeUtilityCatalog.DavyEnabled() then
         if type(snapshot)=='table' and type(snapshot.equipment)=='table' then
             for _,row in pairs(snapshot.equipment) do
+                if type(row)=='table' and type(row.metadata)=='table' and row.metadata.weaponDefinitionId=='utility_fishing_rod' then return nil,'native_fishing_rod_disabled' end
+                if type(row)=='table' and type(row.metadata)=='table' and row.metadata.weaponDefinitionId=='utility_metal_detector' then return nil,'native_metal_detector_disabled' end
                 if type(row)=='table' and type(row.metadata)=='table'
                     and row.metadata.weaponDefinitionId=='utility_davy_lantern' then return nil,'native_davy_lantern_disabled' end
                 if type(row)=='table' and type(row.metadata)=='table'
                     and row.metadata.weaponDefinitionId=='utility_binoculars' then return nil,'native_binoculars_disabled' end
                 if type(row)=='table' and type(row.metadata)=='table'
                     and row.metadata.weaponDefinitionId=='utility_camera' then return nil,'native_camera_disabled' end
+                if type(row)=='table' and type(row.metadata)=='table'
+                    and row.metadata.weaponDefinitionId=='utility_camera_advanced' then return nil,'native_advanced_camera_disabled' end
+                if type(row)=='table' and type(row.metadata)=='table'
+                    and row.metadata.weaponDefinitionId=='utility_binoculars_improved' then return nil,'native_improved_binoculars_disabled' end
             end
         end
         return assignedSingle(snapshot,catalog,bound)
@@ -67,6 +74,10 @@ function U.AssignedSnapshot(snapshot,catalog,bound)
     local order={'utility','utility_secondary'}
     if WeaponNativeUtilityCatalog.BinocularsEnabled() then order[#order+1]='utility_tertiary' end
     if WeaponNativeUtilityCatalog.CameraEnabled() then order[#order+1]='utility_quaternary' end
+    if WeaponNativeUtilityCatalog.AdvancedCameraEnabled() then order[#order+1]='utility_quinary' end
+    if WeaponNativeUtilityCatalog.ImprovedBinocularsEnabled() then order[#order+1]='utility_senary' end
+    if WeaponNativeUtilityCatalog.MetalDetectorEnabled() then order[#order+1]='utility_septenary' end
+    if WeaponNativeUtilityCatalog.FishingRodEnabled() then order[#order+1]='utility_octonary' end
     for _,slot in ipairs(order) do
         local row,expected=snapshot.equipment[slot],snapshot.expected['weapon_'..slot]
         if row~=nil or expected~=nil then
@@ -101,10 +112,16 @@ function U.Prepare(snapshot,def,bound,intent)
         if not profile or not U.Project(row,def,bound) then return nil,'utility_candidate_required' end
         if (intent.slot=='weapon_utility_tertiary')~=(profile.id=='utility_binoculars') then return nil,'utility_profile_slot_mismatch' end
         if (intent.slot=='weapon_utility_quaternary')~=(profile.id=='utility_camera') then return nil,'utility_profile_slot_mismatch' end
+        if (intent.slot=='weapon_utility_quinary')~=(profile.id=='utility_camera_advanced') then return nil,'utility_profile_slot_mismatch' end
+        if (intent.slot=='weapon_utility_senary')~=(profile.id=='utility_binoculars_improved') then return nil,'utility_profile_slot_mismatch' end
+        if (intent.slot=='weapon_utility_octonary')~=(profile.id=='utility_fishing_rod') then return nil,'utility_profile_slot_mismatch' end
+        if (intent.slot=='weapon_utility_septenary')~=(profile.id=='utility_metal_detector') then return nil,'utility_profile_slot_mismatch' end
         for _,entry in pairs(snapshot.expected) do if entry.itemId==row.id then return nil,'utility_already_equipped' end end
         for _,entry in ipairs(U.Entries(assigned)) do
             local existing=WeaponDefinitionCatalog.weapons[entry.row.metadata.weaponDefinitionId]
-            if existing.family==profile.family then
+            local existingProfile=WeaponNativeUtilityCatalog.Resolve(existing)
+            if not existingProfile then return nil,'utility_definition_required' end
+            if (existingProfile.ownershipGroup or existingProfile.family)==(profile.ownershipGroup or profile.family) then
                 return nil,profile.family=='lasso' and 'one_equipped_lasso_required'
                     or profile.family=='lantern' and 'one_equipped_lantern_required'
                     or profile.family=='camera' and 'one_equipped_camera_required' or 'one_equipped_binoculars_required'
@@ -118,6 +135,10 @@ function U.Prepare(snapshot,def,bound,intent)
     return {characterId=bound.characterId,action=intent.action,slot=intent.slot,utility=true,davyFamily=true,
         binocularsFamily=WeaponNativeUtilityCatalog.BinocularsEnabled() or nil,
         cameraFamily=WeaponNativeUtilityCatalog.CameraEnabled() or nil,
+        advancedCameraFamily=WeaponNativeUtilityCatalog.AdvancedCameraEnabled() or nil,
+        improvedBinocularsFamily=WeaponNativeUtilityCatalog.ImprovedBinocularsEnabled() or nil,
+        fishingRodFamily=WeaponNativeUtilityCatalog.FishingRodEnabled() or nil,
+        metalDetectorFamily=WeaponNativeUtilityCatalog.MetalDetectorEnabled() or nil,
         utilityId=row.id,utilityRevision=row.revision,before=copy(row.metadata),expected=copy(snapshot.expected),
         lifecycleSnapshot=copy(snapshot.equipment),brokenEquipmentContract=snapshot.brokenEquipmentContract,
         brokenPromotionContract=snapshot.brokenPromotionContract}

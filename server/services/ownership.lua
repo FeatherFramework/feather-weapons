@@ -81,6 +81,9 @@ end
 
 function WeaponOwnershipService.HandleCommittedMove(payload)
     if type(payload) ~= "table" then return nil end
+    -- A durable Inventory move is projected through ApplyInventoryMoveDelivery;
+    -- this legacy broadcast must not insert a second provenance record.
+    if payload.durableMoveOperationId then return nil end
     if tostring(payload.fromInventoryId) == tostring(payload.toInventoryId) then return nil end
     local reader=WeaponNativeOwnershipReader
     if not reader then return nil end

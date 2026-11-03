@@ -6,7 +6,7 @@ lua54 'yes'
 description 'The official weapon system for Feather framework.'
 author 'Feather Framework'
 name 'feather-weapons'
-version '0.17.1'
+version '0.18.0'
 
 shared_scripts {
     'config.lua',
@@ -16,6 +16,7 @@ shared_scripts {
     '/shared/definitions/attachments.lua',
     '/shared/definitions/weapons.lua',
     '/shared/validation.lua',
+    '/shared/native_acceptance_view.lua',
     '/shared/ammunition_pools.lua',
     '/shared/character_ammunition.lua',
     '/shared/character_ammunition_runtime.lua',
@@ -29,6 +30,10 @@ shared_scripts {
     '/shared/native_davy_lantern_policy.lua',
     '/shared/native_binoculars_policy.lua',
     '/shared/native_camera_policy.lua',
+    '/shared/native_advanced_camera_policy.lua',
+    '/shared/native_improved_binoculars_policy.lua',
+    '/shared/native_fishing_rod_policy.lua',
+    '/shared/native_metal_detector_policy.lua',
     '/shared/native_utility_catalog.lua',
     '/shared/native_utility_item.lua',
     '/shared/native_utility_collection.lua',
@@ -58,10 +63,14 @@ server_scripts {
     '/server/services/metadata.lua',
     '/server/services/attachments.lua',
     '/server/services/provenance.lua',
+    '/server/services/move_delivery.lua',
     '/server/services/evidence.lua',
     '/server/services/ownership.lua',
     '/server/services/issuance.lua',
     '/server/services/native_throwable_projectile_probe.lua',
+    '/server/services/native_acceptance_suite.lua',
+    '/shared/native_restart_acceptance.lua',
+    '/server/services/native_restart_acceptance.lua',
     '/server/services/commands.lua',
     '/server/services/api.lua',
     '/server/main.lua'
@@ -95,6 +104,7 @@ client_scripts {
     '/client/native_utility_adapter.lua',
     '/client/character_ammunition_native_owner.lua',
     '/client/character_ammunition_startup.lua',
+    '/client/native_acceptance_suite.lua',
     '/client/character_ammunition_actions.lua',
     '/client/native_equipment_actions.lua',
     '/client/native_throwable_projectile_probe.lua',

@@ -144,6 +144,14 @@ function WeaponCharacterAmmoNativeOwner.New(dependencies)
         local davy=definition.id=='utility_davy_lantern'
         local binoculars=definition.id=='utility_binoculars'
         local camera=definition.id=='utility_camera'
+        local advancedCamera=definition.id=='utility_camera_advanced'
+        local improvedBinoculars=definition.id=='utility_binoculars_improved'
+        local fishingRod=definition.id=='utility_fishing_rod'
+        local metalDetector=definition.id=='utility_metal_detector'
+        if improvedBinoculars and not WeaponNativeUtilityCatalog.ImprovedBinocularsEnabled() then return nil,'native_improved_binoculars_disabled' end
+        if fishingRod and not WeaponNativeUtilityCatalog.FishingRodEnabled() then return nil,'native_fishing_rod_disabled' end
+        if metalDetector and not WeaponNativeUtilityCatalog.MetalDetectorEnabled() then return nil,'native_metal_detector_disabled' end
+        if advancedCamera and not WeaponNativeUtilityCatalog.AdvancedCameraEnabled() then return nil,'native_advanced_camera_disabled' end
         if camera and not WeaponNativeUtilityCatalog.CameraEnabled() then return nil,'native_camera_disabled' end
         if binoculars and not WeaponNativeUtilityCatalog.BinocularsEnabled() then return nil,'native_binoculars_disabled' end
         if davy and not WeaponNativeUtilityCatalog.DavyEnabled() then return nil,'native_davy_lantern_disabled' end
@@ -155,6 +163,10 @@ function WeaponCharacterAmmoNativeOwner.New(dependencies)
                 and (not davy or WeaponNativeUtilityCatalog.DavyEnabled())
                 and (not binoculars or WeaponNativeUtilityCatalog.BinocularsEnabled())
                 and (not camera or WeaponNativeUtilityCatalog.CameraEnabled())
+                and (not advancedCamera or WeaponNativeUtilityCatalog.AdvancedCameraEnabled())
+                and (not improvedBinoculars or WeaponNativeUtilityCatalog.ImprovedBinocularsEnabled())
+                and (not fishingRod or WeaponNativeUtilityCatalog.FishingRodEnabled())
+                and (not metalDetector or WeaponNativeUtilityCatalog.MetalDetectorEnabled())
                 and current(owned.identity,ped) and check.characterId==owned.identity.characterId
                 and check.sessionId==owned.identity.sessionId and check.epoch==owned.identity.epoch
         end,sealed,definition)

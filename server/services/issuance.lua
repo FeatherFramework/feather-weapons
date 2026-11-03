@@ -252,6 +252,22 @@ RegisterCommand('WeaponNativeUtilityStatus',function(source)
     local cameraLoaded=WeaponNativeCameraPolicy~=nil and binocularsLoaded
     if cameraConvar==1 and not cameraLoaded then missing[#missing+1]='Camera policy not loaded' end
     if cameraConvar==1 and not WeaponNativeUtilityCatalog.BinocularsEnabled() then missing[#missing+1]='Camera requires Binoculars collection admission' end
+    local advancedCameraConvar=type(GetConvarInt)=='function' and GetConvarInt('feather_native_camera_advanced',0) or 0
+    local advancedCameraLoaded=WeaponNativeAdvancedCameraPolicy~=nil and cameraLoaded
+    if advancedCameraConvar==1 and not advancedCameraLoaded then missing[#missing+1]='Advanced Camera policy not loaded' end
+    if advancedCameraConvar==1 and not WeaponNativeUtilityCatalog.CameraEnabled() then missing[#missing+1]='Advanced Camera requires Standard Camera collection admission' end
+    local improvedBinocularsConvar=type(GetConvarInt)=='function' and GetConvarInt('feather_native_binoculars_improved',0) or 0
+    local improvedBinocularsLoaded=WeaponNativeImprovedBinocularsPolicy~=nil and advancedCameraLoaded
+    if improvedBinocularsConvar==1 and not improvedBinocularsLoaded then missing[#missing+1]='Improved Binoculars policy not loaded' end
+    if improvedBinocularsConvar==1 and not WeaponNativeUtilityCatalog.AdvancedCameraEnabled() then missing[#missing+1]='Improved Binoculars requires Advanced Camera collection admission' end
+    local fishingRodConvar=type(GetConvarInt)=='function' and GetConvarInt('feather_native_fishing_rod',0) or 0
+    local fishingRodLoaded=WeaponNativeFishingRodPolicy~=nil and advancedCameraLoaded
+    if fishingRodConvar==1 and not fishingRodLoaded then missing[#missing+1]='Fishing Rod policy not loaded' end
+    if fishingRodConvar==1 and not WeaponNativeUtilityCatalog.ImprovedBinocularsEnabled() then missing[#missing+1]='Fishing Rod requires Improved Binoculars collection admission' end
+    local metalDetectorConvar=type(GetConvarInt)=='function' and GetConvarInt('feather_native_metal_detector',0) or 0
+    local metalDetectorLoaded=WeaponNativeMetalDetectorPolicy~=nil and advancedCameraLoaded
+    if metalDetectorConvar==1 and not metalDetectorLoaded then missing[#missing+1]='Metal Detector policy not loaded' end
+    if metalDetectorConvar==1 and not WeaponNativeUtilityCatalog.ImprovedBinocularsEnabled() then missing[#missing+1]='Metal Detector requires Improved Binoculars collection admission' end
     if reinforcedConvar==1 and not reinforcedLoaded then missing[#missing+1]='lasso family policy not loaded' end
     print('[WeaponNativeUtilityStatus] '..json.encode({loaded=loaded,enabled=loaded and WeaponNativeUtilityCatalog.Enabled() or false,
         convar=convar,missing=missing,definitionId='utility_lasso',itemName='weapon_lasso',equipmentSlot='weapon_utility',
@@ -263,6 +279,14 @@ RegisterCommand('WeaponNativeUtilityStatus',function(source)
         binocularsEnabled=binocularsLoaded and WeaponNativeUtilityCatalog.BinocularsEnabled() or false,
         cameraLoaded=cameraLoaded,cameraConvar=cameraConvar,
         cameraEnabled=cameraLoaded and WeaponNativeUtilityCatalog.CameraEnabled() or false,
+        advancedCameraLoaded=advancedCameraLoaded,advancedCameraConvar=advancedCameraConvar,
+        advancedCameraEnabled=advancedCameraLoaded and WeaponNativeUtilityCatalog.AdvancedCameraEnabled() or false,
+        improvedBinocularsLoaded=improvedBinocularsLoaded,improvedBinocularsConvar=improvedBinocularsConvar,
+        fishingRodLoaded=fishingRodLoaded,fishingRodConvar=fishingRodConvar,
+        metalDetectorLoaded=metalDetectorLoaded,metalDetectorConvar=metalDetectorConvar,
+        improvedBinocularsEnabled=improvedBinocularsLoaded and WeaponNativeUtilityCatalog.ImprovedBinocularsEnabled() or false,
+        fishingRodEnabled=fishingRodLoaded and WeaponNativeUtilityCatalog.FishingRodEnabled() or false,
+        metalDetectorEnabled=metalDetectorLoaded and WeaponNativeUtilityCatalog.MetalDetectorEnabled() or false,
         noWrites=true,usesAmmunition=false,liveNativeAccepted=false}))
 end)
 RegisterCommand('WeaponNativeKnifeStatus',function(source)
