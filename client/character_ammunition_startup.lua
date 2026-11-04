@@ -1,7 +1,7 @@
 -- Native-only scoped host. Disabled or incomplete configuration never selects another runtime.
 CreateThread(function()
     if Config.CharacterAmmunitionEnabled~=true or Config.CharacterAmmoTransportEnabled~=true then return end
-    if Config.DevMode~=true or Config.NativeAlphaRuntime~=true
+    if Config.NativeAlphaRuntime~=true
         or not WeaponNativeEnrollment.Validate(Config) then
         print('[feather-weapons] native alpha startup refused: explicit scoped configuration required')
         return
@@ -12,7 +12,7 @@ CreateThread(function()
     local waitingNotified=false
     while true do
         if Config.CharacterAmmunitionEnabled~=true or Config.CharacterAmmoTransportEnabled~=true
-            or Config.NativeAlphaRuntime~=true or Config.DevMode~=true then return end
+            or Config.NativeAlphaRuntime~=true then return end
         local result=WeaponCharacterAmmoWorldContext.Read()
         if result.ok==true and WeaponNativeEnrollment.Allows(Config,result.value.characterId) then
             local owner,reason=WeaponCharacterAmmoNativeOwner.New()
@@ -35,7 +35,7 @@ end)
 
 RegisterCommand('weaponNativeMaintenanceStatus',function()
     local owner=WeaponCharacterAmmoActiveOwner
-    if Config.DevMode~=true or not owner or type(owner.MaintenanceStatus)~='function' then return end
+    if Config.NativeAlphaRuntime~=true or not owner or type(owner.MaintenanceStatus)~='function' then return end
     local called,value,reason=pcall(owner.MaintenanceStatus)
     if called and value then print('[feather-weapons] native maintenance '..json.encode(value))
     else print('[feather-weapons] native maintenance unavailable: '..tostring(reason or value)) end
@@ -94,7 +94,7 @@ RegisterCommand('weaponNativeChildComponentProbe',function(_,args)
     print('[WeaponNativeChildComponentProbe] '..(ok and value and ('OBSERVED '..json.encode(value)) or ('REFUSED '..tostring(why or value))))
 end,false)
 RegisterCommand('weaponNativeStatus',function()
-    if Config.DevMode~=true or Config.NativeAlphaRuntime~=true then
+    if Config.NativeAlphaRuntime~=true then
         print('[feather-weapons] native alpha is disabled'); return
     end
     local owner=WeaponCharacterAmmoActiveOwner

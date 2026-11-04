@@ -42,7 +42,7 @@ assert(WeaponCharacterAmmoDispatcher.Start(1).error.code=='approved_policy_unava
 providerReady=true; Config.NativeAlphaRuntime=true; Config.DevMode=true
 Config.NativeAlphaCharacterId='foreign'
 assert(WeaponCharacterAmmoActivationOwner.Ready(1,{characterId='Jane',sessionId='current'}).error.code
-    =='activation_identity_changed' and calls==2,'alpha activation is restricted to the configured character')
+    =='approved_policy_unavailable' and calls==2,'old test allowlist does not restrict another current character')
 Config.NativeAlphaCharacterId='Jane'
 assert(WeaponCharacterAmmoActivationOwner.Ready(1,{characterId='Jane',sessionId='current'}).error.code
     =='approved_policy_unavailable' and calls==2,'matching scope reaches authoritative policy validation')

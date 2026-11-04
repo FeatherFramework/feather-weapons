@@ -5,10 +5,10 @@ function WeaponAPI.GetCapabilities()
             and IssuanceService.NativeAvailable()==true
         return {contractVersion=WeaponConstants.ContractVersion,
             ready=Config.CharacterAmmunitionEnabled==true and Config.CharacterAmmoTransportEnabled==true
-                and Config.DevMode==true and Config.NativeAlphaRuntime==true
+                and Config.NativeAlphaRuntime==true
                 and WeaponCharacterAmmoInventoryProvider.Status()=='ready',
             definitions=DefinitionRegistry.Counts(),
-            features={nativeAlphaFirearms=true,scopedCharacterOnly=true,
+            features={nativeAlphaFirearms=true,scopedCharacterOnly=false,
                 issuance=issuance,secureIssuance=issuance,idempotentIssuance=issuance,
                 issuancePayloadBinding=issuance,issuanceRecovery=issuance,
                 legacyGameplay=false,equip=false,ammunitionManagement=false,repair=false,

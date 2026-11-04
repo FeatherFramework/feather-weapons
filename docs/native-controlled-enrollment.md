@@ -1,5 +1,11 @@
 # Controlled native enrollment — staged implementation
 
+2026-11-03: character allowlists and the two-member access limit are removed.
+Every authoritative current character can access Weapons. This changes access,
+not economic data enrollment or development/runtime requirements. See the
+[current all-player access guide](native-rollout-admission.md). The dated
+instructions below are historical acceptance evidence, not current access setup.
+
 Current checkpoint: authoritative framework Weapons CHECKPOINT_2026-10-17.md.
 InvJohnNativeFixture has been retired from runtime after acceptance; its pure
 body is test-only. Retain existing receipt/data and do not repeat old grant

@@ -18,7 +18,7 @@ function WeaponNativeShutdownDrain.New(api)
             if type(row)~='table' or type(row.source)~='number' or row.source<1 or row.source%1~=0
                 or seen[row.source] or type(row.characterId)~='string' or row.characterId=='' or characters[row.characterId]
                 or type(row.sessionId)~='string' or row.sessionId==''
-                or type(row.epoch)~='string' or row.epoch=='' or #clean>=2 then return nil end
+                or type(row.epoch)~='string' or row.epoch=='' then return nil end
             seen[row.source]=true
             characters[row.characterId]=true
             clean[#clean+1]={source=row.source,characterId=row.characterId,sessionId=row.sessionId,epoch=row.epoch}
@@ -172,7 +172,7 @@ local pending={}
 local stopping={}
 local sequence=0
 local function enabled()
-    return Config.DevMode==true and Config.NativeAlphaRuntime==true
+    return Config.NativeAlphaRuntime==true
         and Config.CharacterAmmunitionEnabled==true and Config.CharacterAmmoTransportEnabled==true
 end
 local coordinator
@@ -865,7 +865,7 @@ coordinator=WeaponNativeEquipmentTransition.New(adapters)
 -- Development orchestrator uses the same coordinator, never console parsing or
 -- a parallel equipment implementation. It cannot request economic writes.
 function WeaponNativeEquipmentBindings.AcceptanceTransition(target,overlap)
-    if not enabled() or not (GetConvarInt('feather_native_acceptance_suite',0)==1
+    if Config.DevMode~=true or not enabled() or not (GetConvarInt('feather_native_acceptance_suite',0)==1
         or (overlap~=true and GetConvarInt('feather_native_restart_suite',0)==1))
         or GetResourceState('feather-weapons-native-proof')~='stopped' then return denied('acceptance_disabled') end
     local state=WeaponCharacterAmmoDispatcher.Status(target)
@@ -1103,12 +1103,14 @@ RegisterNetEvent('feather-weapons:server:native-equipment-restored',function(tic
     end
 end)
 RegisterCommand('WeaponNativeEquipmentDryRun',function(source,args)
+    if Config.DevMode~=true then return end
     if source~=0 or not enabled() or GetResourceState('feather-weapons-native-proof')~='stopped' then return end
     local target=tonumber(args and args[1])
     local result=coordinator.Begin(target,{action='dry-run'})
     print('[WeaponNativeEquipmentDryRun] '..(result.ok and 'STARTED; no equipment write requested' or 'REFUSED '..tostring(result.error.code)))
 end,true)
 RegisterCommand('WeaponNativeOverlapProbe',function(source,args)
+    if Config.DevMode~=true then return end
     if source~=0 or not enabled() or GetConvarInt('feather_native_overlap_probe',0)~=1
         or GetResourceState('feather-weapons-native-proof')~='stopped' then return end
     if not args or #args~=1 then return print('[WeaponNativeOverlapProbe] REFUSED current-server-id required') end
@@ -1124,6 +1126,7 @@ RegisterCommand('WeaponNativeOverlapProbe',function(source,args)
         ..json.encode(result))
 end,true)
 RegisterCommand('WeaponNativeEquipmentChange',function(source,args)
+    if Config.DevMode~=true then return end
     if source~=0 or not enabled() or GetResourceState('feather-weapons-native-proof')~='stopped' then return end
     local action=args and args[2]
     if not args or (action~='equip' and action~='unequip') or (action=='equip' and #args~=4)
@@ -1138,6 +1141,7 @@ RegisterCommand('WeaponNativePrepareStop',function(source,args)
     print('[WeaponNativePrepareStop] '..(result.ok and 'STARTED; wait for PASS before stopping' or 'REFUSED '..tostring(result.error.code)))
 end,true)
 RegisterCommand('WeaponNativeThrowableFunding',function(source,args)
+    if Config.DevMode~=true then return end
     if source~=0 or not enabled() or GetResourceState('feather-weapons-native-proof')~='stopped' then return end
     if not args or #args~=3 then return print('[WeaponNativeThrowableFunding] usage: serverId +1|-1 stable-operation-id') end
     local result=coordinator.Begin(tonumber(args[1]),{action='throwable-funding',slot='weapon_throwable',
@@ -1195,6 +1199,7 @@ RegisterCommand('WeaponNativeShutdownStatus',function(source,args)
     print('[WeaponNativeShutdownStatus] '..json.encode(drain.Status()))
 end,true)
 RegisterCommand('WeaponNativeRepair',function(source,args)
+    if Config.DevMode~=true then return end
     if source~=0 or not enabled() or Config.NativeAlphaRepairEnabled~=true
         or GetResourceState('feather-weapons-native-proof')~='stopped' then return end
     if not args or #args~=2 then return print('[WeaponNativeRepair] usage: current-server-id owned-item-id') end
@@ -1203,6 +1208,7 @@ RegisterCommand('WeaponNativeRepair',function(source,args)
         or 'REFUSED '..tostring(result.error.code)))
 end,true)
 RegisterCommand('WeaponNativeRepairStatus',function(source,args)
+    if Config.DevMode~=true then return end
     if source~=0 or not enabled() or Config.NativeAlphaRepairEnabled~=true then return end
     local target,itemId=tonumber(args and args[1]),tonumber(args and args[2])
     if not args or #args~=2 or not target or target<1 or target%1~=0 or target==math.huge
@@ -1243,6 +1249,7 @@ RegisterCommand('WeaponNativeRepairStatus',function(source,args)
     print('[WeaponNativeRepairStatus] '..(ok and value and json.encode(value) or 'REFUSED current repair snapshot unavailable'))
 end,true)
 RegisterCommand('WeaponNativeAttachmentChange',function(source,args)
+    if Config.DevMode~=true then return end
     if source~=0 then return end
     if not attachmentEnabled() or GetResourceState('feather-weapons-native-proof')~='stopped' then
         return print('[WeaponNativeAttachmentChange] REFUSED scoped attachment flags/final-wear runtime required; proof must be stopped')
@@ -1255,6 +1262,7 @@ RegisterCommand('WeaponNativeAttachmentChange',function(source,args)
         or 'REFUSED '..tostring(result.error.code)))
 end,true)
 RegisterCommand('WeaponNativeArmAttachmentDisconnect',function(source,args)
+    if Config.DevMode~=true then return end
     if source~=0 then return end
     local target,itemId=tonumber(args and args[1]),tonumber(args and args[2])
     local action=args and args[3]
@@ -1280,6 +1288,7 @@ RegisterCommand('WeaponNativeArmAttachmentDisconnect',function(source,args)
     print('[WeaponNativeArmAttachmentDisconnect] ARMED matching action/current epoch only; expires in 60s; confirmed commit disconnects player')
 end,true)
 RegisterCommand('WeaponNativeAttachmentStatus',function(source,args)
+    if Config.DevMode~=true then return end
     if source~=0 then return end
     local target=tonumber(args and args[1])
     local itemId=tonumber(args and args[2])
@@ -1336,6 +1345,7 @@ local function requestWear(target,itemId,automatic)
     return true
 end
 RegisterCommand('WeaponNativeMaintenanceCheckpoint',function(source,args)
+    if Config.DevMode~=true then return end
     if source~=0 then return end
     if not args or #args~=2 then return print('[WeaponNativeMaintenanceCheckpoint] usage: current-server-id equipped-item-id') end
     if not requestWear(tonumber(args[1]),tonumber(args[2]),false) then print('[WeaponNativeMaintenanceCheckpoint] REFUSED scoped active idle owner required') end
@@ -1398,6 +1408,7 @@ periodic=WeaponNativePeriodicWear.New({
     request=function(target,itemId) return requestWear(target,itemId,true) end,
 })
 RegisterCommand('WeaponNativePeriodicWearStatus',function(source,args)
+    if Config.DevMode~=true then return end
     if source~=0 or not enabled() then return end
     local target=tonumber(args and args[1])
     print('[WeaponNativePeriodicWearStatus] '..json.encode({enabled=Config.NativeAlphaPeriodicWearEnabled==true,state=target and periodic.Status(target)}))

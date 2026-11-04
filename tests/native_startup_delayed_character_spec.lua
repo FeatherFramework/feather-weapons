@@ -13,7 +13,7 @@ local function run(mode)
  WeaponCharacterAmmoActiveOwner=nil
  WeaponCharacterAmmoWorldContext={Read=function()
   if now<45000 then return {ok=false} end
-  return {ok=true,value={characterId=mode=='second' and second or mode=='foreign' and 'Other' or 'Jane'}}
+  return {ok=true,value={characterId=mode=='second' and second or mode=='foreign' and '' or 'Jane'}}
  end}
  WeaponCharacterAmmoNativeOwner={New=function()
   created=created+1

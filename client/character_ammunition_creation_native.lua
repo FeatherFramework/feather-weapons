@@ -262,10 +262,10 @@ function WeaponCharacterAmmoCreationNative.Scoped(ped,identity,prepareDual,clean
         return nil,'scoped_maintenance_adapter_unavailable'
     end
     local guidIdentity
-    local savedAttachments=Config.DevMode==true and Config.NativeAlphaRuntime==true
+    local savedAttachments=Config.NativeAlphaRuntime==true
         and WeaponNativeEnrollment.Allows(Config,expected.characterId) and type(GetConvarInt)=='function'
         and GetConvarInt('feather_native_saved_attachments',0)==1
-    if Config.DevMode==true and Config.NativeAlphaRuntime==true and WeaponNativeEnrollment.Allows(Config,expected.characterId)
+    if Config.NativeAlphaRuntime==true and WeaponNativeEnrollment.Allows(Config,expected.characterId)
         and type(GetConvarInt)=='function' and GetConvarInt('feather_native_guid_ownership',0)==1 then
         guidIdentity=WeaponNativeGuidIdentity.New({current=current,hash=joaat,
             exists=function(handle) local value=DoesEntityExist(handle); return value==true or value==1 end,

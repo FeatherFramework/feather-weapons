@@ -1,6 +1,6 @@
 -- Replies only with actual exact-owned readback. No native mutation or SQL.
 RegisterNetEvent('feather-weapons:client:native-maintenance-read',function(ticket,identity,itemId)
-    if Config.DevMode~=true or Config.NativeAlphaRuntime~=true or Config.NativeAlphaMaintenanceEnabled~=true
+    if Config.NativeAlphaRuntime~=true or Config.NativeAlphaMaintenanceEnabled~=true
         or type(ticket)~='string' or #ticket<1 or #ticket>128 or type(identity)~='table'
         or type(itemId)~='number' or itemId<1 or itemId%1~=0 or itemId==math.huge then return end
     local owner=WeaponCharacterAmmoActiveOwner

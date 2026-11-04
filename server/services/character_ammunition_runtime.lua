@@ -156,7 +156,7 @@ end
 -- Trusted activation only. A new current Core session may retire obsolete
 -- server reservations; this never proves old native copies were cleaned up.
 function S.ReconcileSession(source,identity)
-    if not enabled() or Config.DevMode~=true or Config.NativeAlphaRuntime~=true or type(identity)~='table'
+    if not enabled() or Config.NativeAlphaRuntime~=true or type(identity)~='table'
         or not WeaponNativeEnrollment.Allows(Config,identity.characterId)
         or not CoreAdapter.IsSessionCurrent(source,identity.sessionId,identity.characterId) then return failure('recovery_current_scope_required') end
     local stale={}
@@ -254,7 +254,7 @@ function S.IsDeathWearWriteAuthorized(itemId,context)
     return false
 end
 function S.IsDeathEquipmentWriteAuthorized(itemId,context)
-    if Config.NativeAlphaLifecycleWearEnabled~=true or Config.DevMode~=true or Config.NativeAlphaRuntime~=true
+    if Config.NativeAlphaLifecycleWearEnabled~=true or Config.NativeAlphaRuntime~=true
         or not enabled() or type(context)~='table' or context.operation~='equipment_write'
         or context.resource~='feather-weapons' then return false end
     local request=deathWrites[context.actorSource]
@@ -359,7 +359,7 @@ local function deathPlan(source,report)
         return nil
     end
     if not bound then return nil,'death_wear_loadout_required' end
-    if Config.DevMode~=true or Config.NativeAlphaRuntime~=true or not WeaponNativeEnrollment.Allows(Config,bound.characterId)
+    if Config.NativeAlphaRuntime~=true or not WeaponNativeEnrollment.Allows(Config,bound.characterId)
         or bound.invalid then return nil,'death_wear_scope_required' end
     local live=runtime.Get(source)
     if not live or live.phase~='active' or type(report)~='table' or report.characterId~=live.characterId
@@ -460,7 +460,7 @@ exports('ValidateCharacterAmmoRuntimeOperation',function(context,operation,spec)
         return medical and medical.lifeState=='alive' and runtime.IsOperationCurrent(context,operation,spec)==true or false
     end
     if type(spec)=='table' and spec.finalWear~=nil then
-        if operation~='observe' or Config.NativeAlphaLifecycleWearEnabled~=true or Config.DevMode~=true
+        if operation~='observe' or Config.NativeAlphaLifecycleWearEnabled~=true
             or Config.NativeAlphaRuntime~=true or not WeaponNativeEnrollment.Allows(Config,context.characterId) then return false end
         local medical=readMedical(context.actorSource,context)
         return medical and medical.lifeState=='dead' and medical.revision==spec.finalWear.medicalRevision

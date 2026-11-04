@@ -2,7 +2,7 @@
 -- Catalog presence is not permission to grant, equip or adopt a native copy.
 WeaponNativeUtilityCatalog={}
 function WeaponNativeUtilityCatalog.Enabled()
-    return Config and Config.DevMode==true and Config.NativeAlphaRuntime==true
+    return Config and Config.NativeAlphaRuntime==true
         and Config.CharacterAmmunitionEnabled==true and Config.CharacterAmmoTransportEnabled==true
         and Config.NativeAlphaLifecycleWearEnabled==true and type(GetConvarInt)=='function'
         and GetConvarInt('feather_native_utility',0)==1 or false
