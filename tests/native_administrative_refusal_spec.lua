@@ -37,7 +37,7 @@ for _,id in ipairs({-1,0,1.5,math.huge,0/0}) do
  assert(WeaponEvidenceService.Release({},invalid,'feather-weapons').error.code=='invalid')
 end
 exports=function() end
-WeaponConstants={ContractVersion=1}
+dofile('shared/constants.lua')
 DefinitionRegistry={Counts=function() return {} end}
 WeaponCharacterAmmoInventoryProvider={Status=function() return 'ready' end}
 WeaponNativeOwnershipReader={IsReady=function() return true end}
@@ -48,4 +48,5 @@ local caps=WeaponAPI.GetCapabilities()
 assert(caps.ready and caps.features.durableProvenance and caps.features.ownershipTransitionEvents)
 assert(caps.features.evidenceHolds==false and caps.features.destruction==false
  and caps.features.administrativeHoldGuards and caps.features.productionReady==false)
+assert(caps.features.scopedCharacterOnly==false and caps.features.productionReady==false)
 print('Native administrative refusal PASS (hold/release/destroy, flags off cannot select old writes, trust/context preserved)')

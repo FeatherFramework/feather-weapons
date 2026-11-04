@@ -2,7 +2,7 @@
 local pending,sequence=nil,0
 local function failure(code) return {ok=false,error={code=code},message=code} end
 local function current()
-    if Config.DevMode~=true or Config.NativeAlphaRuntime~=true or Config.CharacterAmmunitionEnabled~=true
+    if Config.NativeAlphaRuntime~=true or Config.CharacterAmmunitionEnabled~=true
         or Config.CharacterAmmoTransportEnabled~=true then return nil end
     local owner=WeaponCharacterAmmoActiveOwner
     local state=owner and owner.Status()

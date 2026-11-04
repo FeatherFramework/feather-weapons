@@ -1,6 +1,6 @@
 # Feather Weapons
 
-Current alpha version: **0.18.0-alpha.1**.
+Current version: **0.19.0**.
 
 Feather's native-only, Inventory-backed firearm system. Weapons are unique
 item instances; equipped assignments and maintenance persist per character.
@@ -14,8 +14,12 @@ compatible columns initialize automatically at startup.
 
 ## Current supported scope
 
-This remains a development-scoped alpha with at most two explicitly enrolled
-characters—not unrestricted production activation. Supported native firearms
+Weapons access is available to all current player characters, with no character
+allowlist. [All-player access and startup boundaries](docs/native-rollout-admission.md)
+describes the current rollout stage. Normal startup/equipment/wear no longer
+require DevMode; native runtime/feature switches and canonical Inventory
+requirements still apply. The paired Inventory update initializes eligible fresh
+characters with zero ammunition. Broader live acceptance remains pending. Supported native firearms
 use primary/offhand/shoulder/back positions, character ammunition, maintenance,
 repair, admitted saved attachments, guarded ownership movement/provenance,
 scoped evidence and receipt-backed pristine issuance.

@@ -2,6 +2,7 @@ local f=assert(io.open('server/services/native_equipment_transition.lua','r'));l
 local body=assert(text:match('(function WeaponNativeEquipmentBindings.AcceptanceTransition.-)function WeaponNativeEquipmentBindings.AcceptanceStatus'))
 local flags,dispatch,overlaps={},0,0
 WeaponNativeEquipmentBindings={}
+Config={DevMode=true}
 enabled=function() return true end
 GetConvarInt=function(n,d) return flags[n] or d end
 GetResourceState=function() return 'stopped' end
@@ -18,4 +19,7 @@ assert(WeaponNativeEquipmentBindings.AcceptanceTransition(1,false).ok and dispat
 assert(not WeaponNativeEquipmentBindings.AcceptanceTransition(1,true).ok and overlaps==0,'restart gate does not authorize overlap probe')
 flags.feather_native_acceptance_suite=1
 assert(WeaponNativeEquipmentBindings.AcceptanceTransition(1,true).ok and overlaps==1)
+Config.DevMode=false
+assert(not WeaponNativeEquipmentBindings.AcceptanceTransition(1,false).ok and dispatch==1,
+ 'test orchestration remains developer-only even with stale opt-in flags')
 print('Restart binding gate PASS: actual binding accepts restart dry-run, keeps overlap separately gated, default off')

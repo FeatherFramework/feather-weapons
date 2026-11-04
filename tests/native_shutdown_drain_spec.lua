@@ -63,3 +63,19 @@ local late=WeaponNativeShutdownDrain.New({now=function() return 0 end,
  report=function(s) assert(s.phase=='failed') end,
  schedule=function() error('timed-out drain cannot resume') end})
 assert(not late.Begin() and late.Status().phase=='failed' and late.IsLatched())
+-- All-player access must also drain every owner, without the former two-person cap.
+f=fixture()
+for id=3,5 do
+ local session='session-'..id
+ f.rows[#f.rows+1]={source=id,characterId='character-'..id,sessionId=session,epoch='epoch-'..id}
+ f.states[id]={phase='active',sessionId=session}
+end
+assert(f.drain.Begin())
+for id=1,5 do
+ while #f.calls<id do f.tick() end
+ assert(f.calls[id]==id)
+ f.states[id].phase='parked';f.states[id].commitOutcome='confirmed'
+end
+while f.drain.Status().phase~='ready' do f.tick() end
+assert(f.drain.Status().completed==5 and f.drain.Status().total==5 and #f.calls==5)
+print('All-player shutdown PASS (five owners, sequential one-shot release, aggregate confirmation)')

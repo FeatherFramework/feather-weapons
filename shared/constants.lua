@@ -1,34 +1,17 @@
--- Pure enrollment policy. Callers must still enforce runtime, DevMode, session,
--- epoch and ownership authorization. No automatic/global enrollment or grants.
+-- Admission is available to every character. Callers must still authenticate
+-- Core identity and enforce runtime, session, epoch and item ownership gates.
+-- Historical test allowlist fields are ignored; admission never grants/migrates data.
 WeaponNativeEnrollment={}
 function WeaponNativeEnrollment.Validate(config)
     if type(config)~='table' then return nil,'native_enrollment_config_required' end
-    local members,count={},0
-    local single=config.NativeAlphaCharacterId
-    -- Preserve the existing explicit single-character contract.
-    if single~=nil then
-        if type(single)~='string' or #single<1 or #single>128 then return nil,'native_enrollment_single_invalid' end
-        members[single]=true; count=1
-    end
-    local additional=config.NativeAlphaAdditionalCharacters
-    if additional~=nil then
-        if type(additional)~='table' then return nil,'native_enrollment_list_invalid' end
-        for id,allowed in pairs(additional) do
-            if type(id)~='string' or allowed~=true or #id~=36
-                or not id:match('^%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x$') then
-                return nil,'native_enrollment_entry_invalid'
-            end
-            if not members[id] then members[id]=true; count=count+1 end
-            if count>2 then return nil,'native_enrollment_limit_exceeded' end
-        end
-    end
-    if count==0 then return nil,'native_enrollment_empty' end
-    return members
+    return {},nil,{mode='all'}
 end
 function WeaponNativeEnrollment.Allows(config,characterId)
-    if type(characterId)~='string' then return false end
-    local members=WeaponNativeEnrollment.Validate(config)
-    return members~=nil and members[characterId]==true
+    -- Core/Inventory independently normalize the authoritative character UUID.
+    -- This layer only rejects unusable identities; it is no longer an ACL.
+    return type(config)=='table' and type(characterId)=='string'
+        and #characterId>0 and #characterId<=128
+        and characterId:match('^[%w_-]+$')~=nil and characterId~='*'
 end
 
 WeaponConstants = {

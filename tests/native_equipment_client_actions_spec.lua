@@ -1,5 +1,5 @@
 local registered,events={},{ }
-Config={DevMode=true,NativeAlphaRuntime=true,CharacterAmmunitionEnabled=true,CharacterAmmoTransportEnabled=true}
+Config={DevMode=false,NativeAlphaRuntime=true,CharacterAmmunitionEnabled=true,CharacterAmmoTransportEnabled=true}
 local scope={characterId='Jane',sessionId='s',epoch='e1'}
 local clock=0
 local world={characterId='Jane',sessionId='s',ped=10}

@@ -164,7 +164,7 @@ function WeaponNativeKnifeOwner.Scoped(ped,identity,current,definition)
     end
     local guidIdentity
     local capturedInventory=setmetatable({},{__mode='k'})
-    if Config.DevMode==true and Config.NativeAlphaRuntime==true then
+    if Config.NativeAlphaRuntime==true then
         if not WeaponNativeGuidIdentity or not WeaponCharacterAmmoCreationNative or not Citizen then
             return nil,'melee_guid_components_unavailable'
         end

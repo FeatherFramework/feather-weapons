@@ -22,7 +22,7 @@ CreateThread(function()
     end
 
     if Config.CharacterAmmunitionEnabled~=true or Config.CharacterAmmoTransportEnabled~=true
-        or Config.DevMode~=true or Config.NativeAlphaRuntime~=true
+        or Config.NativeAlphaRuntime~=true
         or not WeaponNativeEnrollment.Validate(Config) then
         FailStartup('native_only_configuration_required: no legacy fallback is available')
         return
@@ -36,5 +36,6 @@ CreateThread(function()
     WeaponMoveDelivery.Start()
     local installed,reason=WeaponCharacterAmmoInventoryProvider.Install()
     if not installed then FailStartup(reason); return end
+    print('[feather-weapons] native access available to all current characters; ownership/session/data gates apply')
     print('[feather-weapons] scoped native-only firearms host ready; no legacy fallback')
 end)

@@ -2,7 +2,7 @@
 -- No ammunition document, native attach point, transport or gameplay grant.
 WeaponNativeKnife={}
 function WeaponNativeKnife.Enabled()
-    return Config and Config.DevMode==true and Config.NativeAlphaRuntime==true
+    return Config and Config.NativeAlphaRuntime==true
         and Config.CharacterAmmunitionEnabled==true and Config.CharacterAmmoTransportEnabled==true
         and Config.NativeAlphaLifecycleWearEnabled==true and type(GetConvarInt)=='function'
         and GetConvarInt('feather_native_knife',0)==1 or false

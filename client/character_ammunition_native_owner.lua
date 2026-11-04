@@ -68,7 +68,7 @@ function WeaponCharacterAmmoNativeOwner.New(dependencies)
     end
     local function knife(ped,identity)
         local owned=lease
-        if Config.DevMode~=true or Config.NativeAlphaRuntime~=true or GetConvarInt('feather_native_knife',0)~=1
+        if Config.NativeAlphaRuntime~=true or GetConvarInt('feather_native_knife',0)~=1
             or not owned or owned.cleaned or owned.knifeAttempted or owned.ped~=ped
             or type(identity)~='table' or type(d.knife)~='function' then return nil,'native_knife_owner_unavailable' end
         for _,key in ipairs({'characterId','sessionId','epoch'}) do
@@ -85,7 +85,7 @@ function WeaponCharacterAmmoNativeOwner.New(dependencies)
     end
     local function melee(ped,identity,approval)
         local owned=lease
-        if Config.DevMode~=true or Config.NativeAlphaRuntime~=true or GetConvarInt('feather_native_melee',0)~=1
+        if Config.NativeAlphaRuntime~=true or GetConvarInt('feather_native_melee',0)~=1
             or not WeaponNativeMeleeOwner or not WeaponNativeMeleeCatalog or not owned or owned.cleaned
             or owned.knifeAttempted or owned.ped~=ped or type(identity)~='table' or type(d.knife)~='function' then
             return nil,'native_melee_owner_unavailable'
@@ -110,7 +110,7 @@ function WeaponCharacterAmmoNativeOwner.New(dependencies)
     end
     local function throwable(ped,identity,sealed,registry)
         local owned=lease
-        if Config.DevMode~=true or Config.NativeAlphaRuntime~=true or GetConvarInt('feather_native_throwable',0)~=1
+        if Config.NativeAlphaRuntime~=true or GetConvarInt('feather_native_throwable',0)~=1
             or not owned or owned.cleaned or owned.throwableAttempted or owned.ped~=ped
             or type(identity)~='table' or type(d.throwable)~='function' then return nil,'native_throwable_owner_unavailable' end
         for _,key in ipairs({'characterId','sessionId','epoch'}) do
@@ -130,7 +130,7 @@ function WeaponCharacterAmmoNativeOwner.New(dependencies)
             if not WeaponNativeUtilityCatalog.DavyEnabled() or not WeaponNativeUtilityCollection then return nil,'native_davy_lantern_disabled' end
             return WeaponNativeUtilityCollection.New(utility,ped,identity,sealed)
         end
-        if Config.DevMode~=true or Config.NativeAlphaRuntime~=true or GetConvarInt('feather_native_utility',0)~=1
+        if Config.NativeAlphaRuntime~=true or GetConvarInt('feather_native_utility',0)~=1
             or not owned or owned.cleaned or owned.ped~=ped
             or type(identity)~='table' or type(d.utility)~='function' then return nil,'native_utility_owner_unavailable' end
         for _,key in ipairs({'characterId','sessionId','epoch'}) do

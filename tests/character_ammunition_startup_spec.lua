@@ -22,7 +22,7 @@ Config.CharacterAmmunitionEnabled=false; Config.CharacterAmmoTransportEnabled=fa
 assert(not server() and #calls==0,'disabled flags cannot start the obsolete host')
 Config.CharacterAmmunitionEnabled=true; Config.CharacterAmmoTransportEnabled=true
 assert(server() and #calls==4 and calls[2]=='native-reader' and calls[3]=='provenance' and calls[4]=='native-guards')
-Config.DevMode=false; assert(not server() and #calls==4); Config.DevMode=true
+Config.DevMode=false; assert(server() and #calls==8,'ordinary startup does not require developer mode'); Config.DevMode=true
 local readerInstall=WeaponNativeOwnershipReader.Install
 WeaponNativeOwnershipReader.Install=function() return nil,'reader refused' end
 local before=#calls
@@ -34,6 +34,7 @@ before=#calls
 assert(not server() and #calls==before+2,'ledger failure cannot install native guards')
 WeaponProvenanceService.Start=ledgerStart
 local now,readied,starts,binds=0,false,0,0
+Config.DevMode=false
 GetGameTimer=function() return now end
 Wait=function() coroutine.yield() end
 WeaponCharacterAmmoWorldContext={Read=function()
