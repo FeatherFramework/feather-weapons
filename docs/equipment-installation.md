@@ -6,6 +6,19 @@ character ammunition setting must also be enabled. Keep development mode off.
 Updating an existing server must preserve its configuration and saved reports.
 No item conversion, database wipe, manual SQL or automatic grants are required.
 
+Normal wear persistence requires `NativeAlphaLifecycleWearEnabled=true` in the
+Weapons config (now the shipped default). Older preserved configs may still have
+`false`: native shot wear then appears until a rebuild restores the older saved
+metadata. Update that single setting for lifecycle persistence. Periodic wear
+sampling and repair remain optional. This does not recover wear already lost
+during a prior rebuild or rewrite item metadata to repair the test fixture.
+
+The 0.21.1 patch enables this default. Existing installations that preserve their
+config must set this field to `true` explicitly. The live Cattleman pair passed
+individual and dual-wield firing, independent wear saving across swaps,
+reconnect preservation, and ammunition load/unload conservation with the setting
+enabled. No Inventory update or schema migration is required for this patch.
+
 ## GUID ownership
 
 Exact GUID ownership now defaults to enabled on both server and client. A normal
