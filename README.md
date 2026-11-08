@@ -1,6 +1,6 @@
 # Feather Weapons
 
-Current version: **0.21.0**.
+Current version: **0.21.1**.
 
 Feather's native-only, Inventory-backed firearm system. Weapons are unique
 item instances; equipped assignments and maintenance persist per character.
@@ -71,6 +71,13 @@ default). All current characters have access, subject to canonical item ownershi
 and session checks. No character allowlist or DevMode is required. Development
 mode and optional feature/test gates remain disabled. Preserve customized config
 values when updating; explicitly disabled required runtime settings refuse startup.
+
+Lifecycle wear saving also defaults on (`NativeAlphaLifecycleWearEnabled=true`).
+It saves each firearm's observed wear before equipment changes, orderly shutdown,
+character logout and supported death recovery. An existing config with this set
+to `false` must be updated to retain newly acquired wear across those rebuilds.
+Periodic sampling and repair remain separate opt-ins; development mode is not
+required for lifecycle wear saving.
 
 Exact GUID ownership defaults on automatically on both server and client. Worn
 same-model pairs need no `setr feather_native_guid_ownership 1` startup command.
