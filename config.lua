@@ -1,6 +1,6 @@
 Config = {
     NativeAlphaRuntime = true, -- required native-only host; canonical ownership/session gates still apply
-    NativeAlphaRepairEnabled = false, -- scoped console/Equipment-menu repair; canonical material, opt in only
+    NativeAlphaRepairEnabled = true, -- ordinary gun-oil cleaning; canonical material and ownership checks
     NativeAlphaMaintenanceEnabled = false, -- scoped wear checkpoint; no ammo/material economic writes
     NativeAlphaPeriodicWearEnabled = false, -- idle scoped sampler; changed wear uses sealed checkpoint
     NativeAlphaPeriodicWearIntervalMs = 60000, -- one equipped copy per interval; round-robin up to four

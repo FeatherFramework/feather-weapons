@@ -502,7 +502,7 @@ local function observedModel(id) return modelOverrides[id] or ('WEAPON_'..id:upp
 local rolloutExcluded={revolver_lemat=true} -- dual-ammo remains a separate policy
 local function cattlemanRuntimeEnabled()
     return Config and Config.NativeAlphaRuntime==true and WeaponNativeEnrollment.Validate(Config)~=nil
-        and type(GetConvarInt)=='function' and GetConvarInt('feather_native_saved_attachments',0)==1
+        and type(GetConvarInt)=='function' and GetConvarInt('feather_native_saved_attachments',1)==1
         and GetConvarInt('feather_native_guid_ownership',1)==1
 end
 function WeaponNativeAttachmentMappings.CaptureModel(name)

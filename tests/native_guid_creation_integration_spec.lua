@@ -1,12 +1,19 @@
 dofile('shared/constants.lua') -- shared enrollment dependency from normal manifest
+vector3=function(x,y,z) return {x=x,y=y,z=z} end
+dofile('config.lua')
+for _,file in ipairs({'shared/definitions/ammunition.lua','shared/definitions/attachments.lua',
+ 'shared/definitions/weapons.lua','shared/character_ammunition_materialization.lua'}) do dofile(file) end
 dofile('client/character_maintenance_native.lua')
 dofile('client/character_ammunition_creation_native.lua')
-Config={DevMode=true,NativeAlphaRuntime=true,NativeAlphaCharacterId='Jane',CharacterAmmunitionEnabled=true,CharacterAmmoTransportEnabled=true}
 local identity={characterId='Jane',sessionId='s',epoch='e'}
 local points,exists={}, {[42]=true}
 local lastPoint,removals=0,0
 local words={1,2,3,4}
-GetConvarInt=function(_,default) return default end -- fresh server: no convars configured
+GetConvarInt=function(name,default)
+ -- The manual child-probe assertions below require saved reconstruction off.
+ -- GUID capture still exercises its ordinary default without an override.
+ return name=='feather_native_saved_attachments' and 0 or default
+end
 PlayerPedId=function() return 42 end
 DoesEntityExist=function(handle) return exists[handle] and 1 or 0 end
 IsEntityDead=function() return 0 end
@@ -30,11 +37,12 @@ for _,name in ipairs({'GetWeaponDegradation','GetWeaponPermanentDegradation','Ge
 end
 for _,name in ipairs({'SetWeaponDegradation','SetWeaponDamage','SetWeaponDirt','SetWeaponSoot'}) do _G[name]=function() end end
 local adapter=assert(WeaponCharacterAmmoCreationNative.Scoped(42,identity,function() return true end,function() return true end))
-local record=assert(adapter.createSingle({itemInstanceId=135,itemRevision=0,serialNumber='FW-ALPHA-MIXED-JANE-V1-repeater_carbine',point=10,
+local record=assert(adapter.createSingle({definitionId='repeater_carbine',itemInstanceId=135,itemRevision=0,serialNumber='FW-ALPHA-MIXED-JANE-V1-repeater_carbine',point=10,
  nativeWeaponName='WEAPON_REPEATER_CARBINE',attachments={},cosmetics={},
  maintenance={degradation=0,permanentDegradation=0,damage=0,dirt=0,soot=0}},0,identity))
 assert(record.guidIdentity and record.entity==50)
 -- Fresh adapter status must not require an earlier mutating install attempt.
+Config.DevMode=true -- remaining assertions intentionally exercise the manual diagnostic probe
 local readGuid=Citizen.InvokeNative
 Citizen.InvokeNative=function(hash,...)
  if hash==0x6929E22158E52265 then return readGuid(hash,...) end

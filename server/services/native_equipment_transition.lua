@@ -187,8 +187,8 @@ local drain
 local attachmentDisconnect={}
 local function attachmentEnabled()
     return enabled() and Config.NativeAlphaLifecycleWearEnabled==true and type(GetConvarInt)=='function'
-        and GetConvarInt('feather_native_attachment_transactions',0)==1
-        and GetConvarInt('feather_native_saved_attachments',0)==1 and GetConvarInt('feather_native_guid_ownership',1)==1
+        and GetConvarInt('feather_native_attachment_transactions',1)==1
+        and GetConvarInt('feather_native_saved_attachments',1)==1 and GetConvarInt('feather_native_guid_ownership',1)==1
 end
 local uiPending={}
 local wearPending={}
