@@ -356,7 +356,7 @@ function WeaponCharacterAmmoCreationNative.Scoped(ped,identity,prepareDual,clean
     local guidIdentity
     local savedAttachments=Config.NativeAlphaRuntime==true
         and WeaponNativeEnrollment.Allows(Config,expected.characterId) and type(GetConvarInt)=='function'
-        and GetConvarInt('feather_native_saved_attachments',0)==1
+        and GetConvarInt('feather_native_saved_attachments',1)==1
     if Config.NativeAlphaRuntime==true and WeaponNativeEnrollment.Allows(Config,expected.characterId)
         and type(GetConvarInt)=='function' and GetConvarInt('feather_native_guid_ownership',1)==1 then
         guidIdentity=WeaponNativeGuidIdentity.New({current=current,hash=joaat,

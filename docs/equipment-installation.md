@@ -10,7 +10,7 @@ Normal wear persistence requires `NativeAlphaLifecycleWearEnabled=true` in the
 Weapons config (now the shipped default). Older preserved configs may still have
 `false`: native shot wear then appears until a rebuild restores the older saved
 metadata. Update that single setting for lifecycle persistence. Periodic wear
-sampling and repair remain optional. This does not recover wear already lost
+sampling remains optional. This does not recover wear already lost
 during a prior rebuild or rewrite item metadata to repair the test fixture.
 
 The 0.21.1 patch enables this default. Existing installations that preserve their
@@ -28,9 +28,28 @@ same-model pairs; remove the old `0` override for normal operation. A configured
 `1` remains compatible. Do not set `0` to test the default: remove the startup
 entry and start a fresh server process with clients disconnected.
 
-Optional saved attachments, gunsmith permissions/range and material requirements
-retain their existing switches/policies. This update does not enable optional
-features or developer commands. Preserve any already accepted server settings.
+## Attachment and cleaning defaults
+
+Saved attachment reconstruction and attachment transactions now default on with
+missing convars. The accepted Cattleman components and proved Carbine mapping
+remain admitted; representative/catalog experimental mappings still require
+their existing development opt-ins. Gunsmith range, configured authorization,
+exact material payment/return, instance ownership and session checks remain.
+Ordinary gun-oil cleaning defaults on through `NativeAlphaRepairEnabled=true`
+and retains its existing field-use behavior and permanent-wear floor.
+
+No manual `setr feather_native_saved_attachments 1` or
+`setr feather_native_attachment_transactions 1` startup command is needed.
+Explicit replicated `0` values remain server-owner disables and override the
+defaults; remove old overrides for normal operation. A transaction-only disable
+preserves saved-component reconstruction. Disabling saved reconstruction refuses
+customized loadouts rather than stripping components. An existing repair setting
+of `false` is also preserved: change it to `true` only to enable cleaning.
+Development mode, fixture grants and fault injection remain off.
+
+These default-setting changes are locally tested; the combined fresh-start
+no-override UI/reconstruction check is pending. Earlier live attachment,
+death/recovery, storage and cleaning acceptance is retained, not repeated.
 
 ## Accepted equipment behavior
 

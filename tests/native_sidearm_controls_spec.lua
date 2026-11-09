@@ -4,7 +4,7 @@ GetConvarInt=function(_,default) return default end
 for _,file in ipairs({'shared/constants.lua','shared/definitions/ammunition.lua','shared/definitions/attachments.lua',
  'shared/definitions/weapons.lua','shared/validation.lua','shared/character_ammunition_catalog.lua',
  'shared/character_ammunition_policy.lua','shared/character_ammunition_item.lua','shared/character_maintenance.lua',
- 'shared/character_lifecycle_wear.lua','shared/character_ammunition_materialization.lua'}) do dofile(file) end
+ 'shared/character_lifecycle_wear.lua','shared/character_attachments.lua','shared/character_ammunition_materialization.lua'}) do dofile(file) end
 local function copy(v) if type(v)~='table' then return v end; local out={}; for k,x in pairs(v) do out[k]=copy(x) end; return out end
 local function gun(id,wear)
  return {id=id,revision=wear and 10 or 2,itemName='weapon_revolver_cattleman',metadata={schemaVersion=2,
@@ -28,6 +28,7 @@ GetGameTimer=function() return clock end
 GetInvokingResource=function() return 'feather-inventory' end
 CoreAdapter={ResolveSession=function() return {ok=true,value=id} end,IsSessionCurrent=function() return true end}
 WeaponCharacterAmmoService={ValidateLoadout=function() return {ok=true} end}
+AttachmentService={AuthorizeNativeModification=function() return {ok=true} end}
 TriggerClientEvent=function(name,_,value,_,result)
  if name=='feather-weapons:client:native-equipment-result' then reply=result else release=value end
 end
@@ -36,7 +37,9 @@ exports=setmetatable({['feather-inventory']={ReadNativeEquipmentTransition=funct
  if rows.primary then expected.weapon={itemId=rows.primary.id,revision=rows.primary.revision} end
  if rows.offhand then expected.weapon_offhand={itemId=rows.offhand.id,revision=rows.offhand.revision} end
  return {ok=true,value={characterId='Jane',equipment=copy(rows),expected=expected,candidate=copy(items[selected])}}
-end,CommitNativeEquipmentTransition=function(_,context,spec)
+ end,ReadNativeAttachmentMaterial=function() return {ok=true,value={definitionId=9,quantity=0}} end,
+ ReadNativeRepairMaterial=function() return {ok=true,value={definitionId=10,quantity=0}} end,
+ CommitNativeEquipmentTransition=function(_,context,spec)
  assert(state.phase=='released' and registered.ValidateNativeEquipmentCommit(context,spec))
  assert(spec.lifecycleSnapshot and type(spec.lifecycleWear)=='table','shipped defaults collect final wear before equipment writes')
  for _,change in ipairs(spec.lifecycleWear) do
