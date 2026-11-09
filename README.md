@@ -1,6 +1,6 @@
 # Feather Weapons
 
-Current version: **0.21.1**.
+Current version: **0.21.2**.
 
 Feather's native-only, Inventory-backed firearm system. Weapons are unique
 item instances; equipped assignments and maintenance persist per character.
