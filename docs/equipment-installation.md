@@ -23,20 +23,18 @@ enabled. No Inventory update or schema migration is required for this patch.
 
 Exact GUID ownership now defaults to enabled on both server and client. A normal
 installation needs no `feather_native_guid_ownership` console command or startup
-entry. An explicit replicated `0` overrides that default and prevents worn
-same-model pairs; remove the old `0` override for normal operation. A configured
+entry. All firearms use GUID inventory insertion and point activation. An explicit
+replicated `0` refuses firearm creation; remove the old override for normal operation. A configured
 `1` remains compatible. Do not set `0` to test the default: remove the startup
 entry and start a fresh server process with clients disconnected.
 
 ## Attachment and cleaning defaults
 
 Saved attachment reconstruction and attachment transactions now default on with
-missing convars. The accepted Cattleman components and proved Carbine mapping
-remain admitted; representative/catalog experimental mappings still require
-their existing development opt-ins. Gunsmith range, configured authorization,
-exact material payment/return, instance ownership and session checks remain.
-Ordinary gun-oil cleaning defaults on through `NativeAlphaRepairEnabled=true`
-and retains its existing field-use behavior and permanent-wear floor.
+missing convars. The recorded sight/barrel mappings are admitted without representative/catalog
+startup flags or development mode. LeMat mode switching, separate pool spending
+and independent wear passed focused live tests; unified production creation acceptance passed all 1,800 cases with confirmed cleanup, full report delivery, original-loadout restoration and final visual pass. Unknown or
+changed model/component/slot/item combinations are refused.
 
 No manual `setr feather_native_saved_attachments 1` or
 `setr feather_native_attachment_transactions 1` startup command is needed.
@@ -47,9 +45,10 @@ customized loadouts rather than stripping components. An existing repair setting
 of `false` is also preserved: change it to `true` only to enable cleaning.
 Development mode, fixture grants and fault injection remain off.
 
-These default-setting changes are locally tested; the combined fresh-start
-no-override UI/reconstruction check is pending. Earlier live attachment,
-death/recovery, storage and cleaning acceptance is retained, not repeated.
+Current live evidence includes the complete 1,800-case production GUID run,
+confirmed reconstruction/cleanup/restoration and final visual pass. Earlier
+attachment, death/recovery, storage and cleaning acceptance is retained. See
+`guid-creation-validation.md` for the exact scope and historical transport failure.
 
 ## Accepted equipment behavior
 
@@ -96,3 +95,6 @@ The manifest changed to remove a client script: run server-console `refresh`
 before `ensure feather-weapons`, with clients still disconnected. One fresh
 server process verifies the missing-convar default; this is not a full crash
 acceptance test. Reconnect and inspect native/maintenance status and drawing.
+
+
+See [GUID creation validation](guid-creation-validation.md) for the production factory consolidation and its automated engine acceptance gate. Singles, mixed firearms and matching pairs share the same mechanism; a pair only requires an extra native inventory-slot separation.

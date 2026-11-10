@@ -1,6 +1,6 @@
 # Feather Weapons
 
-Current version: **0.21.2**.
+Current version: **0.22.0**.
 
 Feather's native-only, Inventory-backed firearm system. Weapons are unique
 item instances; equipped assignments and maintenance persist per character.
@@ -82,11 +82,11 @@ sampling remains opt-in; development mode is not required for these gameplay pat
 Exact GUID ownership defaults on automatically on both server and client. Worn
 same-model pairs need no `setr feather_native_guid_ownership 1` startup command.
 An explicit `setr feather_native_guid_ownership 0` still overrides that default
-and refuses those pairs; remove that old override for normal operation. Existing
+and refuses firearm creation; remove that old override for normal operation. Existing
 `1` entries are harmless. Saved attachment reconstruction and attachment
 transactions also default on; manual startup commands are unnecessary. This
-admits the tested Cattleman components and existing proved Carbine mapping while
-broader experimental model gates remain closed. Gunsmith location, configured
+admits the recorded sight/barrel mappings across the tested firearm catalog.
+LeMat mode switching, separate revolver/shotgun expenditure and per-copy wear passed focused live checks. The unified production GUID acceptance run passed all 1,800 cases, full report delivery, original-loadout restoration and the final visual check. Gunsmith location, configured
 permissions, material costs, ownership and current-session checks still apply.
 
 Server owners can explicitly disable attachment changes with replicated
@@ -140,3 +140,6 @@ from the active manifest. Historical tests reproduce old evidence with mocks;
 they do not establish current native parity or backward compatibility.
 
 The former README is retained there as historical documentation only.
+
+
+Firearm creation uses the same GUID inventory insertion/activation and exact-copy cleanup for singles, mixed loadouts and matching pairs, including independently worn/customized copies. The opt-in [GUID acceptance suite](docs/guid-creation-validation.md) exercises this production implementation with a temporary native-only matrix; it does not issue Inventory weapons or repair saved data.
