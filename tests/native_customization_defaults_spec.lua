@@ -55,8 +55,8 @@ end
 local found=preview()
 assert(found.cattleman_long_barrel and found.cattleman_wide_sight and found.repair,
  'no manual convars or development mode needed with normal config and materials')
-assert(not WeaponNativeAttachmentMappings.CaptureModel('WEAPON_REVOLVER_SCHOFIELD')
- and not WeaponNativeAttachmentMappings.CaptureModel('WEAPON_REVOLVER_LEMAT'),'experimental model gates stay closed')
+assert(WeaponNativeAttachmentMappings.CaptureModel('WEAPON_REVOLVER_SCHOFIELD')
+ and WeaponNativeAttachmentMappings.CaptureModel('WEAPON_REVOLVER_LEMAT'),'tested model mappings are admitted')
 parts=0;oil=0;found=preview()
 assert(not next(found),'missing materials hide unpaid customization actions')
 parts=1;oil=1;position={x=0,y=0,z=0};found=preview()

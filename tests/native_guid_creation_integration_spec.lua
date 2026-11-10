@@ -17,19 +17,43 @@ end
 PlayerPedId=function() return 42 end
 DoesEntityExist=function(handle) return exists[handle] and 1 or 0 end
 IsEntityDead=function() return 0 end
-joaat=function(value) return value end
+joaat=function(value) return value=='WEAPON_REPEATER_CARBINE' and 100 or 999 end
 WeaponCharacterAmmoWorldContext={Read=function() return {ok=true,value={characterId='Jane',sessionId='s',ped=42}} end}
 GetGameTimer=function() return 1 end; Wait=function() error('unexpected yield') end
-GetCurrentPedWeapon=function(_,_,point) return points[point] and 1 or 0,points[point] and 'WEAPON_REPEATER_CARBINE' or 0 end
+GetCurrentPedWeapon=function(_,_,point) return points[point] and 1 or 0,points[point] and 100 or 0 end
 GetCurrentPedWeaponEntityIndex=function(_,point) return points[point] and points[point].entity or 0 end
-GiveWeaponToPed=function(_,_,ammo) assert(ammo==0); points[10]={entity=50,guid=words}; exists[50]=true end
+GiveWeaponToPed=function() error('model grant forbidden') end
+RemoveWeaponFromPed=function() error('model removal forbidden') end
 HasPedGotWeapon=function() return points[0]~=nil or points[10]~=nil end
-RemoveWeaponFromPed=function() removals=removals+1; points={}; exists[51]=false end
+SetCurrentPedWeapon=function() end
+local function rawGuid() return string.pack('<I4I4I4I4I4I4I4I4',1,0,2,0,3,0,4,0)..string.rep('\0',72) end
+local inventoryRecord
+local N=WeaponCharacterAmmoCreationNative
+local decode=N.DecodeDiagnosticGuid
+N.DecodeDiagnosticGuid=function(raw)
+ if raw:sub(1,32)==string.rep('\0',32) then
+  local p=points[lastPoint];return p and {scriptSlotWords=p.guid}
+ end
+ return decode(raw)
+end
 Citizen={InvokeNative=function(hash,_,point)
- assert(hash==0x6929E22158E52265); lastPoint=point; return 1
+ if hash==0x6929E22158E52265 then lastPoint=point;return points[point] and 1 or 0 end
+ if hash==0x886DFD3E185C8A89 or hash==0x94A3C1B804D291EC then return 1 end
+ if hash==0xCB5D11F9508A928D then inventoryRecord=rawGuid():sub(1,32)..string.pack('<I4I4',100,0)..string.rep('\0',136);return 1 end
+ if hash==0x3E4E811480B3AE79 then
+  removals=removals+1;inventoryRecord=nil
+  for p,v in pairs(points) do if v.guid==words then exists[v.entity]=false;points[p]=nil end end
+  return 1
+ end
+ error('unexpected native '..tostring(hash))
 end}
-WeaponCharacterAmmoCreationNative.DecodeDiagnosticGuid=function()
- return {scriptSlotWords=points[lastPoint].guid}
+local new=N.New
+N.New=function(ped,current,prepare,apply,guid,saved)
+ return new(ped,current,prepare,apply,guid,{
+  buffer=rawGuid,read=function() return inventoryRecord end,
+  update=function(_,raw) inventoryRecord=raw;return true end,
+  pointGuid=function(p) local v=points[p];return v and ('%08x%08x%08x%08x'):format(table.unpack(v.guid)) end,
+  activate=function() points[10]={entity=50,guid=words};exists[50]=true;return true end})
 end
 GetObjectIndexFromEntityIndex=function(handle) return handle+100 end
 for _,name in ipairs({'GetWeaponDegradation','GetWeaponPermanentDegradation','GetWeaponDamage','GetWeaponDirt','GetWeaponSoot'}) do
@@ -59,7 +83,6 @@ Citizen.InvokeNative=readGuid
 points[0]={entity=51,guid=words}; points[10]=nil; exists[50]=false; exists[51]=true
 assert(adapter.readMaintenance(record,identity) and record.entity==51,'concrete adapter follows captured GUID to replacement for wear')
 points[9]={entity=52,guid={1,2,3,5}}; exists[52]=true
-assert(not adapter.remove(record) and removals==0,'model-wide native removal cannot delete foreign copy')
-points[9]=nil
-assert(adapter.remove(record) and removals==1,'cleanup follows exact GUID-resolved representation')
+assert(adapter.remove(record) and removals==1 and points[9] and exists[52],
+ 'exact GUID cleanup removes our moved representation while preserving a foreign copy of the same model')
 print('GUID concrete creation PASS (capture during actual single create, resolved maintenance and cleanup, foreign same-model removal veto)')
