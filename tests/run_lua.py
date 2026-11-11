@@ -13,7 +13,7 @@ from lupa.lua54 import LuaRuntime
 
 root = Path(__file__).resolve().parents[1]
 os.chdir(root)
-runtime_files = [root / 'fxmanifest.lua', root / 'config.lua']
+runtime_files = [root / 'fxmanifest.lua', root / 'config.lua', root / 'shop_config.lua']
 for folder in ('client', 'server', 'shared', 'translations'):
     runtime_files.extend((root / folder).rglob('*.lua'))
 syntax = LuaRuntime()
