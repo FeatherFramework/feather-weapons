@@ -13,6 +13,11 @@ function WeaponCharacterAmmoSession.New(api,registry)
             print(('[WeaponNativeThrowablePickup] PASS ledger acknowledged/read-only GUID rebind revision=%s; no loose/native ammo grant'):format(tostring(baseline.revision)))
         end
         return accepted,why
+    end,function(baseline)
+        if throwableSnapshot and throwableSnapshot.contract==3 then
+            return throwable and throwable.PrepareRestore and throwable.PrepareRestore(baseline)==true
+        end
+        return true
     end)
     local T={}
     local function blocked(value) api.block(value) end
@@ -142,7 +147,10 @@ function WeaponCharacterAmmoSession.New(api,registry)
         after,reason=native.Read(ped,true)
         if not after then return freeze(reason) end
         for id,count in pairs(before) do
-            local authorized=throwableSnapshot and id=='ammo_tomahawk_regular' and throwableSnapshot.pools[id] or count
+            -- Quantity carriers are created with zero ammo; only controller.Begin
+            -- may restore their saved balance after this creation check.
+            local authorized=throwableSnapshot and throwableSnapshot.contract~=3
+                and id=='ammo_tomahawk_regular' and throwableSnapshot.pools[id] or count
             if after[id]~=authorized then return freeze('creation_changed_native_pool') end
         end
         phase='restoring'
@@ -183,7 +191,7 @@ function WeaponCharacterAmmoSession.New(api,registry)
         return controller.Finalize()
     end
     function T.Transfer(id,amount,operationId)
-        if throwable and id=='ammo_tomahawk_regular' then return nil,'throwable_transfer_requires_rebuild' end
+        if throwable and id=='ammo_tomahawk_regular' and not (throwableSnapshot and throwableSnapshot.contract==3) then return nil,'throwable_transfer_requires_rebuild' end
         return controller.Transfer(id,amount,operationId)
     end
     function T.FinalizeDeath()

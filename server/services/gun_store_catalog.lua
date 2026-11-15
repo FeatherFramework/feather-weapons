@@ -28,6 +28,8 @@ function WeaponGunStore.Build(config,definitions)
     if config.currency~='dollars' or not Integer(config.maximumBoxes,1,100)
         or type(config.stores)~='table' or #config.stores>20 then return Error('Gun store currency, quantity or locations invalid.') end
     local entries={}
+    local physicalUnits=WeaponNativeThrowablePolicy and WeaponNativeThrowablePolicy.UnitsEnabled
+        and WeaponNativeThrowablePolicy.UnitsEnabled()
     for _,group in ipairs({'weapons','ammunition','attachments'}) do
         if type(config[group])~='table' then return Error('Missing gun store price group: '..group) end
         for key in pairs(config[group]) do
@@ -36,6 +38,9 @@ function WeaponGunStore.Build(config,definitions)
         for key,definition in pairs(definitions[group]) do
             local setting=config[group][key]
             if setting==nil then return Error('Missing gun store price: '..key) end
+            if group=='weapons' and WeaponNativeMeleeCatalog and WeaponNativeMeleeCatalog.Resolve(definition)
+                and not WeaponNativeMeleeCatalog.Enabled() then setting=false end
+            if group=='ammunition' and key=='ammo_tomahawk_regular' and physicalUnits then setting=false end
             if setting~=false and not (group=='ammunition' and type(setting)=='table' and setting.price==false) then
                 local price,size,category
                 if group=='ammunition' then
@@ -45,7 +50,12 @@ function WeaponGunStore.Build(config,definitions)
                     price=Price(setting);size=1
                     category=group=='attachments' and 'attachments' or definition.family
                     local firearm={pistol=true,revolver=true,repeater=true,rifle=true,shotgun=true}
-                    if group=='weapons' and (not firearm[definition.family]
+                    local melee=group=='weapons' and WeaponNativeMeleeCatalog and WeaponNativeMeleeCatalog.Enabled()
+                        and WeaponNativeMeleeCatalog.Resolve(definition)~=nil
+                    if melee then category='melee' end
+                    local throwable=physicalUnits and key=='throwable_tomahawk' and definition.itemName=='weapon_thrown_tomahawk'
+                    if throwable then category='throwables' end
+                    if group=='weapons' and not melee and not throwable and (not firearm[definition.family]
                         or (definition.slot~='sidearm' and definition.slot~='longgun')) then
                         return Error('No canonical shop issuance for weapon: '..key)
                     end

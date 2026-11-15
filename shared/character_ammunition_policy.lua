@@ -22,10 +22,19 @@ end
 function WeaponCharacterAmmoPolicy.Build(catalog)
     local registry,why=WeaponCharacterAmmoCatalog.Build(catalog,WeaponCharacterAmmoPolicy.Limits())
     if not registry then return nil,why end
-    if WeaponNativeThrowablePolicy and WeaponNativeThrowablePolicy.Enabled() then
+    local units=WeaponNativeThrowablePolicy and WeaponNativeThrowablePolicy.UnitsEnabled and WeaponNativeThrowablePolicy.UnitsEnabled()
+    local quantities=WeaponNativeThrowablePolicy and WeaponNativeThrowablePolicy.QuantityEnabled()
+    if WeaponNativeThrowablePolicy and (quantities or units or WeaponNativeThrowablePolicy.Enabled()) then
         local candidate
         candidate,why=WeaponNativeThrowablePolicy.Preview(catalog,registry)
         if not candidate then return nil,why end
+        if quantities then
+            candidate.registry.limits.ammo_tomahawk_regular=3
+            candidate.registry.throwableQuantityContract=1
+        elseif units then
+            candidate.registry.limits.ammo_tomahawk_regular=3
+            candidate.registry.throwableUnitContract=2
+        end
         return candidate.registry
     end
     return registry

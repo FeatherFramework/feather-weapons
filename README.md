@@ -171,3 +171,32 @@ The former README is retained there as historical documentation only.
 
 
 Firearm creation uses the same GUID inventory insertion/activation and exact-copy cleanup for singles, mixed loadouts and matching pairs, including independently worn/customized copies. The opt-in [GUID acceptance suite](docs/guid-creation-validation.md) exercises this production implementation with a temporary native-only matrix; it does not issue Inventory weapons or repair saved data.
+
+Fresh recipe installs do not require the retired feather-weapons-native-proof resource. Normal equipment, maintenance and voluntary logout accept that resource being missing or stopped; an active or uncertain proof state remains blocked.
+
+Normal melee commerce supports Knife, Machete, Hammer, Cleaver and Hatchet with unique serials and purchase provenance. Prices live in shop_config.lua. The five-model native path defaults on (feather_native_melee may explicitly disable it); throwing/pickup and same-model equipped duplicates remain unsupported. Equipment offers one Equip or Unequip action and chooses an empty compatible slot without replacing another model. No ammunition is created by melee purchases.
+
+## Opt-in Tomahawk quantities
+
+Set replicated `feather_throwable_quantities=1` before Inventory, Weapons and
+Shops start to use regular Tomahawk ammunition instead of serialized thrown
+units. Capacity is three; Inventory's Ammunition panel loads/unloads the existing
+`ammo_tomahawk_regular` stack item. Native walk-over collection consumes shared
+server allowances created atomically with confirmed paid throws. Allowances
+expire after 180 seconds and require the same routing bucket within 50 metres
+of the server-recorded launch position. Each allowance can be consumed once.
+This deliberately accepts nearby quantity claims rather than exact projectile
+identity; a modified client can consume an available nearby allowance, but cannot
+recover more saved quantity than funded throws supplied. Serial, condition and
+provenance do not follow thrown quantities. Historical serialized items are not
+converted, refunded or deleted. Store legacy carried units before opting in.
+
+Disable the old paid-throwable, paid-collection and GUID-suite test switches for
+this mode. Do not revert to physical-unit mode while quantities remain loaded.
+This mode remains default-off. Own/shared/repeated recovery, three outstanding
+throws, load/unload persistence, loaded reconnect, death/admin revive, prepared
+resource stop/start and full server restart were confirmed live. Unexpected
+shutdown and allowance rejection/batched-report edge cases remain unaccepted
+live. Research and earlier exact-item experiments are retained as gated evidence;
+they are not the quantity recovery authority. See the framework master plan for
+the acceptance record.

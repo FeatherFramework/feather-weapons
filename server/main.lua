@@ -36,6 +36,10 @@ CreateThread(function()
     WeaponMoveDelivery.Start()
     local installed,reason=WeaponCharacterAmmoInventoryProvider.Install()
     if not installed then FailStartup(reason); return end
+    if WeaponNativeThrowablePickupServer then
+        local pickupReady,pickupReason=WeaponNativeThrowablePickupServer.Start()
+        if not pickupReady then FailStartup(pickupReason); return end
+    end
     print('[feather-weapons] native access available to all current characters; ownership/session/data gates apply')
     print('[feather-weapons] scoped native-only firearms host ready; no legacy fallback')
 end)

@@ -1,4 +1,10 @@
 Config = {
+    NativeThrowableQuantityContract = 0, -- opt-in pooled Tomahawk quantities; no per-projectile metadata
+    NativeThrowableUnitsEnabled = false, -- staged paid-unit/prompt recovery; enable only after combined live acceptance
+    NativeThrowableNativeCollectionContract = 0, -- staged native pickup handoff; also requires feather_native_paid_collection=1
+    NativeThrowablePickupPriorPolicy = { -- explicit prior policy owned/restored by the native-only framework
+        w_melee_tomahawk01 = true, w_melee_tomahawk02 = true
+    },
     NativeAlphaRuntime = true, -- required native-only host; canonical ownership/session gates still apply
     NativeAlphaRepairEnabled = true, -- ordinary gun-oil cleaning; canonical material and ownership checks
     NativeAlphaMaintenanceEnabled = false, -- scoped wear checkpoint; no ammo/material economic writes
