@@ -28,7 +28,7 @@ replay or catalog change rewrites historical orders. Each player's language is
 resolved through feather-settings/Core, with English fallback. Store/item label
 translation keys are `ui_shops_store_<store UUID>` and `ui_shops_item_<item name>`.
 
-Current version: **0.23.0**.
+Current version: **0.24.0**. Adds melee commerce and opt-in quantity Tomahawk recovery; pair with Inventory **0.16.0** and Shops **0.4.1**.
 
 Feather's native-only, Inventory-backed firearm system. Weapons are unique
 item instances; equipped assignments and maintenance persist per character.
