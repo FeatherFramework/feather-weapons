@@ -32,7 +32,8 @@ local api={ped=function() return 7 end,ready=function() return true end,hash=fun
    quantity=function() return native.AMMO_TOMAHAWK end,find=function() return carrier and {guid='one-carrier'} or false end,
    materialize=function() materialized=materialized+1;carrier=true;return {guid='one-carrier'} end,
    remove=function() cleaned=cleaned+1;carrier=false;native.AMMO_TOMAHAWK=0;return true end,
-   allow=function() return true end,restorePermissions=function() restored=restored+1;return true end},
+   allow=function() return true end,suppress=function() return true end,
+   restorePermissions=function() restored=restored+1;return true end},
    WeaponDefinitionCatalog,bound,registry.limits)
  end}
 local session=WeaponCharacterAmmoSession.New(api,registry)

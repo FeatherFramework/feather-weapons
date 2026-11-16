@@ -104,7 +104,7 @@ function WeaponNativeThrowableAdapter.Scoped(ped,identity,current,sealed,catalog
         end
         return WeaponThrowableQuantityOwner.New({current=function() return valid(identity) end,
             quantity=quantity,find=inventoryGuid,sealed=sealed,
-            allow=permissions.Allow,restorePermissions=permissions.Restore,
+            allow=permissions.Allow,suppress=permissions.Suppress,restorePermissions=permissions.Restore,
             materialize=function()
                 local before=native.Read(ped,true)
                 if not before or not valid(identity) or inventoryGuid()~=false or present() then return nil end

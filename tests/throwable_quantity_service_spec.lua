@@ -7,6 +7,18 @@ for _,p in ipairs({'shared/constants.lua','shared/definitions/ammunition.lua','s
  'shared/character_ammunition_materialization.lua','shared/character_ammunition_loadout_lease.lua','shared/character_ammunition_runtime.lua'}) do dofile(p) end
 local function copy(v) if type(v)~='table' then return v end;local r={};for k,x in pairs(v) do r[k]=copy(x) end;return r end
 local registered={};local alive,current,bucket=true,true,0
+local commands,output={},{}
+RegisterCommand=function(name,fn) commands[name]=fn end
+local expiryEnabled=false
+local distanceEnabled=false
+local bucketEnabled=false
+GetConvar=function(name,default)
+ if name=='feather_quantity_distance_test' then return distanceEnabled and '1' or '0' end
+ if name=='feather_quantity_bucket_test' then return bucketEnabled and '1' or '0' end
+ return name=='feather_quantity_expiry_test' and (expiryEnabled and '1' or '0') or default
+end
+local clock=1000;os.time=function() return clock end
+json={encode=function(v) return v.phase end}
 GetGameTimer=function() return 100 end
 GetPlayerPed=function(source) assert(source==1);return 7 end
 GetEntityCoords=function(ped) assert(ped==7);return {x=1,y=2,z=3} end
@@ -20,6 +32,9 @@ local function quantity(context)
  return {contract=3,kind='throwable_quantity',characterId='john',identity={characterId='john',sessionId='s',epoch=context.epoch},revision=db.revision,pools=copy(db.pools)}
 end
 local counts={observe=0,pickup=0,transfer=0};local allow=true
+local lastExpiry
+local lastDistance
+local lastBucketTest
 local inventory={GetCharacterFirearmRuntimeSnapshot=function(_,context)
  return {ok=true,value={characterId='john',revision=db.revision,pools=copy(db.pools),equipment={},throwableEquipment=quantity(context)}}
 end}
@@ -35,7 +50,22 @@ inventory.ObserveCharacterAmmunition=function(_,context,spec)
  assert(registered.ValidateCharacterAmmoRuntimeOperation(context,'observe',spec))
  local forged=copy(spec);forged.quantityRecovery.position.x=100
  assert(not registered.ValidateCharacterAmmoRuntimeOperation(context,'observe',forged),'reserved server location immutable')
+ forged=copy(spec)
+ if spec.quantityRecovery.expiryTestSeconds==5 then forged.quantityRecovery.expiryTestSeconds=nil
+ else forged.quantityRecovery.expiryTestSeconds=5 end
+ assert(not registered.ValidateCharacterAmmoRuntimeOperation(context,'observe',forged),'test expiry must match the reserved server operation')
  assert(spec.quantityRecovery.bucket==0 and spec.quantityRecovery.position.x==1)
+ lastExpiry=spec.quantityRecovery.expiryTestSeconds
+ lastDistance=spec.quantityRecovery.distanceTestOffset
+ lastBucketTest=spec.quantityRecovery.bucketTest
+ forged=copy(spec)
+ if spec.quantityRecovery.bucketTest==true then forged.quantityRecovery.bucketTest=nil
+ else forged.quantityRecovery.bucketTest=true end
+ assert(not registered.ValidateCharacterAmmoRuntimeOperation(context,'observe',forged),'bucket test must match server reservation')
+ forged=copy(spec)
+ if spec.quantityRecovery.distanceTestOffset==100 then forged.quantityRecovery.distanceTestOffset=nil
+ else forged.quantityRecovery.distanceTestOffset=100 end
+ assert(not registered.ValidateCharacterAmmoRuntimeOperation(context,'observe',forged),'distance tag must be reserved')
  counts.observe=counts.observe+1;return save(spec.pools)
 end
 inventory.ReconcileNativeThrowablePickup=function(_,context,spec)
@@ -70,4 +100,63 @@ assert(refused.ok and refused.quantityDeclined and refused.value.pools.ammo_toma
  and refused.value.revision==live.revision+1 and S.ValidateLoadout(1).ok,'definite no-credit response leaves session active')
 live=refused.value;alive=false;report=copy(live);report.pools.ammo_tomahawk_regular=3
 assert(not S.NativePickup(1,report).ok and counts.pickup==2,'dead player cannot dispatch quantity claim')
+alive=true
+local savedPrint=print;print=function(line) output[#output+1]=line end
+local command=assert(commands.WeaponQuantityExpiryTest)
+command(0,{'arm','1'});assert(output[#output]:find('REFUSED',1,true),'explicit switch required')
+expiryEnabled=true
+command(1,{'arm','1'});assert(output[#output]:find('REFUSED',1,true),'player command ignored')
+command(0,{'arm','1'});assert(output[#output]:find('ARMED',1,true))
+command(0,{'arm','1'});assert(output[#output]:find('REFUSED',1,true),'cannot silently replace an armed test')
+report=copy(live);report.pools.ammo_tomahawk_regular=1
+live=assert(S.Observe(1,report).value)
+assert(lastExpiry==5 and output[#output]:find('debit_confirmed',1,true))
+report=copy(live);report.pools.ammo_tomahawk_regular=2
+local expired=S.NativePickup(1,report);live=expired.value
+assert(expired.ok and expired.quantityDeclined and output[#output]:find('pickup_declined',1,true))
+report=copy(live);report.pools.ammo_tomahawk_regular=0
+live=assert(S.Observe(1,report).value);assert(lastExpiry==nil,'next normal spend is not shortened')
+command(0,{'cancel','1'})
+live=assert(S.Transfer(1,live,'ammo_tomahawk_regular',1,'expiry-test-funding').value)
+assert(S.ConfirmRestore(1,live).ok);live.phase='active'
+command(0,{'arm','1'});clock=1061
+report=copy(live);report.pools.ammo_tomahawk_regular=0
+live=assert(S.Observe(1,report).value);assert(lastExpiry==nil,'arming expires after 60 seconds')
+command(0,{'cancel','1'});expiryEnabled=false
+live=assert(S.Transfer(1,live,'ammo_tomahawk_regular',2,'distance-test-funding').value)
+assert(S.ConfirmRestore(1,live).ok);live.phase='active'
+local distanceCommand=assert(commands.WeaponQuantityDistanceTest)
+distanceCommand(0,{'arm','1'});assert(output[#output]:find('REFUSED',1,true))
+distanceEnabled=true
+distanceCommand(1,{'arm','1'});assert(output[#output]:find('REFUSED',1,true),'player source ignored')
+distanceCommand(0,{'arm','1'});assert(output[#output]:find('ARMED',1,true))
+command(0,{'arm','1'});assert(output[#output]:find('REFUSED',1,true),'one shared test reservation per player')
+report=copy(live);report.pools.ammo_tomahawk_regular=1
+live=assert(S.Observe(1,report).value)
+assert(lastDistance==100 and lastExpiry==nil and output[#output]:find('[WeaponQuantityDistanceTest] debit_confirmed',1,true))
+report=copy(live);report.pools.ammo_tomahawk_regular=2
+local distant=S.NativePickup(1,report);live=distant.value
+assert(distant.ok and distant.quantityDeclined and output[#output]:find('[WeaponQuantityDistanceTest] pickup_declined',1,true))
+report=copy(live);report.pools.ammo_tomahawk_regular=0
+live=assert(S.Observe(1,report).value);assert(lastDistance==nil and lastExpiry==nil,'distance mode is one-shot')
+distanceCommand(0,{'cancel','1'});distanceEnabled=false
+live=assert(S.Transfer(1,live,'ammo_tomahawk_regular',2,'bucket-test-funding').value)
+assert(S.ConfirmRestore(1,live).ok);live.phase='active'
+local bucketCommand=assert(commands.WeaponQuantityBucketTest)
+bucketCommand(0,{'arm','1'});assert(output[#output]:find('REFUSED',1,true))
+bucketEnabled=true
+bucketCommand(1,{'arm','1'});assert(output[#output]:find('REFUSED',1,true),'player cannot arm bucket test')
+bucketCommand(0,{'arm','1'});assert(output[#output]:find('ARMED',1,true))
+distanceCommand(0,{'arm','1'});assert(output[#output]:find('REFUSED',1,true),'test modes remain exclusive')
+report=copy(live);report.pools.ammo_tomahawk_regular=1
+live=assert(S.Observe(1,report).value)
+assert(lastBucketTest==true and lastDistance==nil and lastExpiry==nil
+ and output[#output]:find('[WeaponQuantityBucketTest] debit_confirmed',1,true))
+report=copy(live);report.pools.ammo_tomahawk_regular=2
+local isolated=S.NativePickup(1,report);live=isolated.value
+assert(isolated.ok and isolated.quantityDeclined and output[#output]:find('[WeaponQuantityBucketTest] pickup_declined',1,true))
+report=copy(live);report.pools.ammo_tomahawk_regular=0
+live=assert(S.Observe(1,report).value);assert(lastBucketTest==nil,'bucket test affects only next single debit')
+bucketCommand(0,{'cancel','1'});bucketEnabled=false
+print=savedPrint
 print('PASS actual quantity service: empty activation, ordinary funding, signed spend location, pickup/no-credit active ack, no physical item lease/challenge, current-life gates; modeled Inventory provider')

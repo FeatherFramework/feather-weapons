@@ -13,9 +13,19 @@ if type(AddEventHandler)=='function' then AddEventHandler('onResourceStop',funct
 end) end
 function WeaponThrowableQuantityOwner.New(api,catalog,identity,limits)
     local phase,handle,baseline,reason='idle',nil,nil,nil
+    local pickupAllowed
     local Q={}
     local function count() local n=api.quantity();return type(n)=='number' and n%1==0 and n>=0 and n<=3 and n or nil end
     local function fail(why) phase='retained';reason=why;return nil,why end
+    local function pickupPermission(n)
+        if type(n)~='number' or n%1~=0 or n<0 or n>3 then return false end
+        local allowed=n<3
+        if pickupAllowed==allowed then return true end
+        local changed
+        if allowed then changed=api.allow() else changed=api.suppress() end
+        if changed~=true then return false end
+        pickupAllowed=allowed;return true
+    end
     local function ensure()
         if not api.current() then return false end
         local found=api.find()
@@ -34,22 +44,25 @@ function WeaponThrowableQuantityOwner.New(api,catalog,identity,limits)
         if not api.current() or count()~=0 or api.find()~=false then return fail('quantity_preexisting_native_state') end
         if assigned.fundedQuantity>0 and not ensure() then return fail('quantity_carrier_creation_failed') end
         permissionOwners[Q]=api.restorePermissions
-        if not api.allow() then return fail('quantity_pickup_permission_failed') end
+        if not pickupPermission(assigned.fundedQuantity) then return fail('quantity_pickup_permission_failed') end
         phase='active';return true
     end
     function Q.PrepareRestore(value)
         if phase~='active' or not api.current() then return nil end
         if value.pools.ammo_tomahawk_regular>0 and not ensure() then return fail('quantity_carrier_restore_failed') end
+        if not pickupPermission(value.pools.ammo_tomahawk_regular) then return fail('quantity_pickup_permission_failed') end
         baseline=value;return true
     end
     function Q.AcceptNativePickup(value)
         if phase~='active' or not api.current() or count()==nil then return nil end
         if count()>0 and not ensure() then return fail('quantity_collected_carrier_failed') end
+        if not pickupPermission(count()) then return fail('quantity_pickup_permission_failed') end
         baseline=value;return true
     end
     function Q.Observe(value)
         if phase~='active' or not api.current() then return nil end
         local n=count();if not n then return fail('quantity_native_count_unreadable') end
+        if not pickupPermission(n) then return fail('quantity_pickup_permission_failed') end
         -- An increase is provisional until the server consumes an allowance.
         if n>value.pools.ammo_tomahawk_regular then return {pickupCandidate=true,quantity=n} end
         local found=api.find()
@@ -67,11 +80,11 @@ function WeaponThrowableQuantityOwner.New(api,catalog,identity,limits)
         if not api.remove(handle) or count()~=0 or api.find()~=false or not api.restorePermissions() then
             return fail('quantity_cleanup_unconfirmed')
         end
-        permissionOwners[Q]=nil;handle=nil;phase='released';return true
+        permissionOwners[Q]=nil;handle=nil;pickupAllowed=nil;phase='released';return true
     end
     function Q.Status()
         return {phase=phase,reason=reason,quantityMode=true,guidCaptured=handle~=nil,revision=baseline and baseline.revision,
-            fundedQuantity=baseline and baseline.pools.ammo_tomahawk_regular,observedQuantity=count()}
+            fundedQuantity=baseline and baseline.pools.ammo_tomahawk_regular,observedQuantity=count(),pickupAllowed=pickupAllowed}
     end
     return Q
 end

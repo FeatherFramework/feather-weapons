@@ -195,8 +195,12 @@ Disable the old paid-throwable, paid-collection and GUID-suite test switches for
 this mode. Do not revert to physical-unit mode while quantities remain loaded.
 This mode remains default-off. Own/shared/repeated recovery, three outstanding
 throws, load/unload persistence, loaded reconnect, death/admin revive, prepared
-resource stop/start and full server restart were confirmed live. Unexpected
-shutdown and allowance rejection/batched-report edge cases remain unaccepted
-live. Research and earlier exact-item experiments are retained as gated evidence;
+resource stop/start and full server restart were confirmed live. Capacity pickup
+suppression/re-enable, multi-unit pickup, and controlled expiry/distance/bucket
+rejection also passed. A settled unprepared resource stop correctly refused
+cleanup, then full client exit/rejoin restored the acknowledged balance. Actual
+process crashes and interrupted-write durability remain untested. See the
+[quantity acceptance summary](docs/quantity-recovery-acceptance.md) for scope.
+Research and earlier exact-item experiments are retained as gated evidence;
 they are not the quantity recovery authority. See the framework master plan for
 the acceptance record.

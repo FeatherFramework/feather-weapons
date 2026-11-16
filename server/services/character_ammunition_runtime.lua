@@ -10,6 +10,11 @@ local opening={}
 local deathWrites={}
 local unitSpends={}
 local quantityWrites={}
+local quantityExpiryTests={}
+local function rejectionTestName(test)
+    if test and test.kind=='bucket' then return 'WeaponQuantityBucketTest' end
+    return test and test.kind=='distance' and 'WeaponQuantityDistanceTest' or 'WeaponQuantityExpiryTest'
+end
 local retirements,recoverySnapshots={},{}
 local function copy(value)
     if type(value)~='table' then return value end
@@ -371,14 +376,39 @@ function S.Observe(source,report)
     local request,reason=runtime.PrepareObservation(source,report)
     if not request then return failure(reason) end
     if request.unchanged then return {ok=true,value=request.value} end
+    local expiryTest
     if quantities() then
         local live=runtime.Get(source)
         if live and request.spec.pools.ammo_tomahawk_regular<live.pools.ammo_tomahawk_regular then
             local where=quantityLocation(source,loadouts[source])
+            local test=quantityExpiryTests[source]
+            if test and test.phase=='armed' then
+                local sameScope=test.sessionId==live.sessionId and test.epoch==live.epoch
+                    and test.characterId==live.characterId and test.revision==live.revision
+                local switch=test.kind=='bucket' and 'feather_quantity_bucket_test'
+                    or test.kind=='distance' and 'feather_quantity_distance_test' or 'feather_quantity_expiry_test'
+                if sameScope and test.deadline>=os.time() and GetConvar(switch,'0')=='1'
+                    and live.pools.ammo_tomahawk_regular-request.spec.pools.ammo_tomahawk_regular==1 and where then
+                    if test.kind=='bucket' then
+                        where.bucketTest=true;test.actualBucket=where.bucket
+                        test.allowanceBucket=where.bucket==2147483647 and 0 or where.bucket+1
+                    elseif test.kind=='distance' then where.distanceTestOffset=100 else where.expiryTestSeconds=5 end
+                    test.phase='dispatching';expiryTest=test
+                else test.phase='cancelled' end
+            end
             if not where or not runtime.AttachQuantitySpend(request,where) then return failure('quantity_spend_context_changed') end
         end
     end
-    return commit(request,'ObserveCharacterAmmunition')
+    local result=commit(request,'ObserveCharacterAmmunition')
+    if expiryTest then
+        expiryTest.phase=result and result.ok and 'debit_confirmed' or 'review_required'
+        expiryTest.confirmedAt=os.time()
+        print('['..rejectionTestName(expiryTest)..'] '..expiryTest.phase..'; one-shot consumed; '
+            ..(expiryTest.kind=='bucket' and 'allowance recorded in different bucket; lifetime=180 seconds'
+                or expiryTest.kind=='distance' and 'allowance offset=100 metres; lifetime=180 seconds' or 'allowance lifetime=5 seconds')
+            ..'; no grants/retries')
+    end
+    return result
 end
 function S.NativePickup(source,report)
     report=copy(report) -- capture before medical/other-player pending writes yield
@@ -401,7 +431,13 @@ function S.NativePickup(source,report)
         if not fresh or fresh.bucket~=where.bucket then return failure('quantity_pickup_context_changed') end
         local request,why=runtime.PrepareQuantityPickup(source,copy(report),where)
         if not request then return failure(why) end
-        return commit(request,'ReconcileNativeThrowablePickup')
+        local result=commit(request,'ReconcileNativeThrowablePickup')
+        local test=quantityExpiryTests[source]
+        if test and test.phase=='debit_confirmed' and test.epoch==report.epoch then
+            test.phase=result and result.ok and (result.quantityDeclined and 'pickup_declined' or 'pickup_credited') or 'review_required'
+            print('['..rejectionTestName(test)..'] '..test.phase..'; verify saved/native quantities before further actions')
+        end
+        return result
     end
     if not enabled() or Config.DevMode~=true or Config.NativeAlphaRuntime~=true
         or type(GetConvarInt)~='function' or GetConvarInt('feather_native_throwable_pickup',0)~=1
@@ -513,6 +549,8 @@ function S.ConfirmCleanup(source,report)
     return {ok=true,value=released}
 end
 function S.Revoke(source,sessionId,reason)
+    local test=quantityExpiryTests[source]
+    if test and (not sessionId or test.sessionId==sessionId) then quantityExpiryTests[source]=nil end
     if deathWrites[source] and (not sessionId or deathWrites[source].context.sessionId==sessionId) then deathWrites[source]=nil end
     if opening[source] and (not sessionId or opening[source].sessionId==sessionId) then opening[source]=nil end
     local bound=loadouts[source]
@@ -583,6 +621,37 @@ if type(RegisterCommand)=='function' and quantities() then RegisterCommand('Weap
     print('[WeaponQuantityStatus] '..json.encode(value and {source=target,quantityMode=true,phase=value.phase,
         revision=value.revision,quantity=value.pools.ammo_tomahawk_regular} or {phase='unavailable'}))
 end,true) end
+local function registerQuantityRejectionTest(name,kind,switch,detail)
+if type(RegisterCommand)=='function' then RegisterCommand(name,function(source,args)
+    if source~=0 then return end
+    local action,target=args and args[1],tonumber(args and args[2])
+    if not target or target<1 or target%1~=0 or #args~=2
+        or (action~='arm' and action~='status' and action~='cancel') then
+        return print('['..name..'] usage: arm|status|cancel current-server-id')
+    end
+    if action=='cancel' then quantityExpiryTests[target]=nil;return print('['..name..'] cancelled; no balances changed') end
+    local test=quantityExpiryTests[target]
+    if action=='status' then
+        local live=runtime.Get(target)
+        return print('['..name..'] '..json.encode({phase=test and test.phase or 'idle',kind=test and test.kind,
+            actualBucket=test and test.actualBucket,allowanceBucket=test and test.allowanceBucket,
+            quantity=live and live.pools.ammo_tomahawk_regular,revision=live and live.revision,
+            elapsedSeconds=test and test.confirmedAt and os.time()-test.confirmedAt or nil}))
+    end
+    local live=runtime.Get(target)
+    if not quantities() or type(GetConvar)~='function' or GetConvar(switch,'0')~='1'
+        or test and test.phase~='cancelled' or not live or live.phase~='active'
+        or live.pools.ammo_tomahawk_regular<1 or not quantityLocation(target,loadouts[target]) then
+        return print('['..name..'] REFUSED explicit test switch and active alive funded owner required; cancel old test before rearming')
+    end
+    quantityExpiryTests[target]={phase='armed',kind=kind,characterId=live.characterId,sessionId=live.sessionId,
+        epoch=live.epoch,revision=live.revision,deadline=os.time()+60}
+    print('['..name..'] ARMED next single paid throw within 60 seconds; '..detail..'; no grants')
+end,true) end
+end
+registerQuantityRejectionTest('WeaponQuantityExpiryTest','expiry','feather_quantity_expiry_test','allowance expires after 5 seconds')
+registerQuantityRejectionTest('WeaponQuantityDistanceTest','distance','feather_quantity_distance_test','allowance offset=100 metres; lifetime=180 seconds')
+registerQuantityRejectionTest('WeaponQuantityBucketTest','bucket','feather_quantity_bucket_test','allowance recorded in different bucket; lifetime=180 seconds')
 AddEventHandler('playerDropped',function() S.Revoke(source,nil,'player_dropped') end)
 AddEventHandler('core.session.left.v1',function(session)
     -- Local Core lifecycle event, not a client-triggerable net route.

@@ -256,9 +256,12 @@ dofile('client/native_throwable_pickup_permissions.lua')
 dofile('client/throwable_quantity_owner.lua')
 WeaponNativeThrowablePolicy.QuantityEnabled=function() return true end
 Config.NativeThrowablePickupPriorPolicy={w_melee_tomahawk01=true,w_melee_tomahawk02=true}
-SetLocalPlayerPermittedToCollectPickupsWithModel=function(_,allowed) assert(type(allowed)=='boolean') end
+local permissionState={}
+SetLocalPlayerPermittedToCollectPickupsWithModel=function(model,allowed)
+ assert(type(allowed)=='boolean');permissionState[model]=allowed
+end
 registry.throwableQuantityContract=1
-for _,initial in ipairs({0,2}) do
+for _,initial in ipairs({0,2,3}) do
  creationMode='units_empty_recovery';world=true;has=false;visible=false;entry=false
  guid={1,2,3,4};hash=42;grants=0;setters=0;removes=0;poolRemoves=0;sealed=nil;now=0
  native={};for id,name in pairs(registry.names) do native[name]=id=='ammo_repeater_regular' and 1 or 0 end
@@ -267,10 +270,13 @@ for _,initial in ipairs({0,2}) do
  local q=assert(WeaponNativeThrowableAdapter.Scoped(7,identity,function() return world end,function() return sealed end,catalog,registry))
  assert(q.Create(child) and grants==(initial>0 and 1 or 0) and setters==0 and native.AMMO_TOMAHAWK==0,
   'quantity factory only constructs a zero-ammo carrier before parent restore')
+ assert(q.Status().pickupAllowed==(initial<3) and permissionState.w_melee_tomahawk01==(initial<3)
+  and permissionState.w_melee_tomahawk02==(initial<3),'capacity policy applies before initial restore')
  native.AMMO_TOMAHAWK=initial -- parent restore is modeled separately
  assert(q.Observe(child))
  native.AMMO_TOMAHAWK=0;entry=false;has=false;visible=false
  assert(q.Observe(child) and not q.Status().guidCaptured,'engine spent carrier absence is not item ownership loss')
+ assert(q.Status().pickupAllowed and permissionState.w_melee_tomahawk01,'throwing creates pickup room')
  native.AMMO_TOMAHAWK=1
  local empty={pools={ammo_tomahawk_regular=0}}
  assert(q.Observe(empty).pickupCandidate and setters==0,'provisional native increase is not funding')
@@ -291,8 +297,24 @@ for id in pairs(registry.limits) do child.pools[id]=id=='ammo_repeater_regular' 
 local q=assert(WeaponNativeThrowableAdapter.Scoped(7,identity,function() return world end,function() return sealed end,catalog,registry))
 assert(q.Create(child));native.AMMO_TOMAHAWK=1
 assert(q.AcceptNativePickup({pools={ammo_tomahawk_regular=1}}))
+native.AMMO_TOMAHAWK=3
+assert(q.AcceptNativePickup({pools={ammo_tomahawk_regular=3}}) and not q.Status().pickupAllowed
+ and permissionState.w_melee_tomahawk01==false,'acknowledged full pool suppresses native pickup')
+assert(q.PrepareRestore({pools={ammo_tomahawk_regular=2}}) and q.Status().pickupAllowed
+ and permissionState.w_melee_tomahawk02==true,'unload re-enables native collection before parent restore')
+native.AMMO_TOMAHAWK=1
 sealed={pools={ammo_tomahawk_regular=1}}
 assert(q.Release() and q.Status().phase=='released' and removes==1 and poolRemoves==0
  and native.AMMO_REPEATER==1 and native.AMMO_TOMAHAWK==0 and setters==0)
+assert(permissionState.w_melee_tomahawk01==true and permissionState.w_melee_tomahawk02==true,
+ 'sealed release restores explicit prior model permissions')
 assert(q.Release() and removes==1,'released quantity carrier cannot repeat removal')
+local fullChild={contract=3,kind='throwable_quantity',characterId='john',identity=identity,revision=0,pools={}}
+for id in pairs(registry.limits) do fullChild.pools[id]=id=='ammo_tomahawk_regular' and 3 or (id=='ammo_repeater_regular' and 1 or 0) end
+SetLocalPlayerPermittedToCollectPickupsWithModel=function() error('permission write failed') end
+local failedCapacity=assert(WeaponNativeThrowableAdapter.Scoped(7,identity,function() return world end,function() return sealed end,catalog,registry))
+assert(not failedCapacity.Create(fullChild) and failedCapacity.Status().phase=='retained'
+ and failedCapacity.Status().reason=='quantity_pickup_permission_failed'
+ and native.AMMO_TOMAHAWK==0 and native.AMMO_REPEATER==1 and setters==0,
+ 'permission suppression failure retains owner without restoring/amending native ammunition')
 print('PASS concrete quantity adapter: zero-ammo carrier, no canonical item IDs, native pool preservation, paid pickup rebind and sealed exact cleanup')
