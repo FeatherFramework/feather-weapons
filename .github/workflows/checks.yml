@@ -22,8 +22,9 @@ jobs:
       # Pin integration sources so unrelated upstream pushes cannot change a run.
       - uses: actions/checkout@v4
         with:
-          repository: FeatherFramework/feather-inventory
-          ref: 6cb10b732e67c20f0f4e99f56c70bed94d54cac1
+          # Paired draft PR #70: immutable reviewed runtime/test revision.
+          repository: JusCampin/feather-inventory
+          ref: 1e15f7207630292781a6c7b780f837c12cfbf8f3
           path: feather-inventory
           persist-credentials: false
       - uses: actions/checkout@v4
