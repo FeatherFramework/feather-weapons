@@ -4,6 +4,15 @@ Companion changes: [Weapons #50](https://github.com/FeatherFramework/feather-wea
 and [Inventory #70](https://github.com/FeatherFramework/feather-inventory/pull/70).
 The framework Weapons and Inventory master plans remain the authoritative record.
 
+Runtime cleanup follow-up (live-confirmed 2026-11-15): the normal manifest now excludes
+45 retired experiment entries. shared/throwable_mode.lua owns the supported
+quantity opt-in, and shop_config.lua supplies the ammunition price/pack size.
+Focused startup/catalog/own recovery passed on this slimmer composition: Shops
+9/9, retired throwable action refused without a loan, and quantity 3->2->3 at
+revisions 61/62 with capacity permissions correct. Earlier broader gates below
+predate the cleanup; they were not all repeated. Offline sources and the historical manifest
+are preserved under the documented research boundary, never loaded as a fallback.
+
 ## Live-confirmed scope
 
 | Gate | Result |
@@ -65,3 +74,8 @@ serialized projectile ownership. A modified client can consume an available
 allowance, but cannot save more recovered units than confirmed paid throws supplied.
 Knives, arrows, physical holder items and historical-item migration are outside
 this regular Tomahawk acceptance scope.
+
+2026-11-15 ammunition purchase-limit follow-up IMPLEMENTED / LOCAL PASS, live pending:
+Single-unit ammunition offers now use maximumUnits (default10, configurable1..100), independently of maximumBoxes (still2 for multi-round packs). Existing operator shop_config.lua files receive default10 without replacement. Tomahawk loaded capacity remains3; purchase price, pack sizes, Inventory delivery limits and server quote checks unchanged. Invalid explicit limits refuse catalog configuration. Weapons runtime syntax and304 isolated Lua suites passed (ammunition-purchase-limit-tests.log), including default/custom/legacy unit limits, invalid settings, and unchanged two50-round-box limit. Deploy only server/services/gun_store_catalog.lua with orderly Weapons stop and Shops restart; no manifest/schema/convar changes or refresh required. Live Jane gate pending: buy5 loose regular Tomahawks for$7.50, verify Inventory delta+5, loaded quantity unchanged, and shop smoke9/9. No commit/push/PR actions performed.
+
+2026-11-15 ammunition purchase-limit LIVE PASS: user confirmed all posted manual checks passed. Jane purchased5 individual regular Tomahawks for$7.50, Inventory gained5 loose units, and loaded quantity remained unchanged. Shops release smoke9/9 passed. Single-unit purchase default10 is live accepted; boxed ammunition maximum2 and loaded Tomahawk capacity3 remain unchanged. No further deployment required for this gate. User handles commits/pushes/PRs.

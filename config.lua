@@ -1,7 +1,7 @@
 Config = {
     NativeThrowableQuantityContract = 0, -- opt-in pooled Tomahawk quantities; no per-projectile metadata
-    NativeThrowableUnitsEnabled = false, -- staged paid-unit/prompt recovery; enable only after combined live acceptance
-    NativeThrowableNativeCollectionContract = 0, -- staged native pickup handoff; also requires feather_native_paid_collection=1
+    NativeThrowableUnitsEnabled = false, -- retired physical-unit research; forced off by supported mode
+    NativeThrowableNativeCollectionContract = 0, -- retired exact-item handoff; forced off by supported mode
     NativeThrowablePickupPriorPolicy = { -- explicit prior policy owned/restored by the native-only framework
         w_melee_tomahawk01 = true, w_melee_tomahawk02 = true
     },

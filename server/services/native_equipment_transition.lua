@@ -1352,14 +1352,14 @@ RegisterCommand('WeaponNativePrepareStop',function(source,args)
     local result=coordinator.Begin(tonumber(args[1]),{action='shutdown'})
     print('[WeaponNativePrepareStop] '..(result.ok and 'STARTED; wait for PASS before stopping' or 'REFUSED '..tostring(result.error.code)))
 end,true)
-RegisterCommand('WeaponNativeThrowableFunding',function(source,args)
+if Config.NativeThrowableQuantityOnly~=true then RegisterCommand('WeaponNativeThrowableFunding',function(source,args)
     if Config.DevMode~=true then return end
     if source~=0 or not enabled() or GetResourceState('feather-weapons-native-proof')~='stopped' then return end
     if not args or #args~=3 then return print('[WeaponNativeThrowableFunding] usage: serverId +1|-1 stable-operation-id') end
     local result=coordinator.Begin(tonumber(args[1]),{action='throwable-funding',slot='weapon_throwable',
         amount=tonumber(args[2]),operationId=args[3]})
     print('[WeaponNativeThrowableFunding] '..(result.ok and 'STARTED; released-owner funding requested' or 'REFUSED '..tostring(result.error.code)))
-end,true)
+end,true) end
 drain=WeaponNativeShutdownDrain.New({
     now=GetGameTimer,
     deadline=function(fn) SetTimeout(90000,fn) end,

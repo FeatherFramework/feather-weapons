@@ -201,6 +201,11 @@ rejection also passed. A settled unprepared resource stop correctly refused
 cleanup, then full client exit/rejoin restored the acknowledged balance. Actual
 process crashes and interrupted-write durability remain untested. See the
 [quantity acceptance summary](docs/quantity-recovery-acceptance.md) for scope.
-Research and earlier exact-item experiments are retained as gated evidence;
-they are not the quantity recovery authority. See the framework master plan for
-the acceptance record.
+The normal manifest excludes the retired prompt, exact-item handoff, capture and
+loan hosts. Their source and historical regressions remain offline evidence;
+see [the research boundary](tests/archive/throwable-research/README.md). Old
+throwable gameplay switches are refused at startup. Quantity mode uses
+`shared/throwable_mode.lua`, with regular ammunition price/pack size configured
+in `shop_config.lua`; temporary paid-test overlays are no longer loaded. The
+firearm GUID matrix remains available, while its retired throwable loan actions
+refuse without dispatch. No archive/test files are needed for deployment.

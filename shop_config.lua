@@ -7,7 +7,8 @@
 WeaponStoreConfig = {
     enabled = true,
     currency = 'dollars',
-    maximumBoxes = 2, -- additionally capped at 100 delivered items per checkout
+    maximumBoxes = 2, -- packs containing multiple rounds; capped at 100 delivered items
+    maximumUnits = 10, -- ammunition sold individually; purchase limit, not loaded capacity
     stores = {
         {
             id = '73000000-0000-4000-8000-000000000001',
@@ -104,7 +105,7 @@ WeaponStoreConfig = {
         ammo_arrow_dynamite = { price = 2.50, rounds = 5 },
         ammo_throwing_knives_regular = { price = 1.00, rounds = 1 },
         ammo_throwing_knives_poison = { price = 3.00, rounds = 1 },
-        ammo_tomahawk_regular = { price = 1.00, rounds = 1 },
+        ammo_tomahawk_regular = { price = 1.50, rounds = 1 }, -- offered only with feather_throwable_quantities=1
         ammo_bolas_regular = { price = 1.00, rounds = 1 },
         ammo_bolas_hawkmoth = { price = 1.00, rounds = 1 },
         ammo_bolas_ironspiked = { price = 1.00, rounds = 1 },

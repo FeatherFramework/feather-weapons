@@ -1,4 +1,5 @@
-local f=assert(io.open('fxmanifest.lua'));local manifest=f:read('*a');f:close()
+-- Historical research regression; manifest assertions use the archived snapshot.
+local f=assert(io.open('tests/archive/throwable-research/fxmanifest.lua'));local manifest=f:read('*a');f:close()
 local config=assert(manifest:find("'shop_config.lua'",1,true))
 local overlay=assert(manifest:find("'paid_throwable_shop_test.lua'",1,true))
 local catalog=assert(manifest:find("'/server/services/gun_store_catalog.lua'",1,true))

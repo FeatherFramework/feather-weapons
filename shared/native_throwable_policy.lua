@@ -9,12 +9,14 @@ end
 -- Staged normal-unit admission. Not shipped enabled until commerce, lifecycle,
 -- UI and recovery/retirement integration are complete.
 function WeaponNativeThrowablePolicy.UnitsEnabled()
+    if Config and Config.NativeThrowableQuantityOnly==true then return false end
     if WeaponNativeThrowablePolicy.QuantityEnabled() then return false end
     return Config and Config.NativeThrowableUnitsEnabled==true and Config.NativeAlphaRuntime==true
         and Config.CharacterAmmunitionEnabled==true and Config.CharacterAmmoTransportEnabled==true
         and Config.NativeAlphaLifecycleWearEnabled==true or false
 end
 function WeaponNativeThrowablePolicy.Enabled()
+    if Config and Config.NativeThrowableQuantityOnly==true then return false end
     return Config and Config.NativeAlphaRuntime==true
         and Config.CharacterAmmunitionEnabled==true and Config.CharacterAmmoTransportEnabled==true
         and Config.NativeAlphaLifecycleWearEnabled==true and type(GetConvarInt)=='function'

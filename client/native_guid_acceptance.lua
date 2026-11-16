@@ -205,6 +205,7 @@ function C.AllowTemporaryFiring()
   and (GetPedAmmoByType(r.ped,joaat('AMMO_TOMAHAWK'))==1 or r.competing and GetPedAmmoByType(r.ped,joaat('AMMO_TOMAHAWK'))==2)
 end
 RegisterNetEvent('feather-weapons:client:guid-suite-throwable',function(ticket,bound,total,mode)
+ if Config and Config.NativeThrowableQuantityOnly==true then return end
  if source~=65535 or active or used[ticket] or type(ticket)~='string' or #ticket<1 or #ticket>128
   or type(bound)~='table' or total~=1 or (mode~=nil and mode~='landing' and mode~='shared' and mode~='shared-competing') or not ownerClosed() then return end
  local w=WeaponCharacterAmmoWorldContext.Read();w=w and w.ok and w.value
@@ -340,6 +341,7 @@ RegisterNetEvent('feather-weapons:client:guid-suite-shared-ack',function(ticket)
  end
 end)
 RegisterNetEvent('feather-weapons:client:guid-suite-shared-collector',function(ticket,bound,origin,unitCount)
+ if Config and Config.NativeThrowableQuantityOnly==true then return end
  if source~=65535 or active or used[ticket] or type(ticket)~='string' or #ticket<1 or #ticket>128
   or (unitCount~=nil and unitCount~=2) or type(bound)~='table' or type(origin)~='table' or not ownerClosed() then return end
  for _,key in ipairs({'characterId','sessionId','epoch'}) do if type(origin[key])~='string' or #origin[key]<1 or #origin[key]>128 then return end end

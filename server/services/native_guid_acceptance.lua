@@ -364,6 +364,9 @@ end)
 RegisterCommand('WeaponGuidAcceptance',function(source,args)
  if source~=0 then return end
  local action=args and args[1]
+ if Config and Config.NativeThrowableQuantityOnly==true and ({throwable=true,landing=true,shared=true,['shared-competing']=true})[action or ''] then
+  return print('[WeaponGuidAcceptance] REFUSED retired exact-item throwable experiment; use quantity-mode diagnostics. Retained evidence is available through status/archive.')
+ end
  local competing=action=='shared-competing'
  if competing then action='shared' end
  if action=='status' then return summary() end

@@ -25,11 +25,16 @@ end
 function WeaponGunStore.Build(config,definitions)
     if type(config)~='table' or type(config.enabled)~='boolean' then return Error('Gun store configuration required.') end
     if not config.enabled then return {ok=true,value={contract=1,stores={}}} end
+    local maximumUnits=config.maximumUnits
+    if maximumUnits==nil then maximumUnits=10 end -- compatible with existing operator configs
     if config.currency~='dollars' or not Integer(config.maximumBoxes,1,100)
+        or not Integer(maximumUnits,1,100)
         or type(config.stores)~='table' or #config.stores>20 then return Error('Gun store currency, quantity or locations invalid.') end
     local entries={}
     local physicalUnits=WeaponNativeThrowablePolicy and WeaponNativeThrowablePolicy.UnitsEnabled
         and WeaponNativeThrowablePolicy.UnitsEnabled()
+    local quantityMode=WeaponNativeThrowablePolicy and WeaponNativeThrowablePolicy.QuantityEnabled
+        and WeaponNativeThrowablePolicy.QuantityEnabled()
     for _,group in ipairs({'weapons','ammunition','attachments'}) do
         if type(config[group])~='table' then return Error('Missing gun store price group: '..group) end
         for key in pairs(config[group]) do
@@ -41,6 +46,8 @@ function WeaponGunStore.Build(config,definitions)
             if group=='weapons' and WeaponNativeMeleeCatalog and WeaponNativeMeleeCatalog.Resolve(definition)
                 and not WeaponNativeMeleeCatalog.Enabled() then setting=false end
             if group=='ammunition' and key=='ammo_tomahawk_regular' and physicalUnits then setting=false end
+            if group=='ammunition' and key=='ammo_tomahawk_regular' and not quantityMode
+                and Config and Config.NativeThrowableQuantityOnly==true then setting=false end
             if setting~=false and not (group=='ammunition' and type(setting)=='table' and setting.price==false) then
                 local price,size,category
                 if group=='ammunition' then
@@ -68,7 +75,7 @@ function WeaponGunStore.Build(config,definitions)
                 end
                 entries[#entries+1]={itemName=definition.itemName,label=definition.label,
                     category=category,unitPrice=price,packSize=size,
-                    maximumQuantity=group=='ammunition' and math.min(config.maximumBoxes,math.floor(100/size))
+                    maximumQuantity=group=='ammunition' and math.min(size==1 and maximumUnits or config.maximumBoxes,math.floor(100/size))
                         or (group=='weapons' and 1 or 10)}
             end
         end
