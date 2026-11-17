@@ -22,9 +22,9 @@ jobs:
       # Pin integration sources so unrelated upstream pushes cannot change a run.
       - uses: actions/checkout@v4
         with:
-          # Paired draft PR #70: immutable reviewed runtime/test revision.
+          # Paired Inventory PR #70: immutable regular-arrow implementation.
           repository: JusCampin/feather-inventory
-          ref: 1e15f7207630292781a6c7b780f837c12cfbf8f3
+          ref: ec9c5a9792d4cd52af4267115642dd313362c01e
           path: feather-inventory
           persist-credentials: false
       - uses: actions/checkout@v4

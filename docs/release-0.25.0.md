@@ -31,8 +31,9 @@ modeled rather than live accepted. Literal crashes/in-flight SQL interruption
 are not covered by the orderly lifecycle results.
 
 Release preparation: Inventory v0.17.0, Shops v0.5.0, then Weapons v0.25.0.
-Weapons and Inventory PRs must cross-link the paired changes. CI sibling pins
-still refer to the previous commits and must be refreshed to the user's pushed
-implementation commits before final paired CI/merge/tag. The user handles all
-commits, pushes, PR ready/merge actions, tags and releases. Version edits are local;
-no GitHub release or new release-head CI result is claimed here.
+Weapons and Inventory PRs must cross-link the paired changes. The user pushed
+Weapons implementation e3d60a0 and Inventory implementation ec9c5a9; both PRs are
+open for review with green checks on those heads. Local CI pin follow-ups now
+select these exact paired implementations, pending user commit/push and new CI.
+The user handles all commits, pushes, PR ready/merge actions, tags and releases.
+No GitHub release or CI result for the unpushed pin follow-ups is claimed here.
