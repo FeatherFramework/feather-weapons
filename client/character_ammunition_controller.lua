@@ -43,16 +43,17 @@ function WeaponCharacterAmmoController.New(api,pickupAck,prepareQuantityRestore)
                 -- the next sample; genuine firearm reductions are never reset.
                 local actual,why=adapter.Read(api.ped(),true)
                 if not actual then return fail(why) end
-                local rejected=request.report.pools.ammo_tomahawk_regular-accepted.pools.ammo_tomahawk_regular
-                actual.ammo_tomahawk_regular=math.max(0,actual.ammo_tomahawk_regular-rejected)
-                for id,n in pairs(actual) do if id~='ammo_tomahawk_regular' and n>accepted.pools[id] then return fail('quantity_decline_foreign_increase') end end
+                local ammoId=request.ammunitionId or 'ammo_tomahawk_regular'
+                local rejected=request.report.pools[ammoId]-accepted.pools[ammoId]
+                actual[ammoId]=math.max(0,actual[ammoId]-rejected)
+                for id,n in pairs(actual) do if id~=ammoId and n>accepted.pools[id] then return fail('quantity_decline_foreign_increase') end end
                 local restored;restored,why=adapter.Restore({phase='restoring',pools=actual},api.ped(),true)
                 if not restored then return fail(why) end
                 return
             end
             if request.kind=='pickup' then
                 if closing or api.ready()~=true or type(pickupAck)~='function' then return fail('pickup_owner_ack_unavailable') end
-                local ok,value=pcall(pickupAck,accepted)
+                local ok,value=pcall(pickupAck,accepted,request.ammunitionId)
                 if not ok or value~=true then return fail('pickup_owner_rebind_unconfirmed') end
             end
             if request.kind=='transfer' then
@@ -87,7 +88,9 @@ function WeaponCharacterAmmoController.New(api,pickupAck,prepareQuantityRestore)
         if not pools then return fail(reason) end
         local request
         local quantityMode=WeaponNativeThrowablePolicy and WeaponNativeThrowablePolicy.QuantityEnabled and WeaponNativeThrowablePolicy.QuantityEnabled()
-        if not closing and quantityMode and pools.ammo_tomahawk_regular>status.baseline.pools.ammo_tomahawk_regular then
+        local arrowPickup=WeaponRegularArrowPolicy and WeaponRegularArrowPolicy.Enabled() and pools.ammo_arrow_regular
+            and pools.ammo_arrow_regular>status.baseline.pools.ammo_arrow_regular
+        if not closing and (arrowPickup or quantityMode and pools.ammo_tomahawk_regular>status.baseline.pools.ammo_tomahawk_regular) then
             request,reason=C.PrepareNativePickup(status.ped,pools,true,true)
             if request and type(api.block)=='function' then api.block(true) end
         elseif not closing and Config and Config.DevMode==true and type(GetConvarInt)=='function'

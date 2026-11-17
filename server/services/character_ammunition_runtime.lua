@@ -24,8 +24,10 @@ local function failure(code) return {ok=false,error={code=code,message=code}} en
 local function enabled() return Config.CharacterAmmunitionEnabled==true end
 local function quantities() return WeaponNativeThrowablePolicy and WeaponNativeThrowablePolicy.QuantityEnabled
     and WeaponNativeThrowablePolicy.QuantityEnabled() end
+local function arrows() return WeaponRegularArrowPolicy and WeaponRegularArrowPolicy.Enabled() end
+local function recoveryEnabled() return quantities() or arrows() end
 local function quantityLocation(source,bound)
-    if not quantities() or not bound or not CoreAdapter.IsSessionCurrent(source,bound.sessionId,bound.characterId) then return nil end
+    if not recoveryEnabled() or not bound or not CoreAdapter.IsSessionCurrent(source,bound.sessionId,bound.characterId) then return nil end
     local ok,medical=pcall(function() return exports['feather-medical']:ReadNativeWeaponCondition(source,
         {characterId=bound.characterId,sessionId=bound.sessionId,runtimeEpoch=bound.epoch}) end)
     if not ok or not medical or not medical.ok or not medical.value or medical.value.lifeState~='alive' then return nil end
@@ -335,7 +337,7 @@ local function commit(request,method)
         end
     end
     if bound then bound.providerOutcome='pending' end
-    local quantityWrite=quantities() and request.spec.quantityRecovery
+    local quantityWrite=recoveryEnabled() and request.spec.quantityRecovery
     if quantityWrite then quantityWrites[request.context.actorSource]=quantityWrite end
     local ok,result=pcall(function() return exports['feather-inventory'][method](exports['feather-inventory'],request.context,request.spec) end)
     if quantityWrites[request.context.actorSource]==quantityWrite then quantityWrites[request.context.actorSource]=nil end
@@ -377,12 +379,14 @@ function S.Observe(source,report)
     if not request then return failure(reason) end
     if request.unchanged then return {ok=true,value=request.value} end
     local expiryTest
-    if quantities() then
+    if recoveryEnabled() then
         local live=runtime.Get(source)
-        if live and request.spec.pools.ammo_tomahawk_regular<live.pools.ammo_tomahawk_regular then
+        local tomSpent=quantities() and live and request.spec.pools.ammo_tomahawk_regular<live.pools.ammo_tomahawk_regular
+        local arrowSpent=arrows() and live and live.pools.ammo_arrow_regular and request.spec.pools.ammo_arrow_regular<live.pools.ammo_arrow_regular
+        if tomSpent or arrowSpent then
             local where=quantityLocation(source,loadouts[source])
             local test=quantityExpiryTests[source]
-            if test and test.phase=='armed' then
+            if tomSpent and test and test.phase=='armed' then
                 local sameScope=test.sessionId==live.sessionId and test.epoch==live.epoch
                     and test.characterId==live.characterId and test.revision==live.revision
                 local switch=test.kind=='bucket' and 'feather_quantity_bucket_test'
@@ -412,7 +416,7 @@ function S.Observe(source,report)
 end
 function S.NativePickup(source,report)
     report=copy(report) -- capture before medical/other-player pending writes yield
-    if quantities() then
+    if recoveryEnabled() then
         local bound=loadouts[source]
         local where=quantityLocation(source,bound)
         if not where then return failure('quantity_pickup_context_changed') end
@@ -429,8 +433,21 @@ function S.NativePickup(source,report)
         end
         local fresh=quantityLocation(source,bound)
         if not fresh or fresh.bucket~=where.bucket then return failure('quantity_pickup_context_changed') end
+        local live=runtime.Get(source)
+        if arrows() and live and live.pools.ammo_arrow_regular and type(report)=='table' and type(report.pools)=='table'
+            and type(report.pools.ammo_arrow_regular)=='number' and report.pools.ammo_arrow_regular>live.pools.ammo_arrow_regular then
+            local checked=S.ValidateLoadout(source)
+            if not checked.ok or loadouts[source]~=bound then return failure('arrow_pickup_loadout_changed') end
+        end
         local request,why=runtime.PrepareQuantityPickup(source,copy(report),where)
         if not request then return failure(why) end
+        if request.spec.nativePickupPlan.ammunitionId=='ammo_arrow_regular' then
+            local owned=false
+            for _,row in pairs(bound.equipment or {}) do
+                if type(row)=='table' and row.metadata and row.metadata.weaponDefinitionId=='bow' then owned=true end
+            end
+            if not arrows() or not owned then runtime.Revoke(source);return failure('owned_bow_required') end
+        end
         local result=commit(request,'ReconcileNativeThrowablePickup')
         local test=quantityExpiryTests[source]
         if test and test.phase=='debit_confirmed' and test.epoch==report.epoch then
@@ -587,7 +604,7 @@ exports('ValidateCharacterAmmoRuntimeOperation',function(context,operation,spec)
     if GetInvokingResource()~='feather-inventory' or not enabled()
         or runtime.IsOperationCurrent(context,operation,spec)~=true then return false end
     if operation=='pickup' then
-        if quantities() then
+        if recoveryEnabled() then
             local where=quantityLocation(context.actorSource,loadouts[context.actorSource])
             return where and spec and spec.nativePickupPlan and spec.nativePickupPlan.version==2
                 and where.bucket==spec.nativePickupPlan.location.bucket and runtime.IsOperationCurrent(context,operation,spec)==true or false

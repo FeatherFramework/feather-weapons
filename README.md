@@ -1,5 +1,24 @@
 # Feather Weapons
 
+Current version: **0.25.0**. See [release notes](docs/release-0.25.0.md).
+
+## Regular arrows
+
+`setr feather_regular_arrows 1` opts the current native runtime into owned bows
+and the 40-unit Regular-arrow character pool. Bows use their native Shoulder8 /
+Back7 carry points. The default Bow offer is $5; Regular arrows retain their
+$0.50 five-arrow pack. Native recovery consumes a separate, once-only funded
+arrow allowance within180seconds/50metres in the same routing bucket; it never
+issues a bow or an extra native ammunition grant. Deploy with the matching
+Inventory recovery and Shops Bow-category changes. Persist the flag before
+startup while using this pool; disabling it is not a saved-data migration.
+
+Own/batched/cross-player recovery, recovered-arrow reselection, loaded death/
+revive/restart, both carry positions and 40-unit capacity controls are live
+accepted. Specialty arrows remain outside this admission; simultaneous increases
+of arrow and Tomahawk pools fail closed. Live competing collectors remain untested.
+See [the integration record](docs/regular-arrow-integration.md) for evidence.
+
 ## Gun-store configuration
 
 `shop_config.lua` owns gun-store locations and all firearm, ammunition, attachment

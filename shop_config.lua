@@ -67,7 +67,7 @@ WeaponStoreConfig = {
         throwable_dynamite = false,          -- no canonical Shops issuance support yet
         throwable_molotov = false,           -- no canonical Shops issuance support yet
         throwable_poisonbottle = false,      -- no canonical Shops issuance support yet
-        bow = false,                         -- no canonical Shops issuance support yet
+        bow = 5.00,                          -- regular-arrow opt-in only; gameplay price
     },
     ammunition = {
         -- Representative period pack sizes. Specialty prices are gameplay estimates.

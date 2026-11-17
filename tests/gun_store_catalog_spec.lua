@@ -56,7 +56,9 @@ end
 assert(tomahawk and tomahawk.category=='throwables' and tomahawk.packSize==1 and tomahawk.unitPrice==500 and not loose,
  'actual unit offer replaces the separate Tomahawk ammunition purchase')
 WeaponNativeThrowablePolicy=nil
-config=copy(baseline);config.weapons.bow=5;assert(not build(config).ok)
+config=copy(baseline);config.weapons.bow=5
+local gated=build(config);assert(gated.ok)
+for _,offer in ipairs(gated.value.stores[1].offers) do assert(offer.itemName~='weapon_bow','bow offer requires explicit regular-arrow admission') end
 config=copy(baseline);config.weapons.typo=5;assert(not build(config).ok)
 config=copy(baseline);config.attachments.cattleman_wide_sight=nil;assert(not build(config).ok)
 config=copy(baseline);config.enabled=false;assert(#build(config).value.stores==0)

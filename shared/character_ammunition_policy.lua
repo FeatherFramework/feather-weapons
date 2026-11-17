@@ -17,7 +17,9 @@ local limits={
     ammo_varmint=100,ammo_varmint_tranquilizer=200,ammo_rifle_elephant=20,
 }
 function WeaponCharacterAmmoPolicy.Limits()
-    local copy={}; for id,cap in pairs(limits) do copy[id]=cap end; return copy
+    local copy={}; for id,cap in pairs(limits) do copy[id]=cap end
+    if WeaponRegularArrowPolicy and WeaponRegularArrowPolicy.Enabled() then copy.ammo_arrow_regular=40 end
+    return copy
 end
 function WeaponCharacterAmmoPolicy.Build(catalog)
     local registry,why=WeaponCharacterAmmoCatalog.Build(catalog,WeaponCharacterAmmoPolicy.Limits())

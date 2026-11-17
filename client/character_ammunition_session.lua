@@ -6,7 +6,15 @@ function WeaponCharacterAmmoSession.New(api,registry)
     local knife,knifeFactoryUnconfirmed,meleeMode
     local throwable,throwableFactoryUnconfirmed,throwableSnapshot
     local utility,utilityFactoryUnconfirmed
-    local controller=WeaponCharacterAmmoController.New(api,function(baseline)
+    local controller=WeaponCharacterAmmoController.New(api,function(baseline,ammunitionId)
+        if ammunitionId=='ammo_arrow_regular' then
+            -- The already-owned bow survives collection; no carrier creation or ammo grant.
+            local owned=false
+            for _,record in pairs(records or {}) do if record.name=='WEAPON_BOW' then owned=true end end
+            if not owned then return nil,'owned_bow_required' end
+            print(('[WeaponRegularArrowPickup] PASS ledger acknowledged revision=%s; no bow or ammo grant'):format(tostring(baseline.revision)))
+            return true
+        end
         if not throwable or type(throwable.AcceptNativePickup)~='function' then return nil end
         local accepted,why=throwable.AcceptNativePickup(baseline)
         if accepted then

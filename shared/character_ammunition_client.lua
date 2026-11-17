@@ -46,19 +46,22 @@ function WeaponCharacterAmmoClient.New()
         if currentPed~=ped then phase='suspended'; pending=nil; return nil,'ped_changed' end
         if worldReady~=true or pending then return nil,'pickup_world_or_request_pending' end
         local observed=WeaponCharacterAmmunition.Validate(pools,limits)
-        local allowed=quantityMode==true and limits.ammo_tomahawk_regular==3
-            and observed and observed.ammo_tomahawk_regular>baseline.pools.ammo_tomahawk_regular
+        local ammoId='ammo_tomahawk_regular'
+        if quantityMode==true and limits.ammo_arrow_regular==40 and observed
+            and observed.ammo_arrow_regular>baseline.pools.ammo_arrow_regular then ammoId='ammo_arrow_regular' end
+        local allowed=quantityMode==true and limits[ammoId]==(ammoId=='ammo_arrow_regular' and 40 or 3)
+            and observed and observed[ammoId]>baseline.pools[ammoId]
         if not allowed and (not observed or limits.ammo_tomahawk_regular~=1 or baseline.pools.ammo_tomahawk_regular~=0
             or observed.ammo_tomahawk_regular~=1) then return nil,'pickup_one_unit_increase_required' end
         for id in pairs(limits) do
-            if pools[id]==nil or (id~='ammo_tomahawk_regular' and
+            if pools[id]==nil or (id~=ammoId and
                 (quantityMode==true and observed[id]>baseline.pools[id] or quantityMode~=true and observed[id]~=baseline.pools[id])) then
                 return nil,'pickup_other_pool_changed'
             end
         end
         sequence=sequence+1
         local report=copy(baseline); report.pools=copy(observed); report.phase=nil
-        pending={id=sequence,kind='pickup',quantityMode=quantityMode==true,report=report,expected={revision=baseline.revision+1,pools=copy(observed)}}
+        pending={id=sequence,kind='pickup',ammunitionId=ammoId,quantityMode=quantityMode==true,report=report,expected={revision=baseline.revision+1,pools=copy(observed)}}
         return copy(pending)
     end
     function C.PrepareTransfer(currentPed,pools,worldReady,ammunitionId,amount,operationId)
@@ -99,11 +102,12 @@ function WeaponCharacterAmmoClient.New()
         if pending.kind=='pickup' and pending.quantityMode and type(result)=='table' and result.quantityDeclined==true then
             local expected=copy(baseline);expected.revision=pending.expected.revision
             local recovered=result.quantityAccepted
-            local maximum=pending.expected.pools.ammo_tomahawk_regular-baseline.pools.ammo_tomahawk_regular
+            local ammoId=pending.ammunitionId or 'ammo_tomahawk_regular'
+            local maximum=pending.expected.pools[ammoId]-baseline.pools[ammoId]
             if type(recovered)~='number' or recovered%1~=0 or recovered<0 or recovered>=maximum then
                 phase='frozen';pending=nil;return nil,'invalid_quantity_decline'
             end
-            local wanted=copy(pending.expected.pools);wanted.ammo_tomahawk_regular=baseline.pools.ammo_tomahawk_regular+recovered
+            local wanted=copy(pending.expected.pools);wanted[ammoId]=baseline.pools[ammoId]+recovered
             local valid=type(value)=='table' and same(expected,value) and value.phase=='active'
                 and WeaponCharacterAmmunition.Validate(value.pools,limits)~=nil
             for ammo,count in pairs(wanted) do valid=valid and value and value.pools and value.pools[ammo]==count end
