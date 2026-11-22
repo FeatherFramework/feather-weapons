@@ -47,7 +47,8 @@ bounded generic allowances remain subject to the accepted nearby-claim tradeoff.
 Live contention, specialty capacity boundaries and cross-player Poison conversion
 are not claimed. The isolated earlier client crash remains unattributed.
 
-CI currently pins the previous paired implementations. After the user pushes
-both new implementations, update the cross-resource workflow pins to their exact
-new commits and require fresh green checks before merging/publishing. Do not
-represent old-pin CI as validation of the new paired changes.
+Implementation commits are pushed and verified on GitHub: Weapons
+4c95245506bfbe4d4580f537b88eb391c7ed27f5 and Inventory
+f589667aa92fb3d545444ed9897f18a678f0dbba. Local workflow follow-ups pin these
+exact paired implementations; user commit/push and fresh green CI remain required
+before merging/publishing. Do not represent old-pin CI as paired validation.
